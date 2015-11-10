@@ -1,0 +1,20 @@
+# Virtualenv #
+##############
+/bin
+/lib
+/include
+/man
+/share
+
+# Vim #
+#######
+.*.un~
+
+# Python #
+#######
+/pip-selfcheck.json
+__pycache__
+
+# Private Data #
+################
+auth_token.txt

@@ -1,0 +1,3 @@
+[submodule "GameAnalysis"]
+	path = game_analysis
+	url = git@github.com:egtaonline/GameAnalysis.git
