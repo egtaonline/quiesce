@@ -20,8 +20,15 @@ $ . bin/activate
 $ pip3 install -r game_analysis/requirements.txt -r requirements.txt
 ```
 
+
 Use
 ---
 
 The two main endpoints are `egta` and `quiesce`. `egta` is a general way to
 access the egta api, while `quiesce` is a script for quiescing a game object.
+
+
+TODO
+----
+
+* Simulator add by json results in duplicated strategies
