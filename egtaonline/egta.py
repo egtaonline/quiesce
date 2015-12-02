@@ -30,31 +30,29 @@ _PARSER_SIM = _SUBPARSERS.add_parser('sim')
 _PARSER_SIM.add_argument('sim_id', metavar='sim-id', nargs='?', help="""The
 identifier of the simulation to get information from. By default this should be
 the simulator id as a number. If unspecified, all simulators are returned.""")
-_PARSER_SIM.add_argument(
-    '--version', '-n', nargs='?', metavar='version-name',
-    default=argparse.SUPPRESS, const=None, help="""If this is specified then
-    the `sim-id` is treated as the name of the simulator and an optionally
-    supplied argument is treated as the version. If no version is specified
-    then this will try to find a single simulator with the name. An error is
-    thrown if there are 0 or 2 or more simulators with the same name.""")
-_PARSER_SIM.add_argument(
-    '--json', '-j', metavar='<json-file>', type=argparse.FileType('r'),
-    help="""Modify simulator using the specified json file. By default this
-    will add all of the roles and strategies in the json file. If `delete` is
-    specified, this will remove only the strategies specified in the file. `-`
-    can be used to read from stdin.""")
+_PARSER_SIM.add_argument('--version', '-n', nargs='?', metavar='version-name',
+        default=argparse.SUPPRESS, const=None, help="""If this is specified
+        then the `sim-id` is treated as the name of the simulator and an
+        optionally supplied argument is treated as the version. If no version
+        is specified then this will try to find a single simulator with the
+        name. An error is thrown if there are 0 or 2 or more simulators with
+        the same name.""")
+_PARSER_SIM.add_argument('--json', '-j', metavar='<json-file>',
+        type=argparse.FileType('r'), help="""Modify simulator using the
+        specified json file. By default this will add all of the roles and
+        strategies in the json file. If `delete` is specified, this will remove
+        only the strategies specified in the file. `-` can be used to read from
+        stdin.""")
 _PARSER_SIM.add_argument('--role', '-r', metavar='<role>', help="""Modify
 `role` of the simulator. By default this will add `role` to the simulator. If
 `delete` is specified this will remove `role` instead. If `strategy` is
 specified see strategy.""")
-_PARSER_SIM.add_argument(
-    '--strategy', '-s', metavar='<strategy>', help="""Modify `strategy` of the
-    simulator. This requires that `role` is also specified. By default this
-    adds `strategy` to `role`. If `delete` is specified, then this removes the
-    strategy instead.""")
-_PARSER_SIM.add_argument(
-    '--delete', '-d', action='store_true', help="""Triggers removal of roles or
-    strategies instead of addition""")
+_PARSER_SIM.add_argument('--strategy', '-s', metavar='<strategy>',
+        help="""Modify `strategy` of the simulator. This requires that `role`
+        is also specified. By default this adds `strategy` to `role`. If
+        `delete` is specified, then this removes the strategy instead.""")
+_PARSER_SIM.add_argument('--delete', '-d', action='store_true',
+        help="""Triggers removal of roles or strategies instead of addition""")
 
 _PARSER_GAME = _SUBPARSERS.add_parser('game')
 _PARSER_GAME.add_argument('game_id', nargs='?', metavar='game-id', help="""The
@@ -82,6 +80,8 @@ _PARSER_GAME.add_argument('--role', '-r', metavar='<role>', help="""Modify
 `role` of the game. By default this will add `role` to the game. If `delete` is
 specified this will remove `role` instead. If `strategy` is specified see
 strategy.""")
+_PARSER_GAME.add_argument('--count', '-c', metavar='<count>', help="""If adding
+a role, the count of the role must be specified.""")
 _PARSER_GAME.add_argument(
     '--strategy', '-s', metavar='<strategy>', help="""Modify `strategy` of the
     game. This requires that `role` is also specified. By default this adds
@@ -164,6 +164,7 @@ def main():
                     game.remove_dict(role_strat)
                 else:
                     game.add_dict(role_strat)
+
             elif args.role is not None:  # Operate on single role or strategy
                 if args.strategy is not None:  # Operate on strategy
                     if args.delete:
@@ -173,8 +174,11 @@ def main():
                 else:  # Operate on role
                     if args.delete:
                         game.remove_role(args.role)
+                    elif args.count:
+                        game.add_role(args.role, args.count)
                     else:
-                        game.add_role(args.role)
+                        raise ValueError('If adding a role, count must be specified')
+
             else:  # Return information instead
                 json.dump(game.get_info(
                     granularity=args.granularity), sys.stdout)

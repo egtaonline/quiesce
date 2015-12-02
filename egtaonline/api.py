@@ -505,12 +505,12 @@ class Game(dict):
         return result
 
     @_requires_id
-    def add_role(self, role):
+    def add_role(self, role, count):
         """Adds a role to the game"""
         resp = self._api._request(
             'post',
             'games/{game:d}/add_role.json'.format(game=self['id']),
-            data={'role': role})
+            data={'role': role, 'count': count})
         resp.raise_for_status()
 
     @_requires_id
@@ -532,20 +532,10 @@ class Game(dict):
         resp.raise_for_status()
 
     def add_dict(self, role_strat_dict):
-        """Adds all of the roles and strategies in a dictionary
+        """Attempts to add all of the strategies in a dictionary
 
-        The dictionary should be of the form {role: [strategies]}. This method
-        by default ignores errors when adding roles as they might already
-        exist, and if they fail to be created, adding any strategies will
-        fail."""
+        The dictionary should be of the form {role: [strategies]}."""
         for role, strategies in role_strat_dict.items():
-            try:
-                self.add_role(role)
-            except IOError:
-                # Likely role already exists, and for some reason this is the
-                # only non quiet case of this
-                pass
-
             for strategy in strategies:
                 self.add_strategy(role, strategy)
 
