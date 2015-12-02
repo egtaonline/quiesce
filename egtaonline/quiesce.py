@@ -38,6 +38,11 @@ _PARSER.add_argument('-t', '--sleep-time', metavar='<sleep-time>', type=int,
 _PARSER.add_argument('-m', '--max-subgame-size', metavar='<max-subgame-size>',
         type=int, default=3, help="""Maximum subgame size to require
         exploration. (default: %(default)s)""")
+_PARSER.add_argument('--num-equilibria', '-n', metavar='<num-equilibria>',
+        default=1, type=int, help="""Necessary number of equilibria to find to
+        consider quiesced. This is useful if you want to include a strategy
+        that results in a trivial equilibrium e.g. a no-op. (default:
+        %(default)d)""")
 # FIXME Add json input
 _PARSER.add_argument('--dpr', nargs='+', metavar='<role-or-count>', default=(),
         help="""If specified, does a dpr reduction with role strategy counts.
@@ -80,10 +85,9 @@ _SCHED_GROUP.add_argument('--nodes', metavar='<nodes>', type=int, default=1,
 class Quieser(object):
     """Class to manage quiesing of a scheduler"""
 
-    def __init__(
-            self, game_id, auth_token, max_profiles=10000, sleep_time=300,
-            subgame_limit=None, num_subgames=1, dpr=None,
-            scheduler_options=collect.frozendict(), verbosity=0,
+    def __init__(self, game_id, auth_token, max_profiles=10000, sleep_time=300,
+            subgame_limit=None, num_subgames=1, required_num_equilibria=1,
+            dpr=None, scheduler_options=collect.frozendict(), verbosity=0,
             email_verbosity=0, recipients=[]):
 
         # Get api and access to standard objects
@@ -117,6 +121,7 @@ class Quieser(object):
         self._scheduler = profsched.ProfileScheduler(api_scheduler, max_profiles, self._log)
         self.observation_increment = scheduler_options['observation_increment']
         self.sleep_time = sleep_time
+        self.required_num_equilibria = required_num_equilibria
         self.subgame_limit = subgame_limit
         self.subgame_size = gamesize.sum_strategies  # TODO allow other functions
 
@@ -131,6 +136,9 @@ class Quieser(object):
         backup = containers.priorityqueue()
         subgames = []  # Subgames that are running
         equilibria = []  # Equilibria that are running
+
+        def enough_equilibria():
+            return len(confirmed_equilibria) >= self.required_num_equilibria
 
         def add_subgame(sub):
             """Adds a subgame to the scheduler"""
@@ -238,10 +246,11 @@ class Quieser(object):
 
             return False  # Finished, so filter
 
+        # Initialize with pure subgames
         for sub in subgame.pure_subgames(self.game):
             add_subgame(sub)
 
-        while not confirmed_equilibria and subgames or equilibria:
+        while not enough_equilibria() and subgames or equilibria:
             self._scheduler.update()
 
             # See what's finished
@@ -273,7 +282,7 @@ class Quieser(object):
                         self.sleep_time)
                 time.sleep(self.sleep_time)
 
-            elif not confirmed_equilibria and not subgames and not equilibria:
+            elif not enough_equilibria() and not subgames and not equilibria:
                 # We've finished all the required stuff, but still haven't
                 # found an equilibrium, so pop a backup off
                 self._log.debug('Extracting backup game\n')
@@ -391,6 +400,7 @@ def main():
         max_profiles=args.max_profiles,
         sleep_time=args.sleep_time,
         subgame_limit=args.max_subgame_size,
+        required_num_equilibria=args.num_equilibria,
         dpr=_parse_dpr(args.dpr),
         scheduler_options={
             'process_memory': args.memory,
