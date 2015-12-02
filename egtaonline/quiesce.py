@@ -6,6 +6,7 @@ import logging
 import sys
 import traceback
 import smtplib
+from os import path
 from logging import handlers
 
 from gameanalysis import rsgame
@@ -21,6 +22,8 @@ from egtaonline import containers
 from egtaonline import gamesize
 from egtaonline import profsched
 
+
+_DEF_AUTH = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
 
 _PARSER = argparse.ArgumentParser(prog='quiesce', description="""Quiesce a
 generic scheduler on EGTA Online.""")
@@ -54,7 +57,7 @@ _PARSER_AUTH = _PARSER.add_mutually_exclusive_group()
 _PARSER_AUTH.add_argument('--auth-string', '-a', metavar='<auth-string>',
         help="""The string authorization token to connect to egta online.""")
 _PARSER_AUTH.add_argument('--auth-file', '-f', metavar='<auth-file>',
-        default='auth_token.txt', help="""Filename that just contains the
+        default=_DEF_AUTH, help="""Filename that just contains the
         string of the auth token. (default: %(default)s)""")
 
 _SCHED_GROUP = _PARSER.add_argument_group('Scheduler parameters',
