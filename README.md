@@ -32,3 +32,5 @@ TODO
 ----
 
 * Simulator add by json results in duplicated strategies
+* Make mixture set that uses LSH
+* Use mixture set to short circuit equilibrium exploration

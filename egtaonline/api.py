@@ -124,7 +124,7 @@ class EgtaOnline(object):
         'state': 'state'
     }
     _rows = ['state', 'profile', 'folder', 'job']
-    
+
     @staticmethod
     def _parse(res):
         """Converts N/A to `nan` and otherwise tries to parse integers"""

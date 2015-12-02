@@ -1,8 +1,6 @@
 import itertools
 import collections
 
-from egtaonline import utils
-
 
 class ProfileScheduler(object):
     """Class that handles scheduling profiles"""

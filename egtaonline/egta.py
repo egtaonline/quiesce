@@ -105,7 +105,7 @@ _PARSER_SCHED.add_argument('--name', '-n', action='store_true', help="""If
 specified then get the scheduler via its string name not its id number. This is
 much slower than accessing via id number, and only works for generic
 schedulers.""")
-_PARSER_SCHED.add_argument( '--verbose', '-v', action='store_true', help="""Get
+_PARSER_SCHED.add_argument('--verbose', '-v', action='store_true', help="""Get
 verbose scheduler information including profile information instead of just the
 simple output of scheduler meta data.""")
 
@@ -131,7 +131,6 @@ _PARSER_SIMS.add_argument('--ascending', '-a', action='store_true',
 _PARSER_SIMS.add_argument('--sort-column', '-s', choices=['job', 'folder',
 'profile', 'state'], default='job', help="""Column to order results by.
 (default: %(default)s)""")
-
 
 
 def main():

@@ -53,8 +53,6 @@ def _json_default(obj):
         return list(obj)
     else:
         return obj.to_json()
-    #raise TypeError("Can't serialize {obj} of type {type}".format(
-    #    obj=obj, type=type(obj)))
 
 
 def format_json(obj):
