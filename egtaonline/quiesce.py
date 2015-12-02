@@ -252,8 +252,8 @@ class Quieser(object):
             except Exception as e:
                 # Sometimes getting game data fails. Just wait and try again
                 self._log.debug(
-                    'Encountered error getting game data: (%s) %s\nSleeping...\n',
-                    e.__class__.__name__, e)
+                    'Encountered error getting game data: (%s) %s\nSleeping for %d seconds...\n',
+                    e.__class__.__name__, e, self.sleep_time)
                 time.sleep(self.sleep_time)
                 continue
 
