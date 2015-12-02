@@ -12,7 +12,7 @@ setup:
 	bin/pip3 install -r game_analysis/requirements.txt -r requirements.txt
 
 ubuntu-install:
-	sudo apt-get install python3 libatlas-base-dev gfortran
+	sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev
 	sudo pip3 install virtualenv
 
 ubuntu-setup: ubuntu-install setup

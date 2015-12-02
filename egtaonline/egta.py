@@ -1,6 +1,8 @@
 import argparse
 import json
 import sys
+import itertools
+import re
 from os import path
 
 from egtaonline import api as egtaonline
@@ -26,7 +28,8 @@ _SUBPARSERS = _PARSER.add_subparsers(title='Subcommands', dest='command',
         possible command for help.""")
 _SUBPARSERS.required = True
 
-_PARSER_SIM = _SUBPARSERS.add_parser('sim')
+_PARSER_SIM = _SUBPARSERS.add_parser('sim', description="""Operate on EGTA
+        simulators""")
 _PARSER_SIM.add_argument('sim_id', metavar='sim-id', nargs='?', help="""The
 identifier of the simulation to get information from. By default this should be
 the simulator id as a number. If unspecified, all simulators are returned.""")
@@ -54,7 +57,8 @@ _PARSER_SIM.add_argument('--strategy', '-s', metavar='<strategy>',
 _PARSER_SIM.add_argument('--delete', '-d', action='store_true',
         help="""Triggers removal of roles or strategies instead of addition""")
 
-_PARSER_GAME = _SUBPARSERS.add_parser('game')
+_PARSER_GAME = _SUBPARSERS.add_parser('game', description="""Operate on EGTA
+        Online games.""")
 _PARSER_GAME.add_argument('game_id', nargs='?', metavar='game-id', help="""The
 identifier of the game to get data from. By default this should be the game id
 number. If unspecified this will return a list of all of the games.""")
@@ -91,7 +95,8 @@ _PARSER_GAME.add_argument(
     '--delete', '-d', action='store_true', help="""Triggers removal of roles or
     strategies instead of addition""")
 
-_PARSER_SCHED = _SUBPARSERS.add_parser('sched')
+_PARSER_SCHED = _SUBPARSERS.add_parser('sched', description="""Operate on EGTA
+        Online schedulers.""")
 _PARSER_SCHED.add_argument('sched_id', nargs='?', metavar='game-id',
 help="""The identifier of the scheduler to get data from. By default this
 should be the scheduler id number. If unspecified this will return a list of
@@ -103,6 +108,30 @@ schedulers.""")
 _PARSER_SCHED.add_argument( '--verbose', '-v', action='store_true', help="""Get
 verbose scheduler information including profile information instead of just the
 simple output of scheduler meta data.""")
+
+_PARSER_SIMS = _SUBPARSERS.add_parser('sims', description="""Get information
+        about EGTA Online simulations. These are the actual scheduled
+        simulations instead of the simulators that generate them.""")
+_PARSER_SIMS.add_argument('--folder', '-f', metavar='<folder-id>', help="""The
+        identifier of the simulation to get data from, normally referred to as
+        the folder number. If unspecified this will return a stream of json
+        scheduler information that can be streamed through jq to get necessary
+        information. If streamed, each result is on a new line.""")
+_PARSER_SIMS.add_argument('--count', '-c', metavar='<count>', type=int,
+        help="""The maximum number of results to return of no folder is
+        specified""")
+_PARSER_SIMS.add_argument('--regex', '-r', metavar='<regex>', help="""If
+        supplied will filter simulations by ones who's profile string matches
+        the given regex.""")
+_PARSER_SIMS.add_argument('--page', '-p', metavar='<start-page>', default=1,
+        type=int, help="""The page to start scanning at. (default:
+        %(default)d)""")
+_PARSER_SIMS.add_argument('--ascending', '-a', action='store_true',
+        help="""Return results in ascending order instead of descending.""")
+_PARSER_SIMS.add_argument('--sort-column', '-s', choices=['job', 'folder',
+'profile', 'state'], default='job', help="""Column to order results by.
+(default: %(default)s)""")
+
 
 
 def main():
@@ -196,6 +225,30 @@ def main():
 
             # Output
             json.dump(sched.get_info(verbose=args.verbose), sys.stdout)
+
+    elif args.command == 'sims':
+        if args.folder is not None:  # Get info on one simulation
+            sim = api.simulation(args.folder)
+            json.dump(sim, sys.stdout)
+
+        else:  # Stream simulations
+            sims = api.get_simulations(page_start=args.page,
+                    asc=args.ascending, column=args.sort_column)
+
+            # Tweak stream
+            if args.regex is not None:
+                regex = re.compile(args.regex)
+                sims = (s for s in sims if next(regex.finditer(s['profile']), None) is not None)
+
+            if args.count is not None:
+                sim = itertools.islice(sims, args.count)
+
+            try:
+                for sim in sim:
+                    json.dump(sim, sys.stdout)
+                    sys.stdout.write('\n')
+            except BrokenPipeError:
+                pass  # Don't care if stream breaks
 
     else:
         raise ValueError('Invalid option "{0}" specified'.format(args.command))

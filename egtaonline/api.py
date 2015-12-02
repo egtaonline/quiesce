@@ -4,6 +4,9 @@ import json
 import logging
 import sys
 import functools
+import itertools
+
+from lxml import etree
 
 from gameanalysis import collect
 from gameanalysis import profile
@@ -59,6 +62,15 @@ class EgtaOnline(object):
         self._log.info('%s request to %s with data %s', verb, url, true_data)
         return requests.request(verb, url, data=true_data)
 
+    def _non_api_request(self, verb, api, data=collect.frozendict()):
+        true_data = {'auth_token': self._auth}
+        true_data.update(data)
+        true_data = _encode_data(true_data)
+        url = 'http://{domain}/{endpoint}'.format(
+            domain=self._domain, endpoint=api)
+        self._log.info('%s request to %s with data %s', verb, url, true_data)
+        return requests.request(verb, url, data=true_data)
+
     def simulator(self, *args, **kwargs):
         """Get a simulator with given properties
 
@@ -104,6 +116,56 @@ class EgtaOnline(object):
         calls significantly more efficient. `id`s can be found with a
         scheduler's `get_info` when verbose=True."""
         return Profile(*args, _api=self, **kwargs)
+
+    _mapping = {
+        'job': 'job_id',
+        'folder': None,
+        'profile': 'profiles.assignment',
+        'state': 'state'
+    }
+    _rows = ['state', 'profile', 'folder', 'job']
+    
+    @staticmethod
+    def _parse(res):
+        """Converts N/A to `nan` and otherwise tries to parse integers"""
+        try:
+            return int(res)
+        except ValueError:
+            if res.lower() == 'n/a':
+                return float('nan')
+            else:
+                return res
+
+    def get_simulations(self, page_start=1, asc=False, column='job_id'):
+        """Get information about current simulations
+
+        `page_start` must be at least 1. `column` should be
+        one of 'job', 'folder', 'profile', or 'state'."""
+        column = self._mapping.get(column, column)
+        data = {
+            'direction': 'ASC' if asc else 'DESC'
+        }
+        if column is not None:
+            data['sort'] = column
+        for page in itertools.count(page_start):
+            data['page'] = page
+            resp = self._non_api_request('get', 'simulations', data=data)
+            resp.raise_for_status()
+            rows = etree.HTML(resp.text).xpath('//tbody/tr')
+            if not rows:
+                break  # Empty page implies we're done
+            for row in rows:
+                res = (self._parse(''.join(e.itertext())) for e in row.getchildren())
+                yield dict(zip(self._rows, res))
+
+    def simulation(self, folder):
+        resp = self._non_api_request(
+            'get',
+            'simulations/{folder}'.format(folder=folder))
+        resp.raise_for_status()
+        info = etree.HTML(resp.text).xpath('//div[@class="show_for simulation"]/p')
+        parsed = (''.join(e.itertext()).split(':', 1) for e in info)
+        return {k.lower().replace(' ', '_'): self._parse(v.strip()) for k, v in parsed}
 
 
 class Simulator(dict):
@@ -483,12 +545,10 @@ class Game(dict):
         if 'id' in self:
             # This call breaks convention because the api is broken, so we use
             # a different api.
-            resp = requests.get(
-                'http://egtaonline.eecs.umich.edu/games/{gid:d}.json'.format(
-                    gid=self['id']),
-                data={
-                    'granularity': granularity,
-                    'auth_token': self._api._auth})
+            resp = self._api._non_api_request(
+                'get',
+                'games/{gid:d}.json'.format(gid=self['id']),
+                data={'granularity': granularity})
             resp.raise_for_status()
             result = (
                 json.loads(json.loads(resp.text))
