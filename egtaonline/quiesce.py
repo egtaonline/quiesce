@@ -6,6 +6,7 @@ import logging
 import sys
 import traceback
 import smtplib
+import warnings
 from os import path
 from logging import handlers
 
@@ -22,6 +23,8 @@ from egtaonline import containers
 from egtaonline import gamesize
 from egtaonline import profsched
 
+# Game load failure is a user warning, but we don't want to process it
+warnings.simplefilter('error', UserWarning)
 
 _DEF_AUTH = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
 
