@@ -128,10 +128,7 @@ class Quieser(object):
     def quiesce(self):
         """Starts the process of quiescing"""
 
-        # FIXME Instead of using a set here, using an equilibrium set (e.g.
-        # equilibria that are almost the same are counted arbitrarily as
-        # exactly the same should probably be used)
-        confirmed_equilibria = set()
+        confirmed_equilibria = containers.MixtureSet(1e-3)  # Dont't hardcode this
         explored_subgames = containers.setset()
         backup = containers.priorityqueue()
         subgames = []  # Subgames that are running

@@ -1,8 +1,9 @@
 """Useful containers"""
 import heapq
+import collections
 
 
-class priorityqueue(object):
+class priorityqueue(collections.Iterable):
     """Priority queue with more sensible interface"""
     def __init__(self, init_elems=()):
         self._elems = list(init_elems)
@@ -90,3 +91,40 @@ class setset(object):
 
     def __repr__(self):
         return '{' + repr(self.maximal_sets())[5:-2] + '}'
+
+
+class MixtureSet(collections.Iterable):
+    """A set of profile mixtures, allows things to be close and considered in
+
+    By default this keeps the previous element. This could be done better with
+    locality hashing, but as it is, it just does linear scans. Since we don't
+    usually have many equilibira, linear scans aren't that bad."""
+    def __init__(self, tolerance):
+        self.tolerance = tolerance
+        self._mixtures = []
+
+    def add(self, mixture):
+        if mixture not in self:
+            self._mixtures.append(mixture)
+
+    def _close(self, a, b):
+        """Returns true if mixtures are within tolerance"""
+        return all(
+            all(abs(strats.get(strat, 0) - b[role].get(strat, 0))
+                < self.tolerance for strat in set(strats).union(b[role]))
+            for role, strats in a.items())
+
+    def __contains__(self, mixture):
+        return any(self._close(other, mixture) for other in self)
+
+    def __bool__(self):
+        return bool(self._mixtures)
+
+    def __len__(self):
+        return len(self._mixtures)
+
+    def __iter__(self):
+        return iter(self._mixtures)
+
+    def __repr__(self):
+        return repr(self._mixtures)
