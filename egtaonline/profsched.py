@@ -16,7 +16,8 @@ class ProfileScheduler(object):
     def schedule(self, profiles, numobs):
         """Add a set of profiles to schedule"""
         promise = ScheduledSet(self, numobs)
-        self._queue.append((promise, numobs, itertools.chain(profiles, [None])))
+        self._queue.append(
+            (promise, numobs, profiles))
         return promise
 
     def update(self):
@@ -27,7 +28,8 @@ class ProfileScheduler(object):
         while count < self._max_profiles and self._queue:
             promise, numobs, profiles = self._queue[0]
 
-            for profile in itertools.islice(profiles, self._max_profiles - count):
+            for profile in itertools.islice(itertools.chain(profiles, [None]),
+                                            self._max_profiles - count):
                 if profile is None:  # Reached end of list
                     self._queue.popleft()
                     promise._all_scheduled = True
@@ -40,7 +42,8 @@ class ProfileScheduler(object):
             count = self._scheduler.num_running_profiles()
 
         # Update running ids for active checks
-        self._running_ids = {p['id'] for p in self._scheduler.running_profiles()}
+        self._running_ids = \
+            {p['id'] for p in self._scheduler.running_profiles()}
 
 
 class ScheduledSet(object):

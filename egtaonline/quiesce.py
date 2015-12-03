@@ -29,69 +29,77 @@ warnings.simplefilter('error', UserWarning)
 _DEF_AUTH = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
 
 _PARSER = argparse.ArgumentParser(prog='quiesce', description="""Quiesce a
-generic scheduler on EGTA Online.""")
+                                  generic scheduler on EGTA Online.""")
 _PARSER.add_argument('game', metavar='<game-id>', type=int, help="""The id of
-the game to pull data from / to quiesce""")
+                     the game to pull data from / to quiesce""")
 _PARSER.add_argument('-p', '--max-profiles', metavar='<max-num-profiles>',
-        type=int, default=500, help="""Maximum number of profiles to ever have
-        scheduled at a time. (default: %(default)s)""")
+                     type=int, default=500, help="""Maximum number of profiles
+                     to ever have scheduled at a time. (default:
+                     %(default)s)""")
 _PARSER.add_argument('-t', '--sleep-time', metavar='<sleep-time>', type=int,
-        default=300, help="""Time to wait in seconds between checking EGTA
-        Online for job completion. (default: %(default)s)""")
+                     default=300, help="""Time to wait in seconds between
+                     checking EGTA Online for job completion. (default:
+                     %(default)s)""")
 _PARSER.add_argument('-m', '--max-subgame-size', metavar='<max-subgame-size>',
-        type=int, default=3, help="""Maximum subgame size to require
-        exploration. (default: %(default)s)""")
+                     type=int, default=3, help="""Maximum subgame size to
+                     require exploration. (default: %(default)s)""")
 _PARSER.add_argument('--num-equilibria', '-n', metavar='<num-equilibria>',
-        default=1, type=int, help="""Necessary number of equilibria to find to
-        consider quiesced. This is useful if you want to include a strategy
-        that results in a trivial equilibrium e.g. a no-op. (default:
-        %(default)d)""")
+                     default=1, type=int, help="""Necessary number of
+equilibria to find to consider quiesced. This is useful if you want to include
+a strategy that results in a trivial equilibrium e.g. a no-op. (default:
+                     %(default)d)""")
 # FIXME Add json input
 _PARSER.add_argument('--dpr', nargs='+', metavar='<role-or-count>', default=(),
-        help="""If specified, does a dpr reduction with role strategy counts.
-        e.g.  --dpr role1 1 role2 2 ...""")
+                     help="""If specified, does a dpr reduction with role
+                     strategy counts.  e.g.  --dpr role1 1 role2 2 ...""")
 _PARSER.add_argument('-v', '--verbose', action='count', default=0,
-        help="""Verbosity level. Two for confirmed equilibria, three for major
-        scheduling actions, four for minor scheduling actions (i.e. every
-        profile). Logging is output to standard error""")
+                     help="""Verbosity level. Two for confirmed equilibria,
+                     three for major scheduling actions, four for minor
+                     scheduling actions (i.e. every profile). Logging is output
+                     to standard error""")
 _PARSER.add_argument('-e', '--email_verbosity', action='count', default=0,
-        help="""Verbosity level for email. Two for confirmed equilibria, three
-        for everything""")
+                     help="""Verbosity level for email. Two for confirmed
+                     equilibria, three for everything""")
 _PARSER.add_argument('-r', '--recipient', metavar='<email-address>',
-        action='append', default=[], help="""Specify an email address to
-        receive email logs at. Can specify multiple email addresses.""")
+                     action='append', default=[], help="""Specify an email
+                     address to receive email logs at. Can specify multiple
+                     email addresses.""")
 
 _PARSER_AUTH = _PARSER.add_mutually_exclusive_group()
 _PARSER_AUTH.add_argument('--auth-string', '-a', metavar='<auth-string>',
-        help="""The string authorization token to connect to egta online.""")
+                          help="""The string authorization token to connect to
+                          egta online.""")
 _PARSER_AUTH.add_argument('--auth-file', '-f', metavar='<auth-file>',
-        default=_DEF_AUTH, help="""Filename that just contains the
-        string of the auth token. (default: %(default)s)""")
+                          default=_DEF_AUTH, help="""Filename that just
+                          contains the string of the auth token. (default:
+                          %(default)s)""")
 
 _SCHED_GROUP = _PARSER.add_argument_group('Scheduler parameters',
-        description="""Parameters for the scheduler.""")
+                                          description="""Parameters for the
+                                          scheduler.""")
 _SCHED_GROUP.add_argument('-y', '--memory', metavar='<process-memory>',
-        type=int, default=4096, help="""The process memory to schedule jobs
-        with in MB.  (default: %(default)s)""")
+                          type=int, default=4096, help="""The process memory to
+                          schedule jobs with in MB.  (default: %(default)s)""")
 _SCHED_GROUP.add_argument('-o', '--observation-time',
-        metavar='<observation-time>', type=int, default=600, help="""The time
-        to allow for each observation in seconds. (default: %(default)s)""")
-_SCHED_GROUP.add_argument('--observation-increment',
-        metavar='<observation-increment>', type=int, default=1,
-        help="""The number of observations to run per simulation. (default:
-        %(default)s)""")
+                          metavar='<observation-time>', type=int, default=600,
+                          help="""The time to allow for each observation in
+                          seconds. (default: %(default)s)""")
+_SCHED_GROUP.add_argument('--observation-increment', '-b',
+                          metavar='<observation-increment>', type=int,
+                          default=1, help="""The number of observations to run
+                          per simulation. (default: %(default)s)""")
 _SCHED_GROUP.add_argument('--nodes', metavar='<nodes>', type=int, default=1,
-        help="""Number of nodes to run the simulation on. (default:
-        %(default)s)""")
+                          help="""Number of nodes to run the simulation on.
+                          (default: %(default)s)""")
 
 
 class Quieser(object):
     """Class to manage quiesing of a scheduler"""
 
     def __init__(self, game_id, auth_token, max_profiles=10000, sleep_time=300,
-            subgame_limit=None, num_subgames=1, required_num_equilibria=1,
-            dpr=None, scheduler_options=collect.frozendict(), verbosity=0,
-            email_verbosity=0, recipients=[]):
+                 subgame_limit=None, num_subgames=1, required_num_equilibria=1,
+                 dpr=None, scheduler_options=collect.frozendict(), verbosity=0,
+                 email_verbosity=0, recipients=[]):
 
         # Get api and access to standard objects
         self._log = _create_logger(
@@ -121,17 +129,19 @@ class Quieser(object):
         api_scheduler = _get_scheduler(
             self._api, self._log, game_info, **scheduler_options)
 
-        self._scheduler = profsched.ProfileScheduler(api_scheduler, max_profiles, self._log)
+        self._scheduler = profsched.ProfileScheduler(api_scheduler,
+                                                     max_profiles, self._log)
         self.observation_increment = scheduler_options['observation_increment']
         self.sleep_time = sleep_time
         self.required_num_equilibria = required_num_equilibria
         self.subgame_limit = subgame_limit
-        self.subgame_size = gamesize.sum_strategies  # TODO allow other functions
+        # TODO allow other functions
+        self.subgame_size = gamesize.sum_strategies
 
     def quiesce(self):
         """Starts the process of quiescing"""
-
-        confirmed_equilibria = containers.MixtureSet(1e-3)  # Dont't hardcode this
+        # Dont't hardcode this
+        confirmed_equilibria = containers.MixtureSet(1e-3)
         explored_subgames = containers.setset()
         backup = containers.priorityqueue()
         subgames = []  # Subgames that are running
@@ -147,7 +157,8 @@ class Quieser(object):
                     'Exploring subgame:\n%s\n', utils.format_json(sub))
                 promise = self._scheduler.schedule(
                     itertools.chain.from_iterable(
-                        self.reduction.expand_profile(p) for p in sub.all_profiles()),
+                        self.reduction.expand_profile(p)
+                        for p in sub.all_profiles()),
                     self.observation_increment)
                 subgames.append((sub, promise))
 
@@ -182,13 +193,15 @@ class Quieser(object):
 
             equilibria = list(nash.mixed_nash(
                 subgame.subgame(game_data, sub.strategies)))
-            self._log.debug('Found candidate equilibria:\n%s\nin subgame:\n%s\n',
-                            utils.format_json(equilibria), utils.format_json(sub))
+            self._log.debug(
+                'Found candidate equilibria:\n%s\nin subgame:\n%s\n',
+                utils.format_json(equilibria), utils.format_json(sub))
             if not equilibria:
                 self._log.info(
                     'Found no equilibria in subgame:\n%s\n',
                     utils.format_json(sub))
-                promise.update_count(promise.count + self.observation_increment)
+                promise.update_count(promise.count +
+                                     self.observation_increment)
                 return True  # No equilibria found - keep scheduling
             else:
                 for mixture in equilibria:
@@ -196,7 +209,7 @@ class Quieser(object):
                 return False
 
         def analyze_equilibrium(game_data, mixture, promise):
-            """Analyzes responses to an equilibrium and book keeps accordingly"""
+            """Analyzes responses to an equilibrium and book keeps"""
             if not promise.finished():  # Unfinished, so don't filter
                 return True
 
@@ -205,7 +218,8 @@ class Quieser(object):
                 'Responses:\n%s\nto candidate equilibrium:\n%s\n',
                 utils.format_json(responses), utils.format_json(mixture))
 
-            if all(all(d < 1e-3 for d in s.values()) for s in responses.values()):
+            if all(all(d < 1e-3 for d in s.values())
+                   for s in responses.values()):
                 # found equilibria
                 if mixture not in confirmed_equilibria:
                     confirmed_equilibria.add(mixture)
@@ -216,7 +230,8 @@ class Quieser(object):
             else:  # Queue up next subgames
                 supp = mixture.support()
                 sub = subgame.EmptySubgame(self.game, supp)
-                subgame_size = self.subgame_size(supp, role_counts=self.game.players)
+                subgame_size = self.subgame_size(supp,
+                                                 role_counts=self.game.players)
                 small_subgame = subgame_size < self.subgame_limit
 
                 for role, role_resps in responses.items():
@@ -261,25 +276,30 @@ class Quieser(object):
             except Exception as e:
                 # Sometimes getting game data fails. Just wait and try again
                 self._log.debug(
-                        'Encountered error getting game data: (%s) %s\nWith traceback:\n%s\nSleeping for %d seconds...\n',
-                    e.__class__.__name__, e, traceback.format_exc(), self.sleep_time)
+                    'Encountered error getting game data: (%s) %s\nWith '
+                    'traceback:\n%s\nSleeping for %d seconds...\n',
+                    e.__class__.__name__, e, traceback.format_exc(),
+                    self.sleep_time)
                 time.sleep(self.sleep_time)
                 continue
 
             any_finished = False
 
-            filtered_subgames = [sub for sub in subgames if analyze_subgame(game_data, *sub)]
+            filtered_subgames = [sub for sub in subgames
+                                 if analyze_subgame(game_data, *sub)]
             any_finished |= len(filtered_subgames) != len(subgames)
             subgames = filtered_subgames
 
-            filtered_equilibria = [mix for mix in equilibria if analyze_equilibrium(game_data, *mix)]
+            filtered_equilibria = [mix for mix in equilibria
+                                   if analyze_equilibrium(game_data, *mix)]
             any_finished |= len(filtered_equilibria) != len(equilibria)
             equilibria = filtered_equilibria
 
             if subgames or equilibria and not any_finished:
                 # We're still waiting for jobs to complete, so take a break
-                self._log.debug('Waiting %d seconds for simulations to finish...\n',
-                        self.sleep_time)
+                self._log.debug(
+                    'Waiting %d seconds for simulations to finish...\n',
+                    self.sleep_time)
                 time.sleep(self.sleep_time)
 
             elif not enough_equilibria() and not subgames and not equilibria:
@@ -301,14 +321,17 @@ def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
     # hacky solution, but egta doesn't expose the necessary information.
     candidate_name = '{game}_generic_quiesce_{rolecounts}'.format(
         game=game['name'],
-        rolecounts='_'.join('{name}_{count:d}'.format(**r) for r in game['roles']))
+        rolecounts='_'.join('{name}_{count:d}'.format(**r)
+                            for r in game['roles']))
     sim_inst_id = game['simulator_instance_id']
     schedulers = (gs for gs in api.get_generic_schedulers() if
                   gs['simulator_instance_id'] == sim_inst_id and
                   gs['process_memory'] == process_memory and
                   gs['time_per_observation'] == observation_time and
-                  gs['default_observation_requirement'] == observation_increment and
-                  gs['observations_per_simulation'] == observation_increment and
+                  gs['default_observation_requirement']
+                  == observation_increment and
+                  gs['observations_per_simulation']
+                  == observation_increment and
                   gs['nodes'] == nodes and
                   gs['name'].startswith(candidate_name))
 
@@ -317,7 +340,8 @@ def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
         # found at least one exact match so use it
         sched.update(active=1)
         log.info(
-            'Using scheduler %d (http://egtaonline.eecs.umich.edu/generic_schedulers/%d)',
+            'Using scheduler %d '
+            '(http://egtaonline.eecs.umich.edu/generic_schedulers/%d)',
             sched['id'], sched['id'])
         return sched
     except StopIteration:
@@ -325,8 +349,8 @@ def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
 
     # Find simulator by matching on fullname
     sim_id = utils.only(s for s in api.get_simulators()
-                        if '{name}-{version}'.format(**s) == game['simulator_fullname']
-                        )['id']
+                        if '{name}-{version}'.format(**s)
+                        == game['simulator_fullname'])['id']
 
     # Generate a random suffix
     sched = api.simulator(id=sim_id).create_generic_scheduler(
@@ -345,7 +369,8 @@ def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
     for role in game['roles']:
         sched.add_role(role['name'], role['count'])
 
-    log.info('Created scheduler %d (http://egtaonline.eecs.umich.edu/generic_schedulers/%d)',
+    log.info('Created scheduler %d '
+             '(http://egtaonline.eecs.umich.edu/generic_schedulers/%d)',
              sched['id'], sched['id'])
     return sched
 
@@ -370,7 +395,8 @@ def _create_logger(name, level, email_level, recipients, game_id):
         # by machine
         # must get correct hostname to send mail
         server = smtplib.SMTP(smtp_host)
-        smtp_fromaddr = "EGTA Online <egta_online@" + server.local_hostname + ">"
+        smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
+            host=server.local_hostname)
         server.quit()  # dummy server is now useless
 
         email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,

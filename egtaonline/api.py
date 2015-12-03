@@ -155,7 +155,8 @@ class EgtaOnline(object):
             if not rows:
                 break  # Empty page implies we're done
             for row in rows:
-                res = (self._parse(''.join(e.itertext())) for e in row.getchildren())
+                res = (self._parse(''.join(e.itertext()))
+                       for e in row.getchildren())
                 yield dict(zip(self._rows, res))
 
     def simulation(self, folder):
@@ -163,9 +164,11 @@ class EgtaOnline(object):
             'get',
             'simulations/{folder}'.format(folder=folder))
         resp.raise_for_status()
-        info = etree.HTML(resp.text).xpath('//div[@class="show_for simulation"]/p')
+        info = etree.HTML(resp.text).xpath(
+            '//div[@class="show_for simulation"]/p')
         parsed = (''.join(e.itertext()).split(':', 1) for e in info)
-        return {k.lower().replace(' ', '_'): self._parse(v.strip()) for k, v in parsed}
+        return {key.lower().replace(' ', '_'): self._parse(val.strip())
+                for key, val in parsed}
 
 
 class Simulator(dict):
@@ -326,8 +329,8 @@ class Scheduler(dict):
             result = self._api.scheduler(json.loads(resp.text))
             if verbose:
                 result['scheduling_requirements'] = [
-                    self.profile(prof, id=prof['profile_id'])
-                    for prof in result.get('scheduling_requirements', None) or ()]
+                    self.profile(prof, id=prof['profile_id']) for prof
+                    in result.get('scheduling_requirements', None) or ()]
 
         else:
             result = utils.only(
