@@ -17,6 +17,10 @@ ubuntu-install:
 
 ubuntu-setup: ubuntu-install setup
 
+todo:
+	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=lib --exclude-from=Makefile --color=always
+
+
 check:
 	bin/flake8 egtaonline
 
