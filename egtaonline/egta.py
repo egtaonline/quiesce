@@ -259,10 +259,10 @@ def main():
                         if next(reg.finditer(s['profile']), None) is not None)
 
             if args.count is not None:
-                sim = itertools.islice(sims, args.count)
+                sims = itertools.islice(sims, args.count)
 
             try:
-                for sim in sim:
+                for sim in sims:
                     json.dump(sim, sys.stdout)
                     sys.stdout.write('\n')
             except BrokenPipeError:
