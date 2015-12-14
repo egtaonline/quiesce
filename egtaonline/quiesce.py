@@ -265,7 +265,7 @@ class Quieser(object):
         for sub in subgame.pure_subgames(self.game):
             add_subgame(sub)
 
-        while not enough_equilibria() and subgames or equilibria:
+        while subgames or equilibria:  # Scheduling left to do
             self._scheduler.update()
 
             # See what's finished
@@ -302,7 +302,7 @@ class Quieser(object):
                     self.sleep_time)
                 time.sleep(self.sleep_time)
 
-            elif not enough_equilibria() and not subgames and not equilibria:
+            elif not subgames and not equilibria and not enough_equilibria():
                 # We've finished all the required stuff, but still haven't
                 # found an equilibrium, so pop a backup off
                 self._log.debug('Extracting backup game\n')
