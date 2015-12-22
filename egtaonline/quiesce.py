@@ -191,7 +191,7 @@ class Quieser(object):
             if not promise.finished():  # Unfinished, so don't filter
                 return True
 
-            equilibria = list(nash.mixed_nash(
+            equilibria = list(n.trim_support() for n in nash.mixed_nash(
                 subgame.subgame(game_data, sub.strategies)))
             self._log.debug(
                 'Found candidate equilibria:\n%s\nin subgame:\n%s\n',
