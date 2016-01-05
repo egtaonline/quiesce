@@ -64,6 +64,9 @@ _PARSER.add_argument('-r', '--recipient', metavar='<email-address>',
                      action='append', default=[], help="""Specify an email
                      address to receive email logs at. Can specify multiple
                      email addresses.""")
+_PARSER.add_argument('--regret-threshold', metavar='<regret-threshold>',
+                     default=1e-3, type=float, help="""Regret tolerance to
+                     consider an equilibrium found. (default: %(default)s)""")
 
 _PARSER_AUTH = _PARSER.add_mutually_exclusive_group()
 _PARSER_AUTH.add_argument('--auth-string', '-a', metavar='<auth-string>',
@@ -97,8 +100,9 @@ class Quieser(object):
     """Class to manage quiesing of a scheduler"""
 
     def __init__(self, game_id, auth_token, max_profiles=10000, sleep_time=300,
-                 subgame_limit=None, num_subgames=1, required_num_equilibria=1,
-                 dpr=None, scheduler_options=collect.frozendict(), verbosity=0,
+                 regret_thresh=1e-3, subgame_limit=None, num_subgames=1,
+                 required_num_equilibria=1, dpr=None,
+                 scheduler_options=collect.frozendict(), verbosity=0,
                  email_verbosity=0, recipients=[]):
 
         # Get api and access to standard objects
@@ -135,6 +139,7 @@ class Quieser(object):
         self.sleep_time = sleep_time
         self.required_num_equilibria = required_num_equilibria
         self.subgame_limit = subgame_limit
+        self.regret_thresh = regret_thresh
         # TODO allow other functions
         self.subgame_size = gamesize.sum_strategies
 
@@ -192,7 +197,7 @@ class Quieser(object):
                 return True
 
             equilibria = list(n.trim_support() for n in nash.mixed_nash(
-                subgame.subgame(game_data, sub.strategies)))
+                subgame.subgame(game_data, sub.strategies), regret_thresh=self.regret_thresh))
             self._log.debug(
                 'Found candidate equilibria:\n%s\nin subgame:\n%s\n',
                 utils.format_json(equilibria), utils.format_json(sub))
@@ -218,7 +223,7 @@ class Quieser(object):
                 'Responses:\n%s\nto candidate equilibrium:\n%s\n',
                 utils.format_json(responses), utils.format_json(mixture))
 
-            if all(all(d < 1e-3 for d in s.values())
+            if all(all(d < self.regret_thresh for d in s.values())
                    for s in responses.values()):
                 # found equilibria
                 if mixture not in confirmed_equilibria:
@@ -427,6 +432,7 @@ def main():
         sleep_time=args.sleep_time,
         subgame_limit=args.max_subgame_size,
         required_num_equilibria=args.num_equilibria,
+        regret_thresh=args.regret_threshold,
         dpr=_parse_dpr(args.dpr),
         scheduler_options={
             'process_memory': args.memory,
