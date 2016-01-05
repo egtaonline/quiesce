@@ -18,7 +18,7 @@ ubuntu-install:
 ubuntu-setup: ubuntu-install setup
 
 todo:
-	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=lib --exclude-from=Makefile --color=always
+	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=lib --exclude-dir=game_analysis --exclude-from=Makefile --color=always
 
 
 check:
