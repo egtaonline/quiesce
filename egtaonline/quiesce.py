@@ -150,15 +150,22 @@ class Quieser(object):
         def enough_equilibria():
             return len(confirmed_equilibria) >= self.required_num_equilibria
 
+        # FIXME Remove this indicator
+        def checkNotNull(msg):
+            def mapFunc(x):
+                assert x is not None, msg
+                return x
+            return mapFunc
+
         def add_subgame(sub):
             """Adds a subgame to the scheduler"""
             if explored_subgames.add(sub.support_set()):  # Unexplored
                 self._log.debug(
                     'Exploring subgame:\n%s\n', utils.format_json(sub))
                 promise = self._scheduler.schedule(
-                    itertools.chain.from_iterable(
+                    map(checkNotNull("subgame"), itertools.chain.from_iterable(
                         self.reduction.expand_profile(p)
-                        for p in sub.all_profiles()),
+                        for p in sub.all_profiles())),
                     self.observation_increment)
                 subgames.append((sub, promise))
 
@@ -179,9 +186,9 @@ class Quieser(object):
             ).deviation_profiles()
 
             promise = self._scheduler.schedule(
-                itertools.chain.from_iterable(
+                map(checkNotNull("equilibrium"), itertools.chain.from_iterable(
                     self.reduction.expand_profile(p)
-                    for p, r, s in reduced_profiles),
+                    for p, r, s in reduced_profiles)),
                 self.observation_increment)
 
             equilibria.append((mixture, promise))
