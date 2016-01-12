@@ -205,9 +205,16 @@ class Quieser(object):
                 self._log.info(
                     'Found no equilibria in subgame:\n%s\n',
                     utils.format_json(sub))
-                promise.update_count(promise.count +
-                                     self.observation_increment)
-                return True  # No equilibria found - keep scheduling
+                # TODO Don't hard code this 10
+                if promise.count < 10 * self.observation_increment:
+                    promise.update_count(promise.count +
+                                         self.observation_increment)
+                    return True  # No equilibria found - keep scheduling
+                else:
+                    # TODO 10 hardcoded here too
+                    self._log.error('Tried rescheduling equilibrium 10 times '
+                                    'and still can\'t find an equilibrium')
+                    return False  # Can't handle
             else:
                 for mixture in equilibria:
                     add_equilibrium(mixture)
