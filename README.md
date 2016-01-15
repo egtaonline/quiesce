@@ -10,7 +10,7 @@ Setup
 $ git submodule init
 $ git submodule update
 
-$ sudo apt-get install python3 libatlas-base-dev gfortran
+$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev
 $ sudo pip3 install virtualenv
 
 $ cd this/directory
