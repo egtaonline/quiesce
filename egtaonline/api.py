@@ -57,7 +57,7 @@ class EgtaOnline(object):
         true_data = {'auth_token': self._auth}
         true_data.update(data)
         true_data = _encode_data(true_data)
-        url = 'http://{domain}/api/v3/{endpoint}'.format(
+        url = 'https://{domain}/api/v3/{endpoint}'.format(
             domain=self._domain, endpoint=api)
         self._log.info('%s request to %s with data %s', verb, url, true_data)
         return requests.request(verb, url, data=true_data)
@@ -66,7 +66,7 @@ class EgtaOnline(object):
         true_data = {'auth_token': self._auth}
         true_data.update(data)
         true_data = _encode_data(true_data)
-        url = 'http://{domain}/{endpoint}'.format(
+        url = 'https://{domain}/{endpoint}'.format(
             domain=self._domain, endpoint=api)
         self._log.info('%s request to %s with data %s', verb, url, true_data)
         return requests.request(verb, url, data=true_data)
