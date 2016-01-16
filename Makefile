@@ -5,7 +5,7 @@ help:
 	@echo "ubuntu-setup - setup a clean installation on ubuntu (requires root)"
 
 setup:
-	virtualenv -p python3.5 .
+	virtualenv -p python3 .
 	git submodule init
 	git submodule update
 	bin/pip3 install -U pip

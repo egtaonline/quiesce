@@ -1,2 +1,2 @@
 #!/bin/bash
-"$(dirname "$0")/bin/python3.4" -m egtaonline.egta "$@"
+"$(ls "$(dirname "$0")/bin/python3."{6,5,4} 2>/dev/null | head -n1)" -m egtaonline.egta "$@"
