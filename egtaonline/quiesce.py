@@ -42,7 +42,7 @@ _PARSER.add_argument('-t', '--sleep-time', metavar='<sleep-time>', type=int,
                      %(default)s)""")
 _PARSER.add_argument('-m', '--max-subgame-size', metavar='<max-subgame-size>',
                      type=int, default=3, help="""Maximum subgame size to
-                     require exploration. (default: %(default)s)""")
+                     require exploration. (default: %(default)d)""")
 _PARSER.add_argument('--num-equilibria', '-n', metavar='<num-equilibria>',
                      default=1, type=int, help="""Necessary number of
 equilibria to find to consider quiesced. This is useful if you want to include
