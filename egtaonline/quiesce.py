@@ -197,7 +197,8 @@ class Quieser(object):
                 return True
 
             equilibria = list(n.trim_support() for n in nash.mixed_nash(
-                subgame.subgame(game_data, sub.strategies), regret_thresh=self.regret_thresh))
+                subgame.subgame(game_data, sub.strategies),
+                regret_thresh=self.regret_thresh))
             self._log.debug(
                 'Found candidate equilibria:\n%s\nin subgame:\n%s\n',
                 utils.format_json(equilibria), utils.format_json(sub))
