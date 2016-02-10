@@ -45,9 +45,9 @@ _PARSER.add_argument('-m', '--max-subgame-size', metavar='<max-subgame-size>',
                      require exploration. (default: %(default)d)""")
 _PARSER.add_argument('--num-equilibria', '-n', metavar='<num-equilibria>',
                      default=1, type=int, help="""Necessary number of
-equilibria to find to consider quiesced. This is useful if you want to include
-a strategy that results in a trivial equilibrium e.g. a no-op. (default:
-                     %(default)d)""")
+                     equilibria to find to consider quiesced. This is useful if
+                     you want to include a strategy that results in a trivial
+                     equilibrium e.g. a no-op. (default: %(default)d)""")
 # FIXME Add json input
 _PARSER.add_argument('--dpr', nargs='+', metavar='<role-or-count>', default=(),
                      help="""If specified, does a dpr reduction with role
@@ -55,8 +55,9 @@ _PARSER.add_argument('--dpr', nargs='+', metavar='<role-or-count>', default=(),
 _PARSER.add_argument('-v', '--verbose', action='count', default=0,
                      help="""Verbosity level. Two for confirmed equilibria,
                      three for major scheduling actions, four for minor
-                     scheduling actions (i.e. every profile). Logging is output
-                     to standard error""")
+                     scheduling actions (i.e. every profile), five for all
+                     requests (these won't go to email). Logging is output to
+                     standard error""")
 _PARSER.add_argument('-e', '--email_verbosity', action='count', default=0,
                      help="""Verbosity level for email. Two for confirmed
                      equilibria, three for everything""")
@@ -109,7 +110,7 @@ class Quieser(object):
         self._log = _create_logger(
             self.__class__.__name__, verbosity, email_verbosity, recipients,
             game_id)
-        self._api = api.EgtaOnline(auth_token, logLevel=(0 if verbosity < 4 else 3))
+        self._api = api.EgtaOnline(auth_token, logLevel=(0 if verbosity < 5 else 3))
         self._game_api = self._api.game(id=game_id)
 
         # General information about game
