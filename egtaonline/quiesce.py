@@ -267,7 +267,7 @@ class Quieser(object):
                     # subgames, then highest gain.
 
                     # Add the rest to the backup
-                    for strat, gain in ordered:
+                    for strategy, gain in ordered:
                         dev_subgame = sub.add_strategy(role, strategy)
                         backup.append((
                             (True, gain < 0, subgame_size, -gain),
