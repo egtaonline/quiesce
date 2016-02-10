@@ -109,7 +109,7 @@ class Quieser(object):
         self._log = _create_logger(
             self.__class__.__name__, verbosity, email_verbosity, recipients,
             game_id)
-        self._api = api.EgtaOnline(auth_token)
+        self._api = api.EgtaOnline(auth_token, logLevel=(0 if verbosity < 4 else 3))
         self._game_api = self._api.game(id=game_id)
 
         # General information about game
