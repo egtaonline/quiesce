@@ -46,6 +46,11 @@ class ProfileScheduler(object):
         self._running_ids = \
             {p['id'] for p in self._scheduler.running_profiles()}
 
+    def deactivate(self):
+        """Deactivate the egta online scheduler"""
+        # Must be '0' not 'False'
+        self._scheduler.update(active=0)
+
 
 class ScheduledSet(object):
     def __init__(self, profile_scheduler, count):

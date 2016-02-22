@@ -1,6 +1,6 @@
 """Python script for quiessing a game"""
 import argparse
-import time
+
 import itertools
 import logging
 import sys
@@ -326,6 +326,10 @@ class Quieser(object):
         self._log.info('Finished quiescing\nConfirmed equilibria:\n%s',
                        utils.format_json(confirmed_equilibria))
 
+    def deactivate(self):
+        """Deactivate the egta online scheduler"""
+        self._scheduler.deactivate()
+
 
 def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
                    observation_increment=1, nodes=1):
@@ -455,6 +459,12 @@ def main():
 
     try:
         quies.quiesce()
+
+    except KeyboardInterrupt:
+        quies._log.error(
+            'Manually killed quiesce script. Deactivating scheduler')
+        quies.deactivate()
+
     except Exception as e:
         quies._log.error(
             'Caught exception: (%s) %s\nWith traceback:\n%s\n',
