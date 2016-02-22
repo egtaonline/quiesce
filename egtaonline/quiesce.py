@@ -90,7 +90,7 @@ _SCHED_GROUP.add_argument('-o', '--observation-time',
                           seconds. (default: %(default)s)""")
 _SCHED_GROUP.add_argument('--observation-increment', '-b',
                           metavar='<observation-increment>', type=int,
-                          default=1, help="""The number of observations to run
+                          default=10, help="""The number of observations to run
                           per simulation. (default: %(default)s)""")
 _SCHED_GROUP.add_argument('--nodes', metavar='<nodes>', type=int, default=1,
                           help="""Number of nodes to run the simulation on.
