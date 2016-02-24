@@ -1,27 +1,27 @@
 """Python script for quiessing a game"""
 import argparse
-
 import itertools
 import logging
-import sys
-import traceback
 import smtplib
+import sys
+import time
+import traceback
 import warnings
-from os import path
 from logging import handlers
+from os import path
 
+from gameanalysis import collect
+from gameanalysis import nash
+from gameanalysis import reduction
+from gameanalysis import regret
 from gameanalysis import rsgame
 from gameanalysis import subgame
-from gameanalysis import collect
-from gameanalysis import reduction
-from gameanalysis import nash
-from gameanalysis import regret
 
 from egtaonline import api
-from egtaonline import utils
 from egtaonline import containers
 from egtaonline import gamesize
 from egtaonline import profsched
+from egtaonline import utils
 
 # Game load failure is a user warning, but we don't want to process it
 warnings.simplefilter('error', UserWarning)
@@ -110,7 +110,8 @@ class Quieser(object):
         self._log = _create_logger(
             self.__class__.__name__, verbosity, email_verbosity, recipients,
             game_id)
-        self._api = api.EgtaOnline(auth_token, logLevel=(0 if verbosity < 5 else 3))
+        self._api = api.EgtaOnline(auth_token,
+                                   logLevel=(0 if verbosity < 5 else 3))
         self._game_api = self._api.game(id=game_id)
 
         # General information about game
@@ -180,9 +181,7 @@ class Quieser(object):
                 utils.format_json(mixture))
 
             reduced_profiles = subgame.EmptySubgame(
-                self.game,
-                mixture.support()
-            ).deviation_profiles()
+                self.game, mixture).deviation_profiles()
 
             promise = self._scheduler.schedule(
                 itertools.chain.from_iterable(
@@ -242,9 +241,8 @@ class Quieser(object):
                         utils.format_json(mixture))
 
             else:  # Queue up next subgames
-                supp = mixture.support()
-                sub = subgame.EmptySubgame(self.game, supp)
-                subgame_size = self.subgame_size(supp,
+                sub = subgame.EmptySubgame(self.game, mixture)
+                subgame_size = self.subgame_size(mixture,
                                                  role_counts=self.game.players)
                 small_subgame = subgame_size < self.subgame_limit
 
@@ -329,6 +327,10 @@ class Quieser(object):
     def deactivate(self):
         """Deactivate the egta online scheduler"""
         self._scheduler.deactivate()
+
+    def close(self):
+        """Closes the api session"""
+        self._api.close()
 
 
 def _get_scheduler(api, log, game, process_memory=4096, observation_time=600,
@@ -461,14 +463,20 @@ def main():
         quies.quiesce()
 
     except KeyboardInterrupt:
+        # Manually killed, so just deactivate
         quies._log.error(
             'Manually killed quiesce script. Deactivating scheduler')
         quies.deactivate()
 
     except Exception as e:
+        # Other exception, notify, but don't deactivate
         quies._log.error(
             'Caught exception: (%s) %s\nWith traceback:\n%s\n',
             e.__class__.__name__, e, traceback.format_exc())
+
+    finally:
+        # Make sure to clean up
+        quies.close()
 
 
 if __name__ == '__main__':

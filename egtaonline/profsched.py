@@ -35,7 +35,7 @@ class ProfileScheduler(object):
                     promise._all_scheduled = True
 
                 else:  # Process profile
-                    self._log.log(1, 'Scheduling profile: %s', profile)      
+                    self._log.log(1, 'Scheduling profile: %s', profile)
                     prof = self._scheduler.profile(profile=profile).add(numobs)
                     promise._add_profile(prof)
 

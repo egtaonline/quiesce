@@ -51,106 +51,108 @@ def main():
         with open(args.auth_file) as auth_file:
             args.auth_string = auth_file.read().strip()
 
-    egta = api.EgtaOnline(args.auth_string)
-    sched = egta.scheduler(id=args.scheduler).get_info(verbose=True)
-    sim_id = sched['simulator_id']
-    sched_size = sched['size']
+    with api.EgtaOnline(args.auth_string) as egta:
 
-    base_job_id = next(egta.get_simulations())['job']
+        sched = egta.scheduler(id=args.scheduler).get_info(verbose=True)
+        sim_id = sched['simulator_id']
+        sched_size = sched['size']
 
-    # Logging
-    log = logging.getLogger(__name__)
-    log.setLevel(20 - 10 * args.verbose)
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(logging.Formatter(
-        '%(asctime)s ({sid:d}) %(message)s'.format(sid=args.scheduler)))
-    log.addHandler(handler)
+        base_job_id = next(egta.get_simulations())['job']
 
-    # Email Logging
-    if args.recipient:
-        email_subject = 'Scheduler Watching Status for Scheduler {sid:d}'\
-            .format(sid=args.scheduler)
-        smtp_host = 'localhost'
+        # Logging
+        log = logging.getLogger(__name__)
+        log.setLevel(20 - 10 * args.verbose)
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s ({sid:d}) %(message)s'.format(sid=args.scheduler)))
+        log.addHandler(handler)
 
-        # We need to do this to match the from address to the local host name
-        # otherwise, email logging will not work. This seems to vary somewhat
-        # by machine
-        # must get correct hostname to send mail
-        with smtplib.SMTP(smtp_host) as server:
-            smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
-                host=server.local_hostname)
+        # Email Logging
+        if args.recipient:
+            email_subject = 'Scheduler Watching Status for Scheduler {sid:d}'\
+                .format(sid=args.scheduler)
+            smtp_host = 'localhost'
 
-        email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,
-                                             args.recipient, email_subject)
-        email_handler.setLevel(20)
-        log.addHandler(email_handler)
+            # We need to do this to match the from address to the local host
+            # name otherwise, email logging will not work. This seems to vary
+            # somewhat by machine must get correct hostname to send mail
+            with smtplib.SMTP(smtp_host) as server:
+                smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
+                    host=server.local_hostname)
 
-    log.info('Watcher initialized for scheduler %d', args.scheduler)
+            email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,
+                                                 args.recipient, email_subject)
+            email_handler.setLevel(20)
+            log.addHandler(email_handler)
 
-    finished = False
-    while True:
-        try:
-            reqs = sched.get_info(True).get('scheduling_requirements', ())
-            finished = all(prof['current_count'] >= prof['requirement']
-                           for prof in reqs)
-            if finished:
-                log.info('Scheduler %d completely scheduled', args.scheduler)
-                finished = True
-                sys.exit(0)
+        log.info('Watcher initialized for scheduler %d', args.scheduler)
 
-            sims = itertools.takewhile(lambda sim: sim['job'] > base_job_id,
-                                       egta.get_simulations())
-            for sim in sims:
-                # Ignore all non failed simulations
-                if sim['state'] != 'failed':
-                    continue
+        finished = False
+        while True:
+            try:
+                reqs = sched.get_info(True).get('scheduling_requirements', ())
+                finished = all(prof['current_count'] >= prof['requirement']
+                               for prof in reqs)
+                if finished:
+                    log.info('Scheduler %d completely scheduled',
+                             args.scheduler)
+                    finished = True
+                    sys.exit(0)
 
-                log.debug('Found failed simulation %s', sim)
+                sims = itertools.takewhile(lambda s: s['job'] > base_job_id,
+                                           egta.get_simulations())
+                for sim in sims:
+                    # Ignore all non failed simulations
+                    if sim['state'] != 'failed':
+                        continue
 
-                # Check if simulation uses the same simulator - somewhat slow
-                full_sim = egta.simulation(sim['folder'])
-                name_parts = full_sim['simulator_fullname'].split('-')
-                name = '-'.join(name_parts[:-1])
-                version = name_parts[-1]
-                sim_simulator_id = egta.simulator(name=name, version=version)\
-                    .get_info()['id']
-                if sim_simulator_id != sim_id:
-                    log.debug("Didn't match simulator")
-                    continue
+                    log.debug('Found failed simulation %s', sim)
 
-                prof_obj = profile.Profile.from_profile_string(sim['profile'])
+                    # Check if simulation uses the same simulator - slow
+                    full_sim = egta.simulation(sim['folder'])
+                    name_parts = full_sim['simulator_fullname'].split('-')
+                    name = '-'.join(name_parts[:-1])
+                    version = name_parts[-1]
+                    sim_simulator_id = egta.simulator(
+                        name=name, version=version).get_info()['id']
+                    if sim_simulator_id != sim_id:
+                        log.debug("Didn't match simulator")
+                        continue
 
-                # Check that player numbers match
-                sim_size = sum(sum(strats.values()) for strats
-                               in prof_obj.values())
-                if sim_size != sched_size:
-                    log.debug("Didn't match size")
-                    continue
+                    prof_obj = profile.Profile.from_profile_string(
+                        sim['profile'])
 
-                # Check if profile matches - REALLY SLOW!
-                for prof in reqs:
-                    if prof['current_count'] >= prof['requirement']:
-                        continue  # Complete profile
+                    # Check that player numbers match
+                    sim_size = sum(sum(strats.values()) for strats
+                                   in prof_obj.values())
+                    if sim_size != sched_size:
+                        log.debug("Didn't match size")
+                        continue
 
-                    ga_profile = profile.Profile.from_symmetry_groups(
-                        prof.get_info()['symmetry_groups'])
-                    if ga_profile == prof_obj:
-                        log.info('Scheduler %d probably failing to complete '
-                                 'jobs: "%s"',
-                                 args.scheduler, full_sim['error_message'])
-                        finished = True
-                        sys.exit(1)
+                    # Check if profile matches - REALLY SLOW!
+                    for prof in reqs:
+                        if prof['current_count'] >= prof['requirement']:
+                            continue  # Complete profile
 
-                log.debug("Didn't match active profile [invalid sim]")
+                        ga_profile = profile.Profile.from_symmetry_groups(
+                            prof.get_info()['symmetry_groups'])
+                        if ga_profile == prof_obj:
+                            log.info('Scheduler %d probably failing to '
+                                     'complete jobs: "%s"',
+                                     args.scheduler, full_sim['error_message'])
+                            finished = True
+                            sys.exit(1)
 
-        except Exception as ex:
-            log.info('Encountered error in watch script: (%s) %s\n'
-                     'With traceback:\n%s',
-                     ex.__class__.__name__, ex, traceback.format_exc())
-        finally:
-            if not finished:
-                log.debug('Sleeping for %s seconds', args.sleep_time)
-                time.sleep(args.sleep_time)
+                    log.debug("Didn't match active profile [invalid sim]")
+
+            except Exception as ex:
+                log.info('Encountered error in watch script: (%s) %s\n'
+                         'With traceback:\n%s',
+                         ex.__class__.__name__, ex, traceback.format_exc())
+            finally:
+                if not finished:
+                    log.debug('Sleeping for %s seconds', args.sleep_time)
+                    time.sleep(args.sleep_time)
 
 
 if __name__ == '__main__':

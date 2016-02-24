@@ -154,122 +154,126 @@ def main():
     if args.auth_string is None:
         with open(args.auth_file) as auth_file:
             args.auth_string = auth_file.read().strip()
-    api = egtaonline.EgtaOnline(args.auth_string, logLevel=args.verbose)
 
-    if args.command == 'sim':
-        if args.sim_id is None:  # Get all simulators
-            json.dump(list(api.get_simulators()), sys.stdout)
+    with egtaonline.EgtaOnline(
+            args.auth_string, logLevel=args.verbose) as api:
 
-        else:  # Operate on a single simulator
-            # Get simulator
-            if not hasattr(args, 'version'):
-                sim = api.simulator(id=int(args.sim_id))
-            elif args.version is None:
-                sim = api.simulator(name=args.sim_id)
-            else:
-                sim = api.simulator(name=args.sim_id, version=args.version)
+        if args.command == 'sim':
+            if args.sim_id is None:  # Get all simulators
+                json.dump(list(api.get_simulators()), sys.stdout)
 
-            # Operate
-            if args.json is not None:  # Load from json
-                role_strat = json.load(args.json)
-                if args.delete:
-                    sim.remove_dict(role_strat)
+            else:  # Operate on a single simulator
+                # Get simulator
+                if not hasattr(args, 'version'):
+                    sim = api.simulator(id=int(args.sim_id))
+                elif args.version is None:
+                    sim = api.simulator(name=args.sim_id)
                 else:
-                    sim.add_dict(role_strat)
-            elif args.role is not None:  # Operate on single role or strategy
-                if args.strategy is not None:  # Operate on strategy
+                    sim = api.simulator(name=args.sim_id, version=args.version)
+
+                # Operate
+                if args.json is not None:  # Load from json
+                    role_strat = json.load(args.json)
                     if args.delete:
-                        sim.remove_strategy(args.role, args.strategy)
+                        sim.remove_dict(role_strat)
                     else:
-                        sim.add_strategy(args.role, args.strategy)
-                else:  # Operate on role
-                    if args.delete:
-                        sim.remove_role(args.role)
-                    else:
-                        sim.add_role(args.role)
-            else:  # Return information instead
-                json.dump(sim.get_info(), sys.stdout)
+                        sim.add_dict(role_strat)
+                elif args.role is not None:  # Operate on single role or strat
+                    if args.strategy is not None:  # Operate on strategy
+                        if args.delete:
+                            sim.remove_strategy(args.role, args.strategy)
+                        else:
+                            sim.add_strategy(args.role, args.strategy)
+                    else:  # Operate on role
+                        if args.delete:
+                            sim.remove_role(args.role)
+                        else:
+                            sim.add_role(args.role)
+                else:  # Return information instead
+                    json.dump(sim.get_info(), sys.stdout)
 
-    elif args.command == 'game':
-        if args.game_id is None:  # Get all games
-            json.dump(list(api.get_games()), sys.stdout)
+        elif args.command == 'game':
+            if args.game_id is None:  # Get all games
+                json.dump(list(api.get_games()), sys.stdout)
 
-        else:  # Operate on specific game
-            # Get game
-            if args.name:
-                game = api.game(name=args.game_id)
-            else:
-                game = api.game(id=int(args.game_id))
-
-            # Operate
-            if args.json is not None:  # Load from json
-                role_strat = json.load(args.json)
-                if args.delete:
-                    game.remove_dict(role_strat)
+            else:  # Operate on specific game
+                # Get game
+                if args.name:
+                    game = api.game(name=args.game_id)
                 else:
-                    game.add_dict(role_strat)
+                    game = api.game(id=int(args.game_id))
 
-            elif args.role is not None:  # Operate on single role or strategy
-                if args.strategy is not None:  # Operate on strategy
+                # Operate
+                if args.json is not None:  # Load from json
+                    role_strat = json.load(args.json)
                     if args.delete:
-                        game.remove_strategy(args.role, args.strategy)
+                        game.remove_dict(role_strat)
                     else:
-                        game.add_strategy(args.role, args.strategy)
-                else:  # Operate on role
-                    if args.delete:
-                        game.remove_role(args.role)
-                    elif args.count:
-                        game.add_role(args.role, args.count)
-                    else:
-                        raise ValueError('If adding a role, '
-                                         'count must be specified')
+                        game.add_dict(role_strat)
 
-            else:  # Return information instead
-                json.dump(game.get_info(
-                    granularity=args.granularity), sys.stdout)
+                elif args.role is not None:  # Operate on single role or strat
+                    if args.strategy is not None:  # Operate on strategy
+                        if args.delete:
+                            game.remove_strategy(args.role, args.strategy)
+                        else:
+                            game.add_strategy(args.role, args.strategy)
+                    else:  # Operate on role
+                        if args.delete:
+                            game.remove_role(args.role)
+                        elif args.count:
+                            game.add_role(args.role, args.count)
+                        else:
+                            raise ValueError('If adding a role, '
+                                             'count must be specified')
 
-    elif args.command == 'sched':
-        if args.sched_id is None:  # Get all simulators
-            json.dump(list(api.get_generic_schedulers()), sys.stdout)
+                else:  # Return information instead
+                    json.dump(game.get_info(
+                        granularity=args.granularity), sys.stdout)
 
-        else:  # Get a single scheduler
-            # Get scheduler
-            if args.name:
-                sched = api.scheduler(name=args.sched_id)
-            else:
-                sched = api.scheduler(id=int(args.sched_id))
+        elif args.command == 'sched':
+            if args.sched_id is None:  # Get all simulators
+                json.dump(list(api.get_generic_schedulers()), sys.stdout)
 
-            # Output
-            json.dump(sched.get_info(verbose=args.verbose), sys.stdout)
+            else:  # Get a single scheduler
+                # Get scheduler
+                if args.name:
+                    sched = api.scheduler(name=args.sched_id)
+                else:
+                    sched = api.scheduler(id=int(args.sched_id))
 
-    elif args.command == 'sims':
-        if args.folder is not None:  # Get info on one simulation
-            sim = api.simulation(args.folder)
-            json.dump(sim, sys.stdout)
+                # Output
+                json.dump(sched.get_info(verbose=args.verbose), sys.stdout)
 
-        else:  # Stream simulations
-            sims = api.get_simulations(page_start=args.page,
-                                       asc=args.ascending,
-                                       column=args.sort_column)
+        elif args.command == 'sims':
+            if args.folder is not None:  # Get info on one simulation
+                sim = api.simulation(args.folder)
+                json.dump(sim, sys.stdout)
 
-            # Tweak stream
-            if args.regex is not None:
-                reg = re.compile(args.regex)
-                sims = (s for s in sims
-                        if next(reg.finditer(s['profile']), None) is not None)
+            else:  # Stream simulations
+                sims = api.get_simulations(page_start=args.page,
+                                           asc=args.ascending,
+                                           column=args.sort_column)
 
-            if args.count is not None:
-                sims = itertools.islice(sims, args.count)
+                # Tweak stream
+                if args.regex is not None:
+                    reg = re.compile(args.regex)
+                    sims = (s for s in sims
+                            if next(reg.finditer(s['profile']), None)
+                            is not None)
 
-            try:
-                for sim in sims:
-                    json.dump(sim, sys.stdout)
-                    sys.stdout.write('\n')
-            except BrokenPipeError:
-                pass  # Don't care if stream breaks
+                if args.count is not None:
+                    sims = itertools.islice(sims, args.count)
 
-    else:
-        raise ValueError('Invalid option "{0}" specified'.format(args.command))
+                try:
+                    for sim in sims:
+                        json.dump(sim, sys.stdout)
+                        sys.stdout.write('\n')
+                except BrokenPipeError:
+                    pass  # Don't care if stream breaks
+
+        else:
+            raise ValueError('Invalid option "{0}" specified'.format(
+                args.command))
 
 
 if __name__ == '__main__':

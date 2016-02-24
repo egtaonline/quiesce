@@ -29,7 +29,6 @@ def _encode_data(data):
     """Takes data in nested dictionary form, and converts it for egta
 
     All dictionary keys must be strings. This call is non destructive.
-
     """
     encoded = {}
     for k, val in data.items():
@@ -47,29 +46,39 @@ class EgtaOnline(object):
     def __init__(self, auth_token, domain='egtaonline.eecs.umich.edu',
                  logLevel=0):
         self._domain = domain
-        self._auth = auth_token
+        self._session = requests.Session()
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(40 - logLevel * 10)
         self._log.addHandler(logging.StreamHandler(sys.stderr))
 
+        # This authenticates us for the duration of the session
+        self._session.get('https://{domain}'.format(domain=self._domain),
+                          data={'auth_token': auth_token})
+
+    def close(self):
+        """Closes the active session"""
+        self._session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._session.close()
+
     def _request(self, verb, api, data=collect.frozendict()):
         """Convenience method for making requests"""
-        true_data = {'auth_token': self._auth}
-        true_data.update(data)
-        true_data = _encode_data(true_data)
+        data = _encode_data(data)
         url = 'https://{domain}/api/v3/{endpoint}'.format(
             domain=self._domain, endpoint=api)
-        self._log.info('%s request to %s with data %s', verb, url, true_data)
-        return requests.request(verb, url, data=true_data)
+        self._log.info('%s request to %s with data %s', verb, url, data)
+        return self._session.request(verb, url, data=data)
 
     def _non_api_request(self, verb, api, data=collect.frozendict()):
-        true_data = {'auth_token': self._auth}
-        true_data.update(data)
-        true_data = _encode_data(true_data)
+        data = _encode_data(data)
         url = 'https://{domain}/{endpoint}'.format(
             domain=self._domain, endpoint=api)
-        self._log.info('%s request to %s with data %s', verb, url, true_data)
-        return requests.request(verb, url, data=true_data)
+        self._log.info('%s request to %s with data %s', verb, url, data)
+        return self._session.request(verb, url, data=data)
 
     def simulator(self, *args, **kwargs):
         """Get a simulator with given properties
