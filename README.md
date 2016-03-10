@@ -20,12 +20,18 @@ $ . bin/activate
 $ pip3 install -r game_analysis/requirements.txt -r requirements.txt
 ```
 
+Cookbook
+--------
 
-Use
----
+Find the first simulation whose profile string matches the regex `<profile-regex>` and failed failed. Returns the error message.
+```
+./egta sims -r <profile-regex> | jq -r 'select(.state == "failed") | .folder' | head -n1 | xargs ./egta sims -f | jq -r .error_message
+```
 
-The two main endpoints are `egta` and `quiesce`. `egta` is a general way to
-access the egta api, while `quiesce` is a script for quiescing a game object.
+Find the first simulation whose profile string matches profile, and is finished. Returns whether it is complete or if it failed.
+```
+./egta sims -r <profile-regex> | jq -r 'select([.state == ("complete", "failed")] | any) | .state' | head -n1
+```
 
 
 TODO
