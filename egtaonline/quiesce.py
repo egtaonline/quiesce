@@ -226,7 +226,8 @@ class Quieser(object):
             if not promise.finished():  # Unfinished, so don't filter
                 return True
 
-            responses = regret.mixture_deviation_gains(game_data, mixture)
+            responses = regret.mixture_deviation_gains(game_data, mixture,
+                                                       assume_complete=True)
             self._log.debug(
                 'Responses:\n%s\nto candidate equilibrium:\n%s\n',
                 utils.format_json(responses), utils.format_json(mixture))
