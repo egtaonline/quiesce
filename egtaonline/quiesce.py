@@ -308,7 +308,7 @@ class Quieser(object):
             any_finished |= len(filtered_equilibria) != len(equilibria)
             equilibria = filtered_equilibria
 
-            if subgames or equilibria and not any_finished:
+            if (subgames or equilibria) and not any_finished:
                 # We're still waiting for jobs to complete, so take a break
                 self._log.debug(
                     'Waiting %d seconds for simulations to finish...\n',
