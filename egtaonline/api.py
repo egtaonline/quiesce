@@ -40,6 +40,11 @@ def _encode_data(data):
     return encoded
 
 
+class _AttrDict(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+
 class EgtaOnline(object):
     """Class to wrap egtaonline api"""
 
@@ -180,7 +185,7 @@ class EgtaOnline(object):
                 for key, val in parsed}
 
 
-class Simulator(dict):
+class Simulator(_AttrDict):
     """Get information about and modify EGTA Online Simulators"""
 
     def __init__(self, *args, **kwargs):
@@ -197,21 +202,21 @@ class Simulator(dict):
         current simulator if it was undefined."""
         if 'id' in self:
             resp = self._api._request(
-                'get', 'simulators/{sim:d}.json'.format(sim=self['id']))
+                'get', 'simulators/{sim:d}.json'.format(sim=self.id))
             resp.raise_for_status()
             result = self._api.simulator(json.loads(resp.text))
-            self['id'] = result['id']
+            self['id'] = result.id
 
         elif 'version' in self:
             result = utils.only(
                 sim for sim in self._api.get_simulators()
-                if sim['name'] == self['name']
-                and sim['version'] == self['version'])
+                if sim.name == self.name
+                and sim.version == self.version)
 
         else:
             result = utils.only(
                 sim for sim in self._api.get_simulators()
-                if sim['name'] == self['name'])
+                if sim.name == self.name)
 
         return result
 
@@ -220,7 +225,7 @@ class Simulator(dict):
         """Adds a role to the simulator"""
         resp = self._api._request(
             'post',
-            'simulators/{sim:d}/add_role.json'.format(sim=self['id']),
+            'simulators/{sim:d}/add_role.json'.format(sim=self.id),
             data={'role': role})
         resp.raise_for_status()
 
@@ -229,7 +234,7 @@ class Simulator(dict):
         """Removes a role from the simulator"""
         resp = self._api._request(
             'post',
-            'simulators/{sim:d}/remove_role.json'.format(sim=self['id']),
+            'simulators/{sim:d}/remove_role.json'.format(sim=self.id),
             data={'role': role})
         resp.raise_for_status()
 
@@ -238,7 +243,7 @@ class Simulator(dict):
         """Adds a strategy to the simulator"""
         resp = self._api._request(
             'post',
-            'simulators/{sim:d}/add_strategy.json'.format(sim=self['id']),
+            'simulators/{sim:d}/add_strategy.json'.format(sim=self.id),
             data={'role': role, 'strategy': strategy})
         resp.raise_for_status()
 
@@ -256,8 +261,7 @@ class Simulator(dict):
         """Removes a strategy from the simulator"""
         resp = self._api._request(
             'post',
-            'simulators/{sim:d}/remove_strategy.json'.format(sim=self[
-                'id']),
+            'simulators/{sim:d}/remove_strategy.json'.format(sim=self.id),
             data={'role': role, 'strategy': strategy})
         resp.raise_for_status()
 
@@ -298,7 +302,7 @@ class Simulator(dict):
             'post',
             'generic_schedulers',
             data={'scheduler': {
-                'simulator_id': self['id'],
+                'simulator_id': self.id,
                 'name': name,
                 'active': active,
                 'process_memory': process_memory,
@@ -314,7 +318,7 @@ class Simulator(dict):
         return self._api.scheduler(json.loads(resp.text))
 
 
-class Scheduler(dict):
+class Scheduler(_AttrDict):
     """Get information and modify EGTA Online Scheduler"""
 
     def __init__(self, *args, **kwargs):
@@ -332,7 +336,7 @@ class Scheduler(dict):
             data = {'granularity': 'with_requirements'} if verbose else {}
             resp = self._api._request(
                 'get',
-                'schedulers/{sched_id}.json'.format(sched_id=self['id']),
+                'schedulers/{sched_id}.json'.format(sched_id=self.id),
                 data)
             resp.raise_for_status()
             result = self._api.scheduler(json.loads(resp.text))
@@ -344,8 +348,8 @@ class Scheduler(dict):
         else:
             result = utils.only(
                 sched for sched in self._api.get_generic_schedulers()
-                if sched['name'] == self['name'])
-            self['id'] = result['id']
+                if sched.name == self.name)
+            self['id'] = result.id
             if verbose:
                 result = self.get_info(verbose=True)
 
@@ -360,7 +364,7 @@ class Scheduler(dict):
         """
         resp = self._api._request(
             'put',
-            'generic_schedulers/{sid:d}.json'.format(sid=self['id']),
+            'generic_schedulers/{sid:d}.json'.format(sid=self.id),
             data={'scheduler': kwargs})
         resp.raise_for_status()
 
@@ -369,8 +373,7 @@ class Scheduler(dict):
         """Add a role with specific count to the scheduler"""
         resp = self._api._request(
             'post',
-            'generic_schedulers/{sid:d}/add_role.json'.format(sid=self[
-                'id']),
+            'generic_schedulers/{sid:d}/add_role.json'.format(sid=self.id),
             data={'role': role, 'count': count})
         resp.raise_for_status()
 
@@ -379,8 +382,7 @@ class Scheduler(dict):
         """Remove a role from the scheduler"""
         resp = self._api._request(
             'post',
-            'generic_schedulers/{sid:d}/remove_role.json'.format(sid=self[
-                'id']),
+            'generic_schedulers/{sid:d}/remove_role.json'.format(sid=self.id),
             data={'role': role})
         resp.raise_for_status()
 
@@ -389,7 +391,7 @@ class Scheduler(dict):
         """Delete a generic scheduler"""
         resp = self._api._request(
             'delete',
-            'generic_schedulers/{sid:d}.json'.format(sid=self['id']))
+            'generic_schedulers/{sid:d}.json'.format(sid=self.id))
         resp.raise_for_status()
 
     @_requires_id
@@ -398,37 +400,15 @@ class Scheduler(dict):
 
         Passing `id` will ensure fastest access, but `symmetry_groups` or
         `profile` will also work."""
-        return self._api.profile(*args, scheduler_id=self['id'], **kwargs)
+        return self._api.profile(*args, scheduler_id=self.id, **kwargs)
 
     def remove_all_profiles(self):
         """Removes all profiles from a scheduler"""
-        for profile in self.get_info(verbose=True)['scheduling_requirements']:
+        for profile in self.get_info(verbose=True).scheduling_requirements:
             profile.remove()
 
-    def num_running_profiles(self):
-        """Get the number of currently running profiles"""
-        update = self.get_info(verbose=True)
-        # Sum profiles that aren't complete
-        return sum(req['current_count'] < req['requirement']
-                   for req in update['scheduling_requirements'] or ())
 
-    def running_profiles(self):
-        """Get a set of the active profiles"""
-        update = self.get_info(verbose=True)
-        return (req for req in update['scheduling_requirements'] or ()
-                if req['current_count'] < req['requirement'])
-
-    def are_profiles_still_active(self, profile_ids):
-        """Returns true if any of the profile ids in profiles are active"""
-        profile_ids = set(profile_ids)
-        update = self.get_info(verbose=True)
-        return any(
-            req['profile_id'] in profile_ids
-            and req['current_count'] < req['requirement']
-            for req in update['scheduling_requirements'] or ())
-
-
-class Profile(dict):
+class Profile(_AttrDict):
     """Class for manipulating profiles
 
     Key fields are `scheduler_id` the id of the scheduler these methods will
@@ -449,21 +429,21 @@ class Profile(dict):
         if 'id' in self:
             resp = self._api._request(
                 'get',
-                'profiles/{pid:d}.json'.format(pid=self['id']))
+                'profiles/{pid:d}.json'.format(pid=self.id))
             resp.raise_for_status()
             result = json.loads(resp.text)
             if 'scheduler_id' in self:
-                result['scheduler_id'] = self['scheduler_id']
+                result['scheduler_id'] = self.scheduler_id
             return self._api.profile(result)
 
         elif 'scheduler_id' in self and (
                 'profile' in self or 'symmetry_groups' in self):
             profile_desc = self.get_game_analysis_profile()
-            for prof in (self._api.scheduler(id=self['scheduler_id'])
-                         .get(verbose=True)['scheduling_requirements']):
+            for prof in (self._api.scheduler(id=self.scheduler_id)
+                         .get(verbose=True).scheduling_requirements):
                 other_desc = prof.get_info().get_game_analysis_profile()
                 if profile_desc == other_desc:
-                    self['id'] = prof['id']
+                    self['id'] = prof.id
                     return prof
 
             raise ValueError('Could not find matching profile in scheduler')
@@ -476,10 +456,10 @@ class Profile(dict):
         """Get a Game Analysis Profile object"""
 
         if 'profile' in self:
-            return profile.Profile(self['profile'])
+            return profile.Profile(self.profile)
         elif 'symmetry_groups' in self:
             return profile.Profile.from_symmetry_groups(
-                self['symmetry_groups'])
+                self.symmetry_groups)
         elif 'id' in self:
             return self.get_info().get_game_analysis_profile()
         else:
@@ -502,7 +482,7 @@ class Profile(dict):
         resp = self._api._request(
             'post',
             'generic_schedulers/{sid:d}/add_profile.json'.format(
-                sid=self['scheduler_id']),
+                sid=self.scheduler_id),
             data={
                 'assignment': str(profile_desc),
                 'count': count
@@ -510,15 +490,15 @@ class Profile(dict):
         resp.raise_for_status()
         result = self._api.profile(json.loads(resp.text))
         if 'scheduler_id' in self:
-            result['scheduler_id'] = self['scheduler_id']
+            result['scheduler_id'] = self.scheduler_id
         return result
 
     def update_count(self, count):
         """Update the count of a profile object"""
         prof_desc = self.get_game_analysis_profile()
         self.remove()
-        self._api.profile(profile=prof_desc, scheduler_id=self[
-                          'scheduler_id']).add(count)
+        self._api.profile(profile=prof_desc, scheduler_id=self.scheduler_id)\
+            .add(count)
 
     @_requires_id
     def remove(self):
@@ -528,12 +508,12 @@ class Profile(dict):
         resp = self._api._request(
             'post',
             'generic_schedulers/{sid:d}/remove_profile.json'.format(
-                sid=self['scheduler_id']),
-            data={'profile_id': self['id']})
+                sid=self.scheduler_id),
+            data={'profile_id': self.id})
         resp.raise_for_status()
 
 
-class Game(dict):
+class Game(_AttrDict):
     """Get information and manipulate EGTA Online Games"""
 
     def __init__(self, *args, **kwargs):
@@ -559,7 +539,7 @@ class Game(dict):
             # a different api.
             resp = self._api._non_api_request(
                 'get',
-                'games/{gid:d}.json'.format(gid=self['id']),
+                'games/{gid:d}.json'.format(gid=self.id),
                 data={'granularity': granularity})
             resp.raise_for_status()
             result = (
@@ -568,9 +548,9 @@ class Game(dict):
                 else json.loads(resp.text))
 
         else:
-            result = utils.only(g for g in self._api.get_games() if g[
-                                'name'] == self['name'])
-            self['id'] = result['id']
+            result = utils.only(g for g in self._api.get_games()
+                                if g.name == self.name)
+            self['id'] = result.id
             if granularity != 'structure':
                 result = self.get_info(granularity=granularity)
 
@@ -581,7 +561,7 @@ class Game(dict):
         """Adds a role to the game"""
         resp = self._api._request(
             'post',
-            'games/{game:d}/add_role.json'.format(game=self['id']),
+            'games/{game:d}/add_role.json'.format(game=self.id),
             data={'role': role, 'count': count})
         resp.raise_for_status()
 
@@ -590,7 +570,7 @@ class Game(dict):
         """Removes a role from the game"""
         resp = self._api._request(
             'post',
-            'games/{game:d}/remove_role.json'.format(game=self['id']),
+            'games/{game:d}/remove_role.json'.format(game=self.id),
             data={'role': role})
         resp.raise_for_status()
 
@@ -599,7 +579,7 @@ class Game(dict):
         """Adds a strategy to the game"""
         resp = self._api._request(
             'post',
-            'games/{game:d}/add_strategy.json'.format(game=self['id']),
+            'games/{game:d}/add_strategy.json'.format(game=self.id),
             data={'role': role, 'strategy': strategy})
         resp.raise_for_status()
 
@@ -616,7 +596,7 @@ class Game(dict):
         """Removes a strategy from the game"""
         resp = self._api._request(
             'post',
-            'games/{game:d}/remove_strategy.json'.format(game=self['id']),
+            'games/{game:d}/remove_strategy.json'.format(game=self.id),
             data={'role': role, 'strategy': strategy})
         resp.raise_for_status()
 
