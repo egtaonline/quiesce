@@ -11,40 +11,42 @@ class ProfileScheduler(object):
         self._log = log
 
         self._queue = collections.deque()
-        self._running_ids = set()
+        self._complete_ids = set()
 
     def schedule(self, profiles, numobs):
         """Add a set of profiles to schedule"""
         promise = ScheduledSet(self, numobs)
         self._queue.append(
-            (promise, numobs, profiles))
+            (promise, numobs, itertools.chain(profiles, [_END])))
         return promise
 
     def update(self):
         """Schedules as many profiles as possible"""
-        count = self._scheduler.num_running_profiles()
+        all_profiles = self._scheduler.get_info(True).scheduling_requirements
+        count_left = self._max_profiles - sum(
+            req.current_count < req.requirement for req in all_profiles or ())
+        all_profiles = {prof.id for prof in all_profiles}
 
         # Loop over necessary that we can schedule
-        while count < self._max_profiles and self._queue:
+        while count_left > 0 and self._queue:
             promise, numobs, profiles = self._queue[0]
+            profile = next(profiles)
 
-            for profile in itertools.islice(itertools.chain(profiles, [None]),
-                                            self._max_profiles - count):
-                if profile is None:  # Reached end of list
-                    self._queue.popleft()
-                    promise._all_scheduled = True
+            if profile is _END:  # Reached end of list
+                self._queue.popleft()
+                promise._all_scheduled = True
 
-                else:  # Process profile
-                    self._log.log(1, 'Scheduling profile: %s', profile)
-                    prof = self._scheduler.profile(profile=profile).add(numobs)
-                    promise._add_profile(prof)
-
-            # Update count
-            count = self._scheduler.num_running_profiles()
+            else:  # Process profile
+                self._log.log(1, 'Scheduling profile: %s', profile)
+                prof = self._scheduler.profile(profile=profile).add(numobs)
+                promise._add_profile(prof)
+                if prof.id not in all_profiles:
+                    count_left -= 1
 
         # Update running ids for active checks
-        self._running_ids = \
-            {p['id'] for p in self._scheduler.running_profiles()}
+        all_profiles = self._scheduler.get_info(True).scheduling_requirements
+        self._complete_ids = {prof.id for prof in all_profiles or ()
+                              if prof.current_count >= prof.requirement}
 
     def deactivate(self):
         """Deactivate the egta online scheduler"""
@@ -63,7 +65,7 @@ class ScheduledSet(object):
         """Returns true if this was entirely scheduled and finished"""
         return (
             self._all_scheduled and
-            self._complete_ids.keys().isdisjoint(self._scheduler._running_ids))
+            self._complete_ids.keys() <= self._scheduler._complete_ids)
 
     def update_count(self, new_count):
         """Request `new_count` observations"""
@@ -79,4 +81,9 @@ class ScheduledSet(object):
         self._scheduler._queue.append((self, new_count, new_profiles))
 
     def _add_profile(self, prof):
-        self._complete_ids[prof['id']] = prof
+        self._complete_ids[prof.id] = prof
+
+
+# Sentinel
+def _END():
+    pass
