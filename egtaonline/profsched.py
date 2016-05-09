@@ -74,6 +74,7 @@ class ScheduledSet(object):
         for profile in self._complete_ids.values():
             profile.remove()
             new_profiles.append(profile.get_game_analysis_profile())
+        new_profiles.append(_END)
 
         self._complete_ids.clear()
         self._all_scheduled = False
