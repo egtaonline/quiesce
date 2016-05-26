@@ -324,6 +324,7 @@ class Quieser(object):
 
         self._log.info('Finished quiescing\nConfirmed equilibria:\n%s',
                        utils.format_json(confirmed_equilibria))
+        self.deactivate()
 
     def deactivate(self):
         """Deactivate the egta online scheduler"""
