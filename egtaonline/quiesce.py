@@ -474,6 +474,7 @@ def main():
         quies._log.error(
             'Caught exception: (%s) %s\nWith traceback:\n%s\n',
             e.__class__.__name__, e, traceback.format_exc())
+        raise e
 
     finally:
         # Make sure to clean up
