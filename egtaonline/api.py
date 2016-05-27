@@ -1,10 +1,11 @@
 """Python package to handle python interface to egta online api"""
-import requests
-import json
-import logging
-import sys
 import functools
 import itertools
+import json
+import logging
+import requests
+import sys
+import time
 
 from lxml import etree
 
@@ -49,8 +50,14 @@ class EgtaOnline(object):
     """Class to wrap egtaonline api"""
 
     def __init__(self, auth_token, domain='egtaonline.eecs.umich.edu',
-                 logLevel=0):
+                 logLevel=0, retry_on=(504,), num_tries=10, retry_delay=60,
+                 retry_backoff=1.2):
         self._domain = domain
+        self._retry_on = frozenset(retry_on)
+        self._num_tries = num_tries
+        self._retry_delay = 20
+        self._retry_backoff = 1.2
+
         self._session = requests.Session()
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(40 - logLevel * 10)
@@ -70,20 +77,32 @@ class EgtaOnline(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self._session.close()
 
+    def _retry_request(self, verb, url, data):
+        data = _encode_data(data)
+        response = None
+        timeout = self._retry_delay
+        for i in range(self._num_tries):
+            self._log.info('%s request to %s with data %s', verb, url, data)
+            response = self._session.request(verb, url, data)
+            if response.status_code not in self._retry_on:
+                return response
+            self._log.info('%s request to %s with data %s failed with status '
+                           '%d, retrying in %.0f seconds', verb, url, data,
+                           response.status_code, timeout)
+            time.sleep(timeout)
+            timeout *= self._retry_backoff
+        return response
+
     def _request(self, verb, api, data=collect.frozendict()):
         """Convenience method for making requests"""
-        data = _encode_data(data)
         url = 'https://{domain}/api/v3/{endpoint}'.format(
             domain=self._domain, endpoint=api)
-        self._log.info('%s request to %s with data %s', verb, url, data)
-        return self._session.request(verb, url, data=data)
+        return self._retry_request(verb, url, data)
 
     def _non_api_request(self, verb, api, data=collect.frozendict()):
-        data = _encode_data(data)
         url = 'https://{domain}/{endpoint}'.format(
             domain=self._domain, endpoint=api)
-        self._log.info('%s request to %s with data %s', verb, url, data)
-        return self._session.request(verb, url, data=data)
+        return self._retry_request(verb, url, data)
 
     def simulator(self, *args, **kwargs):
         """Get a simulator with given properties
