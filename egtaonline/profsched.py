@@ -79,7 +79,7 @@ class ScheduledSet(object):
         self._complete_ids.clear()
         self._all_scheduled = False
 
-        self._scheduler._queue.append((self, new_count, new_profiles))
+        self._scheduler._queue.append((self, new_count, iter(new_profiles)))
 
     def _add_profile(self, prof):
         self._complete_ids[prof.id] = prof
