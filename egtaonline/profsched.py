@@ -1,5 +1,5 @@
-import itertools
 import collections
+import itertools
 
 import numpy as np
 
@@ -8,12 +8,11 @@ from gameanalysis import subgame
 
 
 class QuiesceScheduler(object):
-    def __init__(self, game, serializer, reduction, scheduler, max_profiles,
-                 log):
-        self._game = rsgame.BaseGame(game)
+    def __init__(self, game, reduction, prof_sched):
+        self._game = game
         self._red = reduction
-        self._prof_scheduler = ProfileScheduler(game, serializer, scheduler,
-                                                max_profiles, log)
+        self._prof_scheduler = prof_sched
+        self._update_num = 0
         assert np.all(self._game.num_players == self._red.full_players)
         assert np.all(self._game.num_strategies == self._red.num_strategies)
 
@@ -24,6 +23,7 @@ class QuiesceScheduler(object):
         return DeviationScheduler(self, subgame_mask, counts, role_index)
 
     def update(self):
+        self._update_num += 1
         return self._prof_scheduler.update()
 
 
@@ -35,10 +35,16 @@ class _BaseScheduler(object):
         all_profs = self._profiles()
         sched._prof_scheduler.enqueue(all_profs, counts)
         self._ids = sched._game.profile_id(all_profs)
+        self._last_update = -1
+        self._last_complete = False
 
     def is_complete(self):
-        return all(self._sched._prof_scheduler.get_count(pid) >= self.counts
-                   for pid in self._ids)
+        if self._last_update != self._sched._update_num:
+            self._last_update = self._sched._update_num
+            self._last_complete = all(
+                self._sched._prof_scheduler.get_count(pid) >= self.counts
+                for pid in self._ids)
+        return self._last_complete
 
     def update_counts(self, new_counts):
         self.counts = new_counts
@@ -82,7 +88,8 @@ class DeviationScheduler(_BaseScheduler):
 class ProfileScheduler(object):
     """Class that handles scheduling profiles"""
 
-    def __init__(self, game, serializer, scheduler, max_profiles, log):
+    def __init__(self, game, serializer, scheduler, max_profiles, log,
+                 profiles=()):
         self._game = game
         self._serial = serializer
         self._scheduler = scheduler
@@ -90,8 +97,18 @@ class ProfileScheduler(object):
         self._log = log
 
         self._queue = collections.deque()
-        self._gid_payoffs = {}  # Game ids: game.profile_id
-        self._sid_payoffs = {}  # Simulator ids: profile.id
+        # Game ids: game.profile_id, Simulator ids: profile.id
+        self._gid_payoffs = {}
+        self._sid_payoffs = {}
+
+        for jprof in profiles:
+            gid = game.profile_id(serializer.from_prof_symgrp(
+                jprof['symmetry_groups']))
+            sid = jprof['id']
+            payoff = serializer.from_payoff_symgrp(jprof['symmetry_groups'])
+            data = (sid, [jprof['observations_count']], payoff)
+            self._gid_payoffs[gid] = data
+            self._sid_payoffs[sid] = data
 
     def enqueue(self, profiles, numobs):
         """Add a set of profiles to schedule"""
@@ -129,7 +146,7 @@ class ProfileScheduler(object):
             else:  # Process profile
                 gid = self._game.profile_id(profile)
                 if gid in self._gid_payoffs:
-                    sid, count, _ = self._sid_payoffs[prof.id]
+                    sid, count, _ = self._gid_payoffs[gid]
                     if numobs > count[0]:
                         self._scheduler.profile(id=sid).update_count(numobs)
                         count_left -= 1
@@ -161,6 +178,9 @@ class ProfileScheduler(object):
     def get_count(self, profile_id):
         return (0 if profile_id not in self._gid_payoffs
                 else self._gid_payoffs[profile_id][1][0])
+
+    def get_data(self):
+        return (self._gid_payoffs, self._sid_payoffs)
 
 
 # Sentinel
