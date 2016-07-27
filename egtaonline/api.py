@@ -39,6 +39,7 @@ def _encode_data(data):
 
 
 class _Base(dict):
+
     def __init__(self, *args, api=None, **kwargs):
         assert api is not None
         super().__init__(*args, **kwargs)
@@ -513,7 +514,8 @@ class Game(_Base):
                 result = json.loads(resp.json())
             else:
                 result = resp.json()
-                result['profiles'] = [Profile(p, api=self._api) for p in result['profiles']]
+                result['profiles'] = [
+                    Profile(p, api=self._api) for p in result['profiles']]
 
         else:
             result = utils.only(g for g in self._api.get_games()
@@ -581,7 +583,8 @@ class Game(_Base):
 def symgrps_to_profile(symmetry_groups):
     roles = {}
     for symgrp in symmetry_groups:
-        role, strat, count = symgrp['role'], symgrp['strategy'], symgrp['count']
+        role, strat, count = symgrp['role'], symgrp[
+            'strategy'], symgrp['count']
         roles.setdefault(role, []).append((strat, count))
     return '; '.join(
         '{}: {}'.format(role, ', '.join('{:d} {}'.format(count, strat)

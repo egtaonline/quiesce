@@ -100,10 +100,10 @@ _sched_group.add_argument('--nodes', metavar='<nodes>', type=int, default=1,
 
 
 def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
-            log=logging, profiles=(), all_devs=True, max_profiles=500, max_subgame_size=3,
-            sleep_time=300, required_equilibria=1, regret_thresh=1e-3,
-            reschedule_limit=10, process_memory=4096, observation_time=600,
-            observation_increment=1, nodes=1):
+            log=logging, profiles=(), all_devs=True, max_profiles=500,
+            max_subgame_size=3, sleep_time=300, required_equilibria=1,
+            regret_thresh=1e-3, reschedule_limit=10, process_memory=4096,
+            observation_time=600, observation_increment=1, nodes=1):
     """Quiesce a game"""
 
     # Create scheduler
@@ -128,7 +128,8 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
              sched.id, sched.id)
 
     # Data lookup
-    psched = profsched.ProfileScheduler(game, serial, sched, max_profiles, log, profiles)
+    psched = profsched.ProfileScheduler(
+        game, serial, sched, max_profiles, log, profiles)
 
     # Set up reduction
     if dpr is None:
@@ -166,7 +167,8 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
 
     def add_mixture(mixture, role_index=None):
         """Adds the given mixture to the scheduler"""
-        if any(linalg.norm(mix - mixture) < 1e-3 and (role_index is None or role_index <= ri)
+        if any(linalg.norm(mix - mixture) < 1e-3 and (
+                role_index is None or role_index <= ri)
                for mix, ri in explored_mixtures):
             if role_index is None:
                 log.debug('Mixture already explored:\n%s\n', json.dumps(
@@ -178,13 +180,15 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
         else:
             explored_mixtures.append((mixture, role_index))
             if role_index is None:
-                log.debug('Exploring equilibrium deviations:\n%s\n', json.dumps(
-                    serial.to_prof_json(mixture), indent=2))
-            else:
-                log.debug('Exploring equilibrium deviations for role "%s":\n%s\n',
-                          serial.role_names[role_index],
+                log.debug('Exploring equilibrium deviations:\n%s\n',
                           json.dumps(serial.to_prof_json(mixture), indent=2))
-            dev = qsched.schedule_deviations(mixture > 0, observation_increment, role_index)
+            else:
+                log.debug(
+                    'Exploring equilibrium deviations for role "%s":\n%s\n',
+                    serial.role_names[role_index],
+                    json.dumps(serial.to_prof_json(mixture), indent=2))
+            dev = qsched.schedule_deviations(
+                mixture > 0, observation_increment, role_index)
             deviations.append((mixture, dev))
 
     def analyze_subgame(unsched_subgames, sub):
@@ -196,21 +200,29 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                                     sub.subgame_mask)
             if eqa.size == 0:  # No equilibria
                 if sub.counts < reschedule_limit * observation_increment:
-                    log.info('Found no equilibria in subgame:\n%s\n', json.dumps(
-                        {r: list(s) for r, s in serial.to_prof_json(sub.subgame_mask).items()},
-                        indent=2))
+                    log.info(
+                        'Found no equilibria in subgame:\n%s\n',
+                        json.dumps(
+                            {r: list(s) for r, s
+                             in serial.to_prof_json(sub.subgame_mask).items()},
+                            indent=2))
                     sub.update_counts(sub.counts + observation_increment)
                     unsched_subgames.append(sub)
                 else:
-                    log.error('Failed to find equilibria in subgame:\n%s\n', json.dumps(
-                        {r: list(s) for r, s in serial.to_prof_json(subm).items()},
-                        indent=2))
+                    log.error(
+                        'Failed to find equilibria in subgame:\n%s\n',
+                        json.dumps(
+                            {r: list(s)
+                             for r, s in serial.to_prof_json(subm).items()},
+                            indent=2))
             else:
                 log.debug(
                     'Found candidate equilibria:\n%s\nin subgame:\n%s\n',
                     json.dumps(list(map(serial.to_prof_json, eqa)), indent=2),
-                    json.dumps({r: list(s) for r, s in serial.to_prof_json(sub.subgame_mask).items()},
-                               indent=2))
+                    json.dumps(
+                        {r: list(s) for r, s in
+                         serial.to_prof_json(sub.subgame_mask).items()},
+                        indent=2))
                 if all_devs:
                     for eqm in eqa:
                         add_mixture(eqm)
@@ -225,15 +237,17 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
             """Analyzes responses to an equilibrium and book keeps"""
             if dev.is_complete():
                 dev_game = dev.get_game()
-                responses = regret.mixture_deviation_gains(dev_game, mix,
-                                                           assume_complete=True)
+                responses = regret.mixture_deviation_gains(
+                    dev_game, mix, assume_complete=True)
                 log.debug('Responses:\n%s\nto candidate equilibrium:\n%s\n',
-                          json.dumps(serial.to_prof_json(responses, filter_zeros=False), indent=2),
+                          json.dumps(serial.to_prof_json(
+                              responses, filter_zeros=False), indent=2),
                           json.dumps(serial.to_prof_json(mix), indent=2))
 
                 if np.all(responses < regret_thresh):
                     # found equilibria
-                    if not any(linalg.norm(m - mix) < 1e-3 for m in confirmed_equilibria):
+                    if not any(linalg.norm(m - mix) < 1e-3 for m
+                               in confirmed_equilibria):
                         confirmed_equilibria.append(mix)
                         log.info('Confirmed equilibrium:\n%s\n', json.dumps(
                             serial.to_prof_json(mix), indent=2))
@@ -241,8 +255,10 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                 else:  # Queue up next subgames
                     subsize = dev.subgame_mask.sum()
                     # TODO Normalize role deviations
-                    for rstart, role_resps in zip(game.role_starts, game.role_split(responses)):
-                        order = np.argpartition(role_resps, role_resps.size-1)
+                    for rstart, role_resps in zip(game.role_starts,
+                                                  game.role_split(responses)):
+                        order = np.argpartition(
+                            role_resps, role_resps.size - 1)
                         gain = role_resps[order[-1]]
                         if gain > 0:
                             # Positive best response exists for role
@@ -256,10 +272,10 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                                     subm))
                             order = order[:-1]
 
-                        # Priority for backup is (not best response, not beneficial
-                        # response, subgame size, deviation loss). Thus, best
-                        # responses are first, then positive responses, then small
-                        # subgames, then highest gain.
+                        # Priority for backup is (not best response, not
+                        # beneficial response, subgame size, deviation loss).
+                        # Thus, best responses are first, then positive
+                        # responses, then small subgames, then highest gain.
 
                         # Add the rest to the backup
                         for ind in order:
@@ -278,18 +294,22 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                 dev_game = dev.get_game()
                 role_resps = game.role_split(regret.mixture_deviation_gains(
                     dev_game, mix, assume_complete=True))[dev.role_index]
-                log.debug('"%s" Responses:\n%s\nto candidate equilibrium:\n%s\n',
-                          serial.role_names[dev.role_index],
-                          json.dumps(dict(zip(serial.strat_names[dev.role_index], role_resps)), indent=2),
-                          json.dumps(serial.to_prof_json(mix), indent=2))
+                log.debug(
+                    '"%s" Responses:\n%s\nto candidate equilibrium:\n%s\n',
+                    serial.role_names[dev.role_index],
+                    json.dumps(dict(zip(serial.strat_names[dev.role_index],
+                                        role_resps)), indent=2),
+                    json.dumps(serial.to_prof_json(mix), indent=2))
 
                 if np.all(role_resps < regret_thresh):
                     # role has no deviations
                     if dev.role_index == game.num_roles - 1:
-                        if not any(linalg.norm(m - mix) < 1e-3 for m in confirmed_equilibria):
+                        if not any(linalg.norm(m - mix) < 1e-3 for m
+                                   in confirmed_equilibria):
                             confirmed_equilibria.append(mix)
-                            log.info('Confirmed equilibrium:\n%s\n', json.dumps(
-                                serial.to_prof_json(mix), indent=2))
+                            log.info('Confirmed equilibrium:\n%s\n',
+                                     json.dumps(serial.to_prof_json(mix),
+                                                indent=2))
                     else:
                         add_mixture(mix, dev.role_index + 1)
 
@@ -297,7 +317,7 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                     subsize = dev.subgame_mask.sum()
                     # TODO Normalize role deviations
                     rstart = game.role_starts[dev.role_index]
-                    order = np.argpartition(role_resps, role_resps.size-1)
+                    order = np.argpartition(role_resps, role_resps.size - 1)
                     gain = role_resps[order[-1]]
 
                     # Positive best response exists for role

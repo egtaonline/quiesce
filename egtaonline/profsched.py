@@ -8,6 +8,7 @@ from gameanalysis import subgame
 
 
 class QuiesceScheduler(object):
+
     def __init__(self, game, reduction, prof_sched):
         self._game = game
         self._red = reduction
@@ -28,6 +29,7 @@ class QuiesceScheduler(object):
 
 
 class _BaseScheduler(object):
+
     def __init__(self, sched, subgame_mask, counts):
         self._sched = sched
         self.subgame_mask = subgame_mask
@@ -52,10 +54,12 @@ class _BaseScheduler(object):
 
 
 class SubgameScheduler(_BaseScheduler):
+
     def _profiles(self):
         support = self._sched._game.role_reduce(self.subgame_mask)
         return self._sched._red.expand_profiles(subgame.translate(
-            rsgame.BaseGame(self._sched._red.reduced_players, support).all_profiles(),
+            rsgame.BaseGame(self._sched._red.reduced_players,
+                            support).all_profiles(),
             self.subgame_mask))
 
     def get_subgame(self):
@@ -67,6 +71,7 @@ class SubgameScheduler(_BaseScheduler):
 
 
 class DeviationScheduler(_BaseScheduler):
+
     def __init__(self, sched, subgame_mask, counts, role_index):
         self.role_index = role_index
         super().__init__(sched, subgame_mask, counts)

@@ -260,8 +260,10 @@ def main():
             if args.sched_id is None:  # Get all simulators
                 scheds = api.get_generic_schedulers()
                 if args.delete:
-                    reg = re.compile(r'.*_generic_quiesce(_[a-zA-Z]+_\d+)*_[a-zA-Z0-9]{6}')
-                    fscheds = (s for s in scheds if reg.fullmatch(s.name) and not s.active)
+                    reg = re.compile(
+                        r'.*_generic_quiesce(_[a-zA-Z]+_\d+)*_[a-zA-Z0-9]{6}')
+                    fscheds = (s for s in scheds if reg.fullmatch(
+                        s.name) and not s.active)
 
                     if args.delete > 1:
                         for sched in fscheds:
@@ -269,7 +271,8 @@ def main():
                     else:
                         for sched in fscheds:
                             print(tabulate.tabulate(sched.items()))
-                            if 'y' == input('Delete Scheduler [N/y]: ').lower():
+                            inp = input('Delete Scheduler [N/y]: ').lower()
+                            if 'y' == inp:
                                 sched.delete_scheduler()
 
                 else:

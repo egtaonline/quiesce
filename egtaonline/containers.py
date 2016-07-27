@@ -5,6 +5,7 @@ import collections
 
 class priorityqueue(collections.Iterable):
     """Priority queue with more sensible interface"""
+
     def __init__(self, init_elems=()):
         self._elems = list(init_elems)
         heapq.heapify(self._elems)
@@ -99,6 +100,7 @@ class MixtureSet(collections.Iterable):
     By default this keeps the previous element. This could be done better with
     locality hashing, but as it is, it just does linear scans. Since we don't
     usually have many equilibira, linear scans aren't that bad."""
+
     def __init__(self, tolerance):
         self.tolerance = tolerance
         self._mixtures = []
