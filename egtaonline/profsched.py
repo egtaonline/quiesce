@@ -5,6 +5,7 @@ import numpy as np
 
 from gameanalysis import rsgame
 from gameanalysis import subgame
+from gameanalysis import utils
 
 
 class QuiesceScheduler(object):
@@ -36,7 +37,7 @@ class _BaseScheduler(object):
         self.counts = counts
         all_profs = self._profiles()
         sched._prof_scheduler.enqueue(all_profs, counts)
-        self._ids = sched._game.profile_id(all_profs)
+        self._profs = list(map(utils.hash_array, all_profs))
         self._last_update = -1
         self._last_complete = False
 
@@ -44,8 +45,8 @@ class _BaseScheduler(object):
         if self._last_update != self._sched._update_num:
             self._last_update = self._sched._update_num
             self._last_complete = all(
-                self._sched._prof_scheduler.get_count(pid) >= self.counts
-                for pid in self._ids)
+                self._sched._prof_scheduler.get_count(phash) >= self.counts
+                for phash in self._profs)
         return self._last_complete
 
     def update_counts(self, new_counts):
@@ -63,9 +64,10 @@ class SubgameScheduler(_BaseScheduler):
             self.subgame_mask))
 
     def get_subgame(self):
-        profiles = self._profiles()
-        payoffs = np.concatenate([self._sched._prof_scheduler[pid][None]
-                                  for pid in self._ids])
+        profiles = np.concatenate([phash.array[None] for phash
+                                   in self._profs])
+        payoffs = np.concatenate([self._sched._prof_scheduler[phash][None]
+                                  for phash in self._profs])
         return subgame.subgame(self._sched._red.reduce_game(rsgame.Game(
             self._sched._game, profiles, payoffs)), self.subgame_mask)
 
@@ -81,11 +83,11 @@ class DeviationScheduler(_BaseScheduler):
                                                           self.role_index)
 
     def get_game(self):
-        profiles = np.concatenate([self._profiles(),
-                                   SubgameScheduler._profiles(self)])
-        ids = self._sched._game.profile_id(profiles)
-        payoffs = np.concatenate([self._sched._prof_scheduler[pid][None]
-                                  for pid in ids])
+        hashes = self._profs + list(map(utils.hash_array,
+                                        SubgameScheduler._profiles(self)))
+        profiles = np.concatenate([phash.array[None] for phash in hashes])
+        payoffs = np.concatenate([self._sched._prof_scheduler[phash][None]
+                                  for phash in hashes])
         return self._sched._red.reduce_game(rsgame.Game(
             self._sched._game, profiles, payoffs), True)
 
@@ -102,17 +104,17 @@ class ProfileScheduler(object):
         self._log = log
 
         self._queue = collections.deque()
-        # Game ids: game.profile_id, Simulator ids: profile.id
-        self._gid_payoffs = {}
+        # Profile hashes: utils.hash_array, Simulator ids: profile.id
+        self._phash_payoffs = {}
         self._sid_payoffs = {}
 
         for jprof in profiles:
-            gid = game.profile_id(serializer.from_prof_symgrp(
+            phash = utils.hash_array(serializer.from_prof_symgrp(
                 jprof['symmetry_groups']))
             sid = jprof['id']
             payoff = serializer.from_payoff_symgrp(jprof['symmetry_groups'])
             data = (sid, [jprof['observations_count']], payoff)
-            self._gid_payoffs[gid] = data
+            self._phash_payoffs[phash] = data
             self._sid_payoffs[sid] = data
 
     def enqueue(self, profiles, numobs):
@@ -149,12 +151,13 @@ class ProfileScheduler(object):
                 self._queue.popleft()
 
             else:  # Process profile
-                gid = self._game.profile_id(profile)
-                if gid in self._gid_payoffs:
-                    sid, count, _ = self._gid_payoffs[gid]
+                phash = utils.hash_array(profile)
+                if phash in self._phash_payoffs:
+                    sid, count, _ = self._phash_payoffs[phash]
                     if numobs > count[0]:
                         sprof = self._scheduler.profile(
-                            id=sid, assignment=serial.to_prof_string(profile))
+                            id=sid,
+                            assignment=self._serial.to_prof_string(profile))
                         sprof.update_count(numobs)
                         count_left -= 1
                         changed = True
@@ -164,7 +167,7 @@ class ProfileScheduler(object):
                     sid = self._scheduler.add_profile(string, numobs).id
                     tup = (sid, [0],
                            np.empty(self._serial.num_role_strats))
-                    self._gid_payoffs[gid] = tup
+                    self._phash_payoffs[phash] = tup
                     self._sid_payoffs[sid] = tup
                     count_left -= 1
                     changed = True
@@ -176,18 +179,26 @@ class ProfileScheduler(object):
         # Must be '0' not 'False'
         self._scheduler.update(active=0)
 
-    def __getitem__(self, profile_id):
-        return self._gid_payoffs[profile_id][2]
+    def __getitem__(self, phash):
+        return self._phash_payoffs[phash][2]
 
-    def __contains__(self, profile_id):
-        return profile_id in self._gid_payoffs
+    def __contains__(self, phash):
+        return phash in self._phash_payoffs
 
-    def get_count(self, profile_id):
-        return (0 if profile_id not in self._gid_payoffs
-                else self._gid_payoffs[profile_id][1][0])
+    def get_count(self, phash):
+        return (0 if phash not in self._phash_payoffs
+                else self._phash_payoffs[phash][1][0])
 
-    def get_data(self):
-        return (self._gid_payoffs, self._sid_payoffs)
+    def get_game(self):
+        profiles = np.empty((len(self._phash_payoffs),
+                             self._game.num_role_strats), int)
+        payoffs = np.empty(profiles.shape, float)
+
+        for i, (phash, (_, _, pay)) in enumerate(self._phash_payoffs.items()):
+            profiles[i] = phash.array
+            payoffs[i] = pay
+
+        return rsgame.Game(self._game, profiles, payoffs)
 
 
 # Sentinel

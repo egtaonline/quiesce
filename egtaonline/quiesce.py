@@ -354,7 +354,7 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
         # While still scheduling left to do
         while subgames or deviations:
             if (qsched.update() or any(s.is_complete() for s in subgames) or
-                    any(d.is_complete() for d in deviations)):
+                    any(d.is_complete() for _, d in deviations)):
                 # Something finished scheduling
                 unsched_subgames = []
                 for sub in subgames:
@@ -380,20 +380,30 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                           sleep_time)
                 time.sleep(sleep_time)
 
-        log.error('Finished quiescing\nConfirmed equilibria:\n%s', json.dumps(
-            list(map(serial.to_prof_json, confirmed_equilibria)), indent=2))
-        sched.deactivate()
-        sched.delete_scheduler()
-
     except KeyboardInterrupt:
         # Manually killed, so just deactivate
         log.error('Manually killed quiesce script. Deactivating scheduler')
         sched.deactivate()
 
-    # FIXME return failed subgames and game file
-    return (np.array(confirmed_equilibria) if confirmed_equilibria
-            else np.empty((0, game.num_role_strats)),
-            np.array(explored_subgames))
+    sched.deactivate()
+    sched.delete_scheduler()
+
+    final_game = psched.get_game()
+    red_game = red.reduce_game(final_game, True)
+    equilibria = (np.array(confirmed_equilibria) if confirmed_equilibria
+                  else np.empty((0, game.num_role_strats)))
+    complete_subgames = np.array(explored_subgames)
+    regrets = np.fromiter((regret.mixture_regret(red_game, eqm)
+                           for eqm in confirmed_equilibria),
+                          float, len(confirmed_equilibria))
+    final_log = [dict(regret=float(r), equilibrium=serial.to_prof_json(eqm))
+                 for eqm, r in zip(equilibria, regrets)]
+
+    log.error('Finished quiescing\nConfirmed equilibria:\n%s',
+              json.dumps(final_log, indent=2))
+
+    # TODO return failed subgames
+    return equilibria, complete_subgames, final_game
 
 
 def main():
