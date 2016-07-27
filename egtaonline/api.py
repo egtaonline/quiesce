@@ -470,7 +470,7 @@ class Profile(_Base):
             assignment = symgrps_to_profile(
                 self.symmetry_groups)
         else:
-            assignment = self.get_info().assignment
+            assignment = symgrps_to_profile(self.get_info().symmetry_groups)
         self.remove()
         return self._api.scheduler(id=self.scheduler_id).add_profile(
             assignment, count)
