@@ -153,7 +153,9 @@ class ProfileScheduler(object):
                 if gid in self._gid_payoffs:
                     sid, count, _ = self._gid_payoffs[gid]
                     if numobs > count[0]:
-                        self._scheduler.profile(id=sid).update_count(numobs)
+                        sprof = self._scheduler.profile(
+                            id=sid, assignment=serial.to_prof_string(profile))
+                        sprof.update_count(numobs)
                         count_left -= 1
                         changed = True
                 else:
