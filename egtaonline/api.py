@@ -9,9 +9,6 @@ import time
 
 from lxml import etree
 
-from gameanalysis import collect
-from gameanalysis import profile
-
 from egtaonline import utils
 
 # Decorator to update object id if unknown as most api calls require an id
@@ -41,7 +38,12 @@ def _encode_data(data):
     return encoded
 
 
-class _AttrDict(dict):
+class _Base(dict):
+    def __init__(self, *args, api=None, **kwargs):
+        assert api is not None
+        super().__init__(*args, **kwargs)
+        self._api = api
+
     def __getattr__(self, name):
         return self[name]
 
@@ -52,7 +54,7 @@ class EgtaOnline(object):
     def __init__(self, auth_token, domain='egtaonline.eecs.umich.edu',
                  logLevel=0, retry_on=(504,), num_tries=10, retry_delay=60,
                  retry_backoff=1.2):
-        self._domain = domain
+        self.domain = domain
         self._retry_on = frozenset(retry_on)
         self._num_tries = num_tries
         self._retry_delay = 20
@@ -64,7 +66,7 @@ class EgtaOnline(object):
         self._log.addHandler(logging.StreamHandler(sys.stderr))
 
         # This authenticates us for the duration of the session
-        self._session.get('https://{domain}'.format(domain=self._domain),
+        self._session.get('https://{domain}'.format(domain=self.domain),
                           data={'auth_token': auth_token})
 
     def close(self):
@@ -93,15 +95,15 @@ class EgtaOnline(object):
             timeout *= self._retry_backoff
         return response
 
-    def _request(self, verb, api, data=collect.frozendict()):
+    def _request(self, verb, api, data={}):
         """Convenience method for making requests"""
         url = 'https://{domain}/api/v3/{endpoint}'.format(
-            domain=self._domain, endpoint=api)
+            domain=self.domain, endpoint=api)
         return self._retry_request(verb, url, data)
 
-    def _non_api_request(self, verb, api, data=collect.frozendict()):
+    def _non_api_request(self, verb, api, data={}):
         url = 'https://{domain}/{endpoint}'.format(
-            domain=self._domain, endpoint=api)
+            domain=self.domain, endpoint=api)
         return self._retry_request(verb, url, data)
 
     def simulator(self, *args, **kwargs):
@@ -110,37 +112,37 @@ class EgtaOnline(object):
         Specifying `id` is the most efficient, but a `name` and optionally a
         `version` if several simulators with the same name exist will also
         work."""
-        return Simulator(*args, _api=self, **kwargs)
+        return Simulator(*args, api=self, **kwargs)
 
     def get_simulators(self):
         """Get all known simulators"""
         resp = self._request('get', 'simulators')
         resp.raise_for_status()
-        return map(self.simulator, json.loads(resp.text)['simulators'])
+        return map(self.simulator, resp.json()['simulators'])
 
     def scheduler(self, *args, **kwargs):
         """Get a scheduler with given properties
 
         Specifying `id` is the most efficient, but `name` will also suffice."""
-        return Scheduler(*args, _api=self, **kwargs)
+        return Scheduler(*args, api=self, **kwargs)
 
     def get_generic_schedulers(self):
         """Get a generator of all known generic schedulers"""
         resp = self._request('get', 'generic_schedulers')
         resp.raise_for_status()
-        return map(self.scheduler, json.loads(resp.text)['generic_schedulers'])
+        return map(self.scheduler, resp.json()['generic_schedulers'])
 
     def game(self, *args, **kwargs):
         """Get a game with given properties
 
         Specifying `id` is the most efficient, but `name` will also suffice."""
-        return Game(*args, _api=self, **kwargs)
+        return Game(*args, api=self, **kwargs)
 
     def get_games(self):
         """Get a generator of all of the game structures"""
         resp = self._request('get', 'games')
         resp.raise_for_status()
-        return map(self.game, json.loads(resp.text)['games'])
+        return map(self.game, resp.json()['games'])
 
     def profile(self, *args, **kwargs):
         """Get a profile with given properties
@@ -148,7 +150,7 @@ class EgtaOnline(object):
         `scheduler_id` must be specified for most actions. `id` will make most
         calls significantly more efficient. `id`s can be found with a
         scheduler's `get_info` when verbose=True."""
-        return Profile(*args, _api=self, **kwargs)
+        return Profile(*args, api=self, **kwargs)
 
     _mapping = {
         'job': 'job_id',
@@ -204,12 +206,8 @@ class EgtaOnline(object):
                 for key, val in parsed}
 
 
-class Simulator(_AttrDict):
+class Simulator(_Base):
     """Get information about and modify EGTA Online Simulators"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._api = self.pop('_api')
 
     def get_info(self):
         """Return information about this simulator
@@ -223,7 +221,7 @@ class Simulator(_AttrDict):
             resp = self._api._request(
                 'get', 'simulators/{sim:d}.json'.format(sim=self.id))
             resp.raise_for_status()
-            result = self._api.simulator(json.loads(resp.text))
+            result = self._api.simulator(resp.json())
             self['id'] = result.id
 
         elif 'version' in self:
@@ -334,15 +332,11 @@ class Simulator(_AttrDict):
                 'configuration': configuration
             }})
         resp.raise_for_status()
-        return self._api.scheduler(json.loads(resp.text))
+        return self._api.scheduler(resp.json())
 
 
-class Scheduler(_AttrDict):
+class Scheduler(_Base):
     """Get information and modify EGTA Online Scheduler"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._api = self.pop('_api')
 
     def get_info(self, verbose=False):
         """Get a scheduler information
@@ -358,7 +352,7 @@ class Scheduler(_AttrDict):
                 'schedulers/{sched_id}.json'.format(sched_id=self.id),
                 data)
             resp.raise_for_status()
-            result = self._api.scheduler(json.loads(resp.text))
+            result = self._api.scheduler(resp.json())
             if verbose:
                 result['scheduling_requirements'] = [
                     self.profile(prof, id=prof['profile_id']) for prof
@@ -380,12 +374,19 @@ class Scheduler(_AttrDict):
 
         kwargs are any of the mandatory arguments for create_generic_scheduler
 
+        Note: active should be in {0, 1} not {True, False}
         """
         resp = self._api._request(
             'put',
             'generic_schedulers/{sid:d}.json'.format(sid=self.id),
             data={'scheduler': kwargs})
         resp.raise_for_status()
+
+    def activate(self):
+        self.update(active=1)
+
+    def deactivate(self):
+        self.update(active=0)
 
     @_requires_id
     def add_role(self, role, count):
@@ -414,6 +415,20 @@ class Scheduler(_AttrDict):
         resp.raise_for_status()
 
     @_requires_id
+    def add_profile(self, assignment, count):
+        """Add a profile to the scheduler"""
+        resp = self._api._request(
+            'post',
+            'generic_schedulers/{sid:d}/add_profile.json'.format(
+                sid=self.id),
+            data={
+                'assignment': assignment,
+                'count': count
+            })
+        resp.raise_for_status()
+        return self.profile(resp.json())
+
+    @_requires_id
     def profile(self, *args, **kwargs):
         """Get a profile object capable of profile manipulation
 
@@ -427,7 +442,7 @@ class Scheduler(_AttrDict):
             profile.remove()
 
 
-class Profile(_AttrDict):
+class Profile(_Base):
     """Class for manipulating profiles
 
     Key fields are `scheduler_id` the id of the scheduler these methods will
@@ -435,95 +450,32 @@ class Profile(_AttrDict):
     groups of the profile. `profile` the {role: {strategy: count}}
     representation of the profile."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._api = self.pop('_api')
-
     def get_info(self):
-        """Gets information about the profile
-
-        This is extremely slow if `id` is not present. This will only return a
-        result if a profile with identical symmetry groups or profile exists in
-        the scheduler matching `scheduler_id`."""
-        if 'id' in self:
-            resp = self._api._request(
-                'get',
-                'profiles/{pid:d}.json'.format(pid=self.id))
-            resp.raise_for_status()
-            result = json.loads(resp.text)
-            if 'scheduler_id' in self:
-                result['scheduler_id'] = self.scheduler_id
-            return self._api.profile(result)
-
-        elif 'scheduler_id' in self and (
-                'profile' in self or 'symmetry_groups' in self):
-            profile_desc = self.get_game_analysis_profile()
-            for prof in (self._api.scheduler(id=self.scheduler_id)
-                         .get(verbose=True).scheduling_requirements):
-                other_desc = prof.get_info().get_game_analysis_profile()
-                if profile_desc == other_desc:
-                    self['id'] = prof.id
-                    return prof
-
-            raise ValueError('Could not find matching profile in scheduler')
-
-        else:
-            raise ValueError('Profile did not have either an id or a '
-                             'scheduler_id and appropriate description')
-
-    def get_game_analysis_profile(self):
-        """Get a Game Analysis Profile object"""
-
-        if 'profile' in self:
-            return profile.Profile(self.profile)
-        elif 'symmetry_groups' in self:
-            return profile.Profile.from_symmetry_groups(
-                self.symmetry_groups)
-        elif 'id' in self:
-            return self.get_info().get_game_analysis_profile()
-        else:
-            raise ValueError('Not enough info get get profile')
-
-    def add(self, count):
-        """Adds a profile with a given count to the scheduler
-
-        If a profile with the same symmetry groups is already scheduled then
-        this will have no effect.
-
-        Setting update to True will cause a full scan through the profiles and
-        remove the one that matches this one first. Only useful if updating the
-        requested count of a profile.
-
-        returns information about the added profile."""
-
-        profile_desc = self.get_game_analysis_profile()
-
+        """Gets information about the profile"""
         resp = self._api._request(
-            'post',
-            'generic_schedulers/{sid:d}/add_profile.json'.format(
-                sid=self.scheduler_id),
-            data={
-                'assignment': str(profile_desc),
-                'count': count
-            })
+            'get',
+            'profiles/{pid:d}.json'.format(pid=self.id))
         resp.raise_for_status()
-        result = self._api.profile(json.loads(resp.text))
+        result = resp.json()
         if 'scheduler_id' in self:
             result['scheduler_id'] = self.scheduler_id
-        return result
+        return self._api.profile(result)
 
     def update_count(self, count):
         """Update the count of a profile object"""
-        prof_desc = self.get_game_analysis_profile()
+        if 'assignment' in self:
+            assignment = self.assignment
+        elif 'symmetry_groups' in self:
+            assignment = symgrps_to_profile(
+                self.symmetry_groups)
+        else:
+            assignment = self.get_info().assignment
         self.remove()
-        self._api.profile(profile=prof_desc, scheduler_id=self.scheduler_id)\
-            .add(count)
+        return self._api.scheduler(id=self.scheduler_id).add_profile(
+            assignment, count)
 
-    @_requires_id
     def remove(self):
-        """Removes a profile from a scheduler
-
-        If `id` is present this is fast, otherwise this is very slow."""
+        """Removes a profile from a scheduler"""
         resp = self._api._request(
             'post',
             'generic_schedulers/{sid:d}/remove_profile.json'.format(
@@ -532,12 +484,8 @@ class Profile(_AttrDict):
         resp.raise_for_status()
 
 
-class Game(_AttrDict):
+class Game(_Base):
     """Get information and manipulate EGTA Online Games"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._api = self.pop('_api')
 
     def get_info(self, granularity='structure'):
         """Gets game information from EGTA Online
@@ -561,10 +509,11 @@ class Game(_AttrDict):
                 'games/{gid:d}.json'.format(gid=self.id),
                 data={'granularity': granularity})
             resp.raise_for_status()
-            result = (
-                json.loads(json.loads(resp.text))
-                if granularity == 'structure'
-                else json.loads(resp.text))
+            if granularity == 'structure':
+                result = json.loads(resp.json())
+            else:
+                result = resp.json()
+                result['profiles'] = [Profile(p, api=self._api) for p in result['profiles']]
 
         else:
             result = utils.only(g for g in self._api.get_games()
@@ -573,7 +522,7 @@ class Game(_AttrDict):
             if granularity != 'structure':
                 result = self.get_info(granularity=granularity)
 
-        return result
+        return Game(result, api=self._api)
 
     @_requires_id
     def add_role(self, role, count):
@@ -627,3 +576,15 @@ class Game(_AttrDict):
         for role, strategies in role_strat_dict.items():
             for strategy in strategies:
                 self.remove_strategy(role, strategy)
+
+
+def symgrps_to_profile(symmetry_groups):
+    roles = {}
+    for symgrp in symmetry_groups:
+        role, strat, count = symgrp['role'], symgrp['strategy'], symgrp['count']
+        roles.setdefault(role, []).append((strat, count))
+    return '; '.join(
+        '{}: {}'.format(role, ', '.join('{:d} {}'.format(count, strat)
+                                        for strat, count in sorted(strats)
+                                        if count > 0))
+        for role, strats in sorted(roles.items()))

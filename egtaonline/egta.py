@@ -1,11 +1,14 @@
 import argparse
-import json
-import sys
 import itertools
+import json
 import re
+import requests
+import sys
+import tabulate
 from os import path
 
 from egtaonline import api as egtaonline
+
 
 _DEF_AUTH = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
 
@@ -63,6 +66,11 @@ _PARSER_SIM.add_argument('--strategy', '-s', metavar='<strategy>',
 _PARSER_SIM.add_argument('--delete', '-d', action='store_true',
                          help="""Triggers removal of roles or strategies
                          instead of addition""")
+_PARSER_SIM.add_argument('--zip', '-z', action='count',
+                         help="""Download simulator zip file. If specified
+                         once, this will download it to the current directory
+                         with its proper name. If specified multiple times, it
+                         will be written to stdout.""")
 
 _PARSER_GAME = _SUBPARSERS.add_parser('game', description="""Operate on EGTA
                                       Online games.""")
@@ -121,6 +129,13 @@ _PARSER_SCHED.add_argument('--verbose', '-v', action='store_true', help="""Get
                            verbose scheduler information including profile
                            information instead of just the simple output of
                            scheduler meta data.""")
+_PARSER_SCHED.add_argument('--delete', '-d', action='count', help="""If
+                           specified with a scheduler, delete it. If specified
+                           without a scheduler, delete it. If no scheduler is
+                           specified then filter by inactive generic schedulers
+                           that match quiesce generated names and delete them.
+                           If specified multiple times, then remove all without
+                           prompt.""")
 
 _PARSER_SIMS = _SUBPARSERS.add_parser('sims', description="""Get information
                                       about EGTA Online simulations. These are
@@ -172,7 +187,18 @@ def main():
                     sim = api.simulator(name=args.sim_id, version=args.version)
 
                 # Operate
-                if args.json is not None:  # Load from json
+                if args.zip:
+                    info = sim.get_info()
+                    url = 'https://' + api.domain + info['source']['url']
+                    resp = requests.get(url)
+                    resp.raise_for_status()
+                    if args.zip > 1:
+                        sys.stdout.buffer.write(resp.content)
+                    else:
+                        with open(info.name + '.zip', 'bw') as f:
+                            f.write(resp.content)
+
+                elif args.json is not None:  # Load from json
                     role_strat = json.load(args.json)
                     if args.delete:
                         sim.remove_dict(role_strat)
@@ -232,7 +258,22 @@ def main():
 
         elif args.command == 'sched':
             if args.sched_id is None:  # Get all simulators
-                json.dump(list(api.get_generic_schedulers()), sys.stdout)
+                scheds = api.get_generic_schedulers()
+                if args.delete:
+                    reg = re.compile(r'.*_generic_quiesce(_[a-zA-Z]+_\d+)*_[a-zA-Z0-9]{6}')
+                    fscheds = (s for s in scheds if reg.fullmatch(s.name) and not s.active)
+
+                    if args.delete > 1:
+                        for sched in fscheds:
+                            sched.delete_scheduler()
+                    else:
+                        for sched in fscheds:
+                            print(tabulate.tabulate(sched.items()))
+                            if 'y' == input('Delete Scheduler [N/y]: ').lower():
+                                sched.delete_scheduler()
+
+                else:
+                    json.dump(list(scheds), sys.stdout)
 
             else:  # Get a single scheduler
                 # Get scheduler
@@ -241,8 +282,11 @@ def main():
                 else:
                     sched = api.scheduler(id=int(args.sched_id))
 
-                # Output
-                json.dump(sched.get_info(verbose=args.verbose), sys.stdout)
+                # Resolve
+                if args.delete:
+                    sched.delete_scheduler()
+                else:
+                    json.dump(sched.get_info(verbose=args.verbose), sys.stdout)
 
         elif args.command == 'sims':
             if args.folder is not None:  # Get info on one simulation
