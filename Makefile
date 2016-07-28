@@ -6,8 +6,7 @@ help:
 
 setup:
 	virtualenv -p python3 .
-	git submodule init
-	git submodule update
+	git submodule update --init
 	bin/pip3 install -UI pip
 	bin/pip3 install -r game_analysis/requirements.txt -r requirements.txt
 
