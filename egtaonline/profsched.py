@@ -107,6 +107,7 @@ class ProfileScheduler(object):
         # Profile hashes: utils.hash_array, Simulator ids: profile.id
         self._phash_payoffs = {}
         self._sid_payoffs = {}
+        self._explored_sids = set()
 
         for jprof in profiles:
             phash = utils.hash_array(serializer.from_prof_symgrp(
@@ -154,6 +155,7 @@ class ProfileScheduler(object):
                 phash = utils.hash_array(profile)
                 if phash in self._phash_payoffs:
                     sid, [count], _ = self._phash_payoffs[phash]
+                    self._explored_sids.add(sid)
                     if numobs > count:
                         sprof = self._scheduler.profile(
                             id=sid,
@@ -165,6 +167,7 @@ class ProfileScheduler(object):
                     string = self._serial.to_prof_string(profile)
                     self._log.log(1, 'Scheduling profile: %s', string)
                     sid = self._scheduler.add_profile(string, numobs).id
+                    self._explored_sids.add(sid)
                     tup = (sid, [0],
                            np.empty(self._serial.num_role_strats))
                     self._phash_payoffs[phash] = tup
@@ -191,11 +194,11 @@ class ProfileScheduler(object):
 
     @property
     def num_unique_profiles(self):
-        return len(self._phash_payoffs)
+        return len(self._explored_sids)
 
     @property
     def num_profiles(self):
-        return sum(c for _, [c], _ in self._phash_payoffs.values())
+        return sum(self._sid_payoffs[sid][1][0] for sid in self._explored_sids)
 
     def get_game(self):
         profiles = np.empty((len(self._phash_payoffs),
