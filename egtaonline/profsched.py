@@ -132,12 +132,12 @@ class ProfileScheduler(object):
             if prof.id in self._sid_payoffs:
                 # If prof.id is not in self._sid_payoffs, then we haven't
                 # scheduled it, so we don't care
-                sid, count, payoffs = self._sid_payoffs[prof.id]
+                sid, count_ptr, payoffs = self._sid_payoffs[prof.id]
                 if prof.current_count < prof.requirement:
                     count_left -= 1
 
-                elif prof.current_count > count[0]:
-                    count[0] = prof.current_count
+                elif prof.current_count > count_ptr[0]:
+                    count_ptr[0] = prof.current_count
                     np.copyto(payoffs, self._serial.from_payoff_symgrp(
                         prof.get_info().symmetry_groups))
                     changed = True
@@ -153,8 +153,8 @@ class ProfileScheduler(object):
             else:  # Process profile
                 phash = utils.hash_array(profile)
                 if phash in self._phash_payoffs:
-                    sid, count, _ = self._phash_payoffs[phash]
-                    if numobs > count[0]:
+                    sid, [count], _ = self._phash_payoffs[phash]
+                    if numobs > count:
                         sprof = self._scheduler.profile(
                             id=sid,
                             assignment=self._serial.to_prof_string(profile))
@@ -188,6 +188,14 @@ class ProfileScheduler(object):
     def get_count(self, phash):
         return (0 if phash not in self._phash_payoffs
                 else self._phash_payoffs[phash][1][0])
+
+    @property
+    def num_unique_profiles(self):
+        return len(self._phash_payoffs)
+
+    @property
+    def num_profiles(self):
+        return sum(c for _, [c], _ in self._phash_payoffs.values())
 
     def get_game(self):
         profiles = np.empty((len(self._phash_payoffs),

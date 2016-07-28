@@ -382,11 +382,12 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
 
     except KeyboardInterrupt:
         # Manually killed, so just deactivate
-        log.error('Manually killed quiesce script. Deactivating scheduler')
+        log.error('Manually killed quiesce script. Deactivating scheduler\n')
         sched.deactivate()
 
     sched.deactivate()
     sched.delete_scheduler()
+    log.info('Deleted scheduler %d\n', sched.id)
 
     final_game = psched.get_game()
     red_game = red.reduce_game(final_game, True)
@@ -399,8 +400,10 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
     final_log = [dict(regret=float(r), equilibrium=serial.to_prof_json(eqm))
                  for eqm, r in zip(equilibria, regrets)]
 
-    log.error('Finished quiescing\nConfirmed equilibria:\n%s',
-              json.dumps(final_log, indent=2))
+    log.error('Finished quiescing\nConfirmed equilibria:\n%s\n'
+              'Explored %d subgames, sampled %d profiles with %d distinct\n',
+              json.dumps(final_log, indent=2), complete_subgames.shape[0],
+              psched.num_profiles, psched.num_unique_profiles)
 
     # TODO return failed subgames
     return equilibria, complete_subgames, final_game
