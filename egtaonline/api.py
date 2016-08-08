@@ -53,7 +53,7 @@ class EgtaOnline(object):
     """Class to wrap egtaonline api"""
 
     def __init__(self, auth_token, domain='egtaonline.eecs.umich.edu',
-                 logLevel=0, retry_on=(504,), num_tries=10, retry_delay=60,
+                 logLevel=0, retry_on=(504,), num_tries=20, retry_delay=60,
                  retry_backoff=1.2):
         self.domain = domain
         self._retry_on = frozenset(retry_on)
@@ -86,12 +86,18 @@ class EgtaOnline(object):
         timeout = self._retry_delay
         for i in range(self._num_tries):
             self._log.info('%s request to %s with data %s', verb, url, data)
-            response = self._session.request(verb, url, data)
-            if response.status_code not in self._retry_on:
-                return response
-            self._log.info('%s request to %s with data %s failed with status '
-                           '%d, retrying in %.0f seconds', verb, url, data,
-                           response.status_code, timeout)
+            try:
+                response = self._session.request(verb, url, data)
+                if response.status_code not in self._retry_on:
+                    return response
+                self._log.info('%s request to %s with data %s failed with status '
+                               '%d, retrying in %.0f seconds', verb, url, data,
+                               response.status_code, timeout)
+            except ConnectionError as ex:
+                self._log.info('%s request to %s with data %s failed with '
+                               'exception %s %s, retrying in %.0f seconds',
+                               verb, url, data, ex.__class__.__name__, ex,
+                               timeout)
             time.sleep(timeout)
             timeout *= self._retry_backoff
         return response
