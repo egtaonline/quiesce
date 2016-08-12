@@ -521,7 +521,8 @@ class Game(_Base):
             else:
                 result = resp.json()
                 result['profiles'] = [
-                    Profile(p, api=self._api) for p in result['profiles']]
+                    Profile(p, api=self._api) for p
+                    in result['profiles'] or ()]
 
         else:
             result = utils.only(g for g in self._api.get_games()
