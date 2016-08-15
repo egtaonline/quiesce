@@ -90,9 +90,9 @@ class EgtaOnline(object):
                 response = self._session.request(verb, url, data)
                 if response.status_code not in self._retry_on:
                     return response
-                self._log.info('%s request to %s with data %s failed with status '
-                               '%d, retrying in %.0f seconds', verb, url, data,
-                               response.status_code, timeout)
+                self._log.info('%s request to %s with data %s failed with '
+                               'status %d, retrying in %.0f seconds', verb,
+                               url, data, response.status_code, timeout)
             except ConnectionError as ex:
                 self._log.info('%s request to %s with data %s failed with '
                                'exception %s %s, retrying in %.0f seconds',

@@ -5,6 +5,7 @@ import re
 import requests
 import sys
 import tabulate
+from datetime import datetime
 from os import path
 
 from egtaonline import api as egtaonline
@@ -130,12 +131,14 @@ _PARSER_SCHED.add_argument('--verbose', '-v', action='store_true', help="""Get
                            information instead of just the simple output of
                            scheduler meta data.""")
 _PARSER_SCHED.add_argument('--delete', '-d', action='count', help="""If
-                           specified with a scheduler, delete it. If specified
-                           without a scheduler, delete it. If no scheduler is
-                           specified then filter by inactive generic schedulers
-                           that match quiesce generated names and delete them.
-                           If specified multiple times, then remove all without
-                           prompt.""")
+specified with a scheduler, delete it. If no scheduler is specified then filter
+by inactive or complete generic schedulers that match quiesce generated names
+and haven't been updated in a week and delete them.  If specified multiple
+                           times, then remove all without prompt.""")
+_PARSER_SCHED.add_argument('--days-old', type=int, default=7, help="""The
+                           number of days stagnant (unupdated) a scheduler has
+                           to be to consider it ready for removal. (default:
+                           %(default)d)""")
 
 _PARSER_SIMS = _SUBPARSERS.add_parser('sims', description="""Get information
                                       about EGTA Online simulations. These are
@@ -257,17 +260,31 @@ def main():
                         granularity=args.granularity), sys.stdout)
 
         elif args.command == 'sched':
-            if args.sched_id is None:  # Get all simulators
+            if args.sched_id is None:  # Get all schedulers
                 scheds = api.get_generic_schedulers()
                 if args.delete:
                     reg = re.compile(
                         r'.*_generic_quiesce(_[a-zA-Z]+_\d+)*_[a-zA-Z0-9]{6}')
-                    fscheds = (s for s in scheds if reg.fullmatch(
-                        s.name) and not s.active)
+                    now = datetime.utcnow()
+                    fscheds = (s for s in scheds
+                               if reg.fullmatch(s.name)
+                               and args.days_old <= (now - datetime.strptime(
+                                   s.updated_at, '%Y-%m-%dT%H:%M:%S.%fZ')).days
+                               and (
+                                   not s.active or
+                                   all(p['current_count'] >= p['requirement']
+                                       for p in s.get_info(True)
+                                       .scheduling_requirements)))
 
                     if args.delete > 1:
-                        for sched in fscheds:
-                            sched.delete_scheduler()
+                        inp = input('Delete all quiesce generic schedulers '
+                                    'that haven\'t been updated in at least '
+                                    '{} days and are either inactive or done '
+                                    'scheduling [N/y]: '.format(args.days_old)
+                                    ).lower()
+                        if 'y' == inp:
+                            for sched in fscheds:
+                                sched.delete_scheduler()
                     else:
                         for sched in fscheds:
                             print(tabulate.tabulate(sched.items()))
