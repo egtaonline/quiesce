@@ -380,15 +380,14 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
                           sleep_time)
                 time.sleep(sleep_time)
 
-    except KeyboardInterrupt as ex:
+    except KeyboardInterrupt:
         # Manually killed, so just deactivate
         log.error('Manually killed quiesce script. Deactivating scheduler\n')
         sched.deactivate()
-        raise ex
+        sys.exit(1)
 
+    log.info('Deactivating scheduler %d\n', sched.id)
     sched.deactivate()
-    sched.delete_scheduler()
-    log.info('Deleted scheduler %d\n', sched.id)
 
     final_game = psched.get_game()
     red_game = red.reduce_game(final_game, True)
