@@ -10,7 +10,7 @@ To run the quiesce script, you need to install the following dependencies on ubu
 Similar packages exist on mac and can be installed with homebrew.
 
 ```
-$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv
+$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev
 ```
 
 After that type
