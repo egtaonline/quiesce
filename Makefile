@@ -5,14 +5,18 @@ help:
 	@echo "ubuntu-setup - setup a clean installation on ubuntu (requires root)"
 
 setup:
-	virtualenv -p python3 .
 	git submodule update --init
+	pyvenv .
 	bin/pip3 install -UI pip
 	bin/pip3 install -r game_analysis/requirements.txt -r requirements.txt
 
+pull:
+	git pull
+
+update: pull setup
+
 ubuntu-install:
-	sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev
-	sudo pip3 install virtualenv
+	sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv
 
 ubuntu-setup: ubuntu-install setup
 
