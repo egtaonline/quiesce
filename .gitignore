@@ -1,10 +1,12 @@
-# Virtualenv #
-##############
+# Python venv #
+###############
 /bin
 /lib
+/lib64
 /include
 /man
 /share
+/pyvenv.cfg
 
 # Vim #
 #######
@@ -12,7 +14,7 @@
 .*.swp
 
 # Python #
-#######
+##########
 /pip-selfcheck.json
 __pycache__
 
