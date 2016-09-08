@@ -6,19 +6,21 @@ A script to automatically "quiesce" an empirical game on egtaonline
 Setup
 -----
 
+To run the quiesce script, you need to install the following dependencies on ubuntu.
+Similar packages exist on mac and can be installed with homebrew.
+
 ```
-$ git submodule init
-$ git submodule update
-
-$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev
-$ sudo pip3 install virtualenv
-
-$ cd this/directory
-$ virtualenv -p python3 .
-$ . bin/activate
-
-$ pip3 install -r game_analysis/requirements.txt -r requirements.txt
+$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv
 ```
+
+After that type
+
+```
+make update
+```
+
+and the quiesce script should be ready to use.
+
 
 Cookbook
 --------
