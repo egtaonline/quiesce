@@ -5,6 +5,7 @@ import json
 import logging
 import smtplib
 import sys
+import textwrap
 import time
 import traceback
 from logging import handlers
@@ -414,8 +415,18 @@ def main():
     # Parse arguments
     args = _parser.parse_args()
     if args.auth_string is None:
-        with open(args.auth_file) as auth_file:
-            args.auth_string = auth_file.read().strip()
+        if path.isfile(args.auth_file):
+            with open(args.auth_file) as auth_file:
+                args.auth_string = auth_file.read().strip()
+        else:
+            sys.stderr.write(textwrap.fill((
+                'This script needs an authorization token to access EGTA '
+                'Online. By default, this script looks for file with your '
+                'authorization token at "{}". See `egta --help` for other '
+                'ways to specify your authorization '
+                'token.').format(_def_auth)))
+            sys.stderr.write('\n')
+            sys.exit(1)
 
     # Create logger
     log = logging.getLogger(__name__)

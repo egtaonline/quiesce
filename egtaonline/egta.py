@@ -5,6 +5,7 @@ import re
 import requests
 import sys
 import tabulate
+import textwrap
 from datetime import datetime
 from os import path
 
@@ -170,8 +171,18 @@ _PARSER_SIMS.add_argument('--sort-column', '-s',
 def main():
     args = _PARSER.parse_args()
     if args.auth_string is None:
-        with open(args.auth_file) as auth_file:
-            args.auth_string = auth_file.read().strip()
+        if path.isfile(args.auth_file):
+            with open(args.auth_file) as auth_file:
+                args.auth_string = auth_file.read().strip()
+        else:
+            sys.stderr.write(textwrap.fill((
+                'This script needs an authorization token to access EGTA '
+                'Online. By default, this script looks for file with your '
+                'authorization token at "{}". See `egta --help` for other '
+                'ways to specify your authorization '
+                'token.').format(_DEF_AUTH)))
+            sys.stderr.write('\n')
+            sys.exit(1)
 
     with egtaonline.EgtaOnline(
             args.auth_string, logLevel=args.verbose) as api:
