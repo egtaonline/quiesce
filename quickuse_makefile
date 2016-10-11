@@ -1,0 +1,22 @@
+update:
+	bin/pip install --process-dependency-links -U git+https://github.com/egtaonline/quiesce.git@master
+
+setup: setup-pre update
+
+setup-pre:
+ifeq ($(shell uname),Darwin)
+	which brew 2>&1 >/dev/null || /usr/bin/ruby -e "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	brew update
+	which jq 2>&1 >/dev/null || brew install jq
+	which pyvenv 2>&1 >/dev/null || brew install python3
+else #Linux
+	which pyvenv 2>&1 >/dev/null || sudo apt-get install python3-venv
+	which jq 2>&1 >/dev/null || sudo apt-get install jq
+	which gfortran 2>&1 >/dev/null || sudo apt-get install gfortran
+	ldconfig -p | grep liblapack.so 2>&1 >/dev/null && ldconfig -p | grep libblas.so 2>&1 >/dev/null || sudo apt-get install libatlas-base-dev
+	ldconfig -p | grep libxml2.so 2>&1 >/dev/null || sudo apt-get install libxml2-dev
+	ldconfig -p | grep libxslt.so 2>&1 >/dev/null || sudo apt-get install libxslt1-dev
+	ldconfig -p | grep libz.so 2>&1 >/dev/null || sudo apt-get install zlib1g-dev
+endif
+	pyvenv .
+	bin/pip install -U pip setuptools

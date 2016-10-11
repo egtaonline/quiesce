@@ -1,25 +1,21 @@
 Quiesce
 =======
 
-A script to automatically "quiesce" an empirical game on egtaonline
+A command line and python api for accessing egtaonline.
+Also includes a script to automatically "quiesce" an empirical game on egtaonline.
 
 Setup
 -----
 
-To run the quiesce script, you need to install the following dependencies on ubuntu.
-Similar packages exist on mac and can be installed with homebrew.
+We recommend you install Quiesce in it's own virtual environment.
+To use our recommended setup simply execute the following commands in the directory you want to store Quiesce in.
 
 ```
-$ sudo apt-get install python3 libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev
+curl https://raw.githubusercontent.com/egtaonline/quiesce/master/quickuse_makefile > Makefile && make setup
 ```
 
-After that type
-
-```
-make update
-```
-
-and the quiesce script should be ready to use.
+`quiesce`, `egta`, and `watch` should now be accessible in the `bin` directory.
+To update Quiesce, simply execute `make update` in the appropriate directory.
 
 
 Cookbook
@@ -27,13 +23,20 @@ Cookbook
 
 Find the first simulation whose profile string matches the regex `<profile-regex>` and failed failed. Returns the error message.
 ```
-./egta sims -r <profile-regex> | jq -r 'select(.state == "failed") | .folder' | head -n1 | xargs ./egta sims -f | jq -r .error_message
+bin/egta sims -r <profile-regex> | jq -r 'select(.state == "failed") | .folder' | head -n1 | xargs ./egta sims -f | jq -r .error_message
 ```
 
 Find the first simulation whose profile string matches profile, and is finished. Returns whether it is complete or if it failed.
 ```
-./egta sims -r <profile-regex> | jq -r 'select([.state == ("complete", "failed")] | any) | .state' | head -n1
+bin/egta sims -r <profile-regex> | jq -r 'select([.state == ("complete", "failed")] | any) | .state' | head -n1
 ```
+
+
+Development
+===========
+
+`Makefile` has all of the relevant commands for settings up a development environment.
+Typing `make` will print out everything it's setup to do.
 
 
 TODO

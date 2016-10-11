@@ -7,6 +7,7 @@
 /man
 /share
 /pyvenv.cfg
+/*.egg-info
 
 # Vim #
 #######

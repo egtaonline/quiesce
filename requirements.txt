@@ -1,3 +1,0 @@
-lxml==3.6.4
-requests==2.11.1
-tabulate==0.7.5
