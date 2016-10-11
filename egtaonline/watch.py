@@ -153,7 +153,3 @@ def main():
                 if not finished:
                     log.debug('Sleeping for %s seconds', args.sleep_time)
                     time.sleep(args.sleep_time)
-
-
-if __name__ == '__main__':
-    main()

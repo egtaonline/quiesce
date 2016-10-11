@@ -490,7 +490,3 @@ def main():
     finally:
         # Make sure to clean up
         egta_api.close()
-
-
-if __name__ == '__main__':
-    main()

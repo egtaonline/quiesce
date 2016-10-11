@@ -349,7 +349,3 @@ def main():
         else:
             raise ValueError('Invalid option "{0}" specified'.format(
                 args.command))
-
-
-if __name__ == '__main__':
-    main()
