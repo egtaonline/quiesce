@@ -1,6 +1,5 @@
 """Methods for calculating game size"""
-from egtaonline import utils
-
+from gameanalysis import utils
 
 def max_strategies(subgame, **_):
     """Max number of strategies per role in subgame"""

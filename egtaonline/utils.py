@@ -30,31 +30,9 @@ def only(gen):
     raise LookupError('Iterator had more than one element')
 
 
-def game_size(players, strategies):
-    """Returns the game size for a game with players players and strategies
-    strategies"""
-    return scipy.misc.comb(players + strategies - 1, players, exact=True)
-
-
 def prod(iterable):
     """Returns the product of every element"""
     result = 1
     for elem in iterable:
         result *= elem
     return elem
-
-
-# For output of general objects e.g. logging
-def _json_default(obj):
-    """Function for json default kwargs"""
-    if isinstance(obj, collections.Mapping):
-        return dict(obj)
-    elif isinstance(obj, collections.Iterable):
-        return list(obj)
-    else:
-        return obj.to_json()
-
-
-def format_json(obj):
-    """Converts general objects into nice output string"""
-    return json.dumps(obj, indent=2, default=_json_default)
