@@ -470,7 +470,14 @@ def main():
     egta_api = api.EgtaOnline(args.auth_string,
                               logLevel=(0 if args.verbose < 5 else 3))
     gamej = egta_api.game(id=args.game).get_info('summary')
-    game, serial = gameio.read_base_game(gamej)
+    try:
+        game, serial = gameio.read_base_game(gamej)
+    except TypeError as e:
+        log.error('Caught exception trying to read the initial game, this is '
+                  'most likely caused by a game without roles specified: (%s) '
+                  '%s\nWith traceback:\n%s\n',
+                  e.__class__.__name__, e, traceback.format_exc())
+        raise e
     sim = utils.only(s for s in egta_api.get_simulators()
                      if '{name}-{version}'.format(**s)
                      == gamej.simulator_fullname)
