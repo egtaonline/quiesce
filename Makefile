@@ -11,6 +11,7 @@ setup:
 	pyvenv .
 	bin/pip install -U pip setuptools
 	bin/pip install --process-dependency-links -e .
+	bin/pip install -r requirements.txt
 
 ubuntu-reqs:
 	sudo apt-get install libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev

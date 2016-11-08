@@ -1,0 +1,2 @@
+autopep8~=1.2
+flake8~=3.0
