@@ -25,7 +25,18 @@ from egtaonline import profsched
 from egtaonline import utils
 
 
-_def_auth = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
+def _get_base_auth():
+    base_auth = path.dirname(path.dirname(__file__))
+    try:
+        *base, lib, py, site = base_auth.split(path.sep)
+        if lib == 'lib' and site == 'site-packages' and py[:6] == 'python':
+            return path.join(*base)
+    except TypeError:
+        pass
+    return base_auth
+
+
+_def_auth = path.join(_get_base_auth(), 'auth_token.txt')
 
 _parser = argparse.ArgumentParser(prog='quiesce', description="""Quiesce a
                                   generic scheduler on EGTA Online.""")

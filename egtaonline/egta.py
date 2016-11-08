@@ -12,7 +12,18 @@ from os import path
 from egtaonline import api as egtaonline
 
 
-_DEF_AUTH = path.join(path.dirname(path.dirname(__file__)), 'auth_token.txt')
+def _get_base_auth():
+    base_auth = path.dirname(path.dirname(__file__))
+    try:
+        *base, lib, py, site = base_auth.split(path.sep)
+        if lib == 'lib' and site == 'site-packages' and py[:6] == 'python':
+            return path.join(*base)
+    except TypeError:
+        pass
+    return base_auth
+
+
+_DEF_AUTH = path.join(_get_base_auth(), 'auth_token.txt')
 
 _PARSER = argparse.ArgumentParser(prog='egta', description="""Command line
                                   access to egta online apis""")
