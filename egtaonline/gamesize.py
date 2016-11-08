@@ -1,6 +1,7 @@
 """Methods for calculating game size"""
 from gameanalysis import utils
 
+
 def max_strategies(subgame, **_):
     """Max number of strategies per role in subgame"""
     return max(len(strats) for strats in subgame.values())

@@ -1,9 +1,6 @@
 """python file with a bunch of utility methods"""
-import json
 import random
 import string
-import scipy.misc
-import collections
 
 
 def random_string(length, choices=string.ascii_letters + string.digits):
