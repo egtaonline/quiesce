@@ -98,8 +98,8 @@ _sched_group = _parser.add_argument_group('Scheduler parameters',
                                           description="""Parameters for the
                                           scheduler.""")
 _sched_group.add_argument('-y', '--memory', metavar='<process-memory>',
-                          type=int, default=4096, help="""The process memory to
-                          schedule jobs with in MB.  (default: %(default)s)""")
+                          type=int, default=4000, help="""The process memory to
+                          schedule jobs with in MB.  (default: %(default)d)""")
 _sched_group.add_argument('-o', '--observation-time',
                           metavar='<observation-time>', type=int, default=600,
                           help="""The time to allow for each observation in
@@ -116,7 +116,7 @@ _sched_group.add_argument('--nodes', metavar='<nodes>', type=int, default=1,
 def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
             log=logging, profiles=(), all_devs=True, max_profiles=500,
             max_subgame_size=3, sleep_time=300, required_equilibria=1,
-            regret_thresh=1e-3, reschedule_limit=10, process_memory=4096,
+            regret_thresh=1e-3, reschedule_limit=10, process_memory=4000,
             observation_time=600, observation_increment=1, nodes=1):
     """Quiesce a game"""
 
