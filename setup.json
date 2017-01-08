@@ -13,14 +13,14 @@
     ]
   },
   "install_requires": [
-    "gameanalysis==1.7",
+    "gameanalysis==1.8",
     "lxml~=3.6",
     "numpy~=1.11",
     "requests~=2.11",
     "tabulate~=0.7"
   ],
   "dependency_links": [
-    "git+https://github.com/egtaonline/gameanalysis.git@v1.7#egg=gameanalysis-1.7"
+    "git+https://github.com/egtaonline/gameanalysis.git@v1.8#egg=gameanalysis-1.8"
   ],
   "packages": [
     "egtaonline"
