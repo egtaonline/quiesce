@@ -420,7 +420,7 @@ def quiesce(sim, game, serial, base_name, configuration={}, dpr=None,
               psched.num_profiles, psched.num_unique_profiles)
 
     # TODO return failed subgames
-    return equilibria, complete_subgames, final_game
+    return equilibria, regrets, complete_subgames, final_game
 
 
 def main():
@@ -489,17 +489,17 @@ def main():
             dict(zip(args.dpr[::2], map(int, args.dpr[1::2]))))
 
     try:
-        quiesce(sim, game, serial, gamej.name, dict(gamej.configuration),
-                args.dpr, log, profiles=gamej.profiles, all_devs=not
-                args.role_devs, max_profiles=args.max_profiles,
-                max_subgame_size=args.max_subgame_size,
-                sleep_time=args.sleep_time,
-                required_equilibria=args.num_equilibria,
-                regret_thresh=args.regret_threshold, reschedule_limit=10,
-                process_memory=args.memory,
-                observation_time=args.observation_time,
-                observation_increment=args.observation_increment,
-                nodes=args.nodes)
+        equilibria, regrets, complete_subgames, game = quiesce(
+            sim, game, serial, gamej.name, dict(gamej.configuration), args.dpr,
+            log, profiles=gamej.profiles, all_devs=not args.role_devs,
+            max_profiles=args.max_profiles,
+            max_subgame_size=args.max_subgame_size, sleep_time=args.sleep_time,
+            required_equilibria=args.num_equilibria,
+            regret_thresh=args.regret_threshold, reschedule_limit=10,
+            process_memory=args.memory, observation_time=args.observation_time,
+            observation_increment=args.observation_increment, nodes=args.nodes)
+        json.dump(list(map(serial.to_prof_json, equilibria)), sys.stdout)
+        sys.stdout.write('\n')
 
     except Exception as e:
         # Other exception, notify, but don't deactivate
