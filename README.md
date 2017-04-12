@@ -1,6 +1,8 @@
 Empirical Game-Theoretic Analysis
 =================================
 
+[![Build Status](https://travis-ci.org/egtaonline/quiesce.svg?branch=master)](https://travis-ci.org/egtaonline/quiesce)
+
 A command line tool for running egta on arbitrary simulators.
 
 Setup
@@ -49,3 +51,14 @@ Development
 
 `Makefile` has all of the relevant commands for settings up a development environment.
 Typing `make` will print out everything it's setup to do.
+
+`make setup` will do a best effort to setup an appropriate development environment.
+One requirement is that `python --version` is at least 3.5.
+On ubunutu systems, `python3` points the latest python 3.x where `python` points to the latest 2.x version.
+This can be fixed by running
+
+```
+mkdir -p /tmp/python3 && ln -fs $(which python3) /tmp/python3/python && env PATH="/tmp/python3:$PATH" make setup
+```
+
+instead of just `make setup`.

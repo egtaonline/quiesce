@@ -12,10 +12,8 @@ help:
 	@echo "add EGTA_TESTS=ON to run egta tests as well"
 
 setup:
-	pyvenv .
-	bin/pip install -U pip setuptools
-	bin/pip install -e .
-	bin/pip install -r requirements.txt
+	python -m venv .
+	bin/pip install -U pip setuptools -r requirements.txt -e .
 
 test:
 	bin/pytest test

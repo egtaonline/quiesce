@@ -3,6 +3,7 @@ git:
 language: python
 python:
     - "3.5"
-install: "make setup && bin/pip install coveralls"
-script: "make coverage"
-after_success: "bin/coveralls"
+install:
+    - "deactivate"  # Get out of virtualenv
+    - "PATH=\"/opt/python/3.5/bin:$PATH\" make setup"
+script: "make test"

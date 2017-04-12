@@ -6,6 +6,7 @@
 /include
 /man
 /share
+/build
 /pyvenv.cfg
 /*.egg-info
 /.coverage*
