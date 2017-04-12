@@ -14,7 +14,6 @@ setuptools.setup(
         'gameanalysis~=3.1',
         'egtaonlineapi~=0.1',
         'numpy~=1.12',
-        'tabulate~=0.7',
     ],
     packages=['egta', 'egta.script'],
 )
