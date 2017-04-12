@@ -1,0 +1,40 @@
+{
+  "strategies": {
+    "buyers": [
+      "B_0.0",
+      "B_0.1",
+      "B_0.2",
+      "B_0.3",
+      "B_0.4",
+      "B_0.5",
+      "B_0.6",
+      "B_0.7",
+      "B_0.8",
+      "B_0.9",
+      "B_1.0"
+    ],
+    "sellers": [
+      "S_0.0",
+      "S_0.1",
+      "S_0.2",
+      "S_0.3",
+      "S_0.4",
+      "S_0.5",
+      "S_0.6",
+      "S_0.7",
+      "S_0.8",
+      "S_0.9",
+      "S_1.0"
+    ]
+  },
+  "players": {
+    "buyers": 4,
+    "sellers": 4
+  },
+  "configuration": {
+    "max_value": 1,
+    "market": "cda",
+    "arrivals": "simple",
+    "markup": "ideal"
+  }
+}

@@ -1,35 +1,47 @@
-Quiesce
-=======
+Empirical Game-Theoretic Analysis
+=================================
 
-A command line and python api for accessing egtaonline.
-Also includes a script to automatically "quiesce" an empirical game on egtaonline.
+A command line tool for running egta on arbitrary simulators.
 
 Setup
 -----
 
-We recommend you install Quiesce in it's own virtual environment.
-To use our recommended setup simply execute the following commands in the directory you want to store Quiesce in.
+FIXME
 
-```
-curl https://raw.githubusercontent.com/egtaonline/quiesce/master/quickuse_makefile > Makefile && make setup
-```
+Usage
+-----
 
-`quiesce`, `egta`, and `watch` should now be accessible in the `bin` directory.
-To update Quiesce, simply execute `make update` in the appropriate directory.
+You need a set of supplementary files to actually run this.
+These files describe the game that's going to be run, and the processes of getting payoff data for each profile when requested.
+This repository contains a sample simulator called `cdasim` that can be used for this purpose.
+Below are some example uses
 
+1. Perform the quiesce routine on a game that already has game data.
+   One can also add noise to the payoffs for testing of equilibria procedures but this will just run it with no noise.
 
-Cookbook
---------
+   ```
+   egta --game-json cdasim/data_game.json quiesce game --load-game
+   ```
 
-Find the first simulation whose profile string matches the regex `<profile-regex>` and failed failed. Returns the error message.
-```
-bin/egta sims -r <profile-regex> | jq -r 'select(.state == "failed") | .folder' | head -n1 | xargs ./egta sims -f | jq -r .error_message
-```
+2. Perform the quiesce routine on a game that's defined by a command line simulator.
+   This will get profile data by sampling from the cdasim python simulator.
 
-Find the first simulation whose profile string matches profile, and is finished. Returns whether it is complete or if it failed.
-```
-bin/egta sims -r <profile-regex> | jq -r 'select([.state == ("complete", "failed")] | any) | .state' | head -n1
-```
+   ```
+   egta --game-json cdasim/small_game.json quiesce sim -- python3 cdasim/sim.py 1 --single
+   ```
+
+   By default the quiesce routine only uses one payoff sample per profile.
+   Setting `--count` to a larger number will help reduce the noise.
+
+3. Perform the quiesce routine on a game with information on EGTA Online.
+   The parameters specified here are for the same simulation that was uploaded there.
+
+   ```
+   egta --game-id 1466 quiesce --dpr buyers:2,sellers:2 egta --sim-memory 2048 --sim-time 60
+   ```
+
+   Note: To use this method, your EGTA Online credentials must be stored in a place where the python api can find them.
+   Note: This game has already been solved, so this call will only fetch the initial game and then solve it without scheduling more profiles.
 
 
 Development
@@ -37,9 +49,3 @@ Development
 
 `Makefile` has all of the relevant commands for settings up a development environment.
 Typing `make` will print out everything it's setup to do.
-
-
-TODO
-----
-
-* Simulator add by json results in duplicated strategies

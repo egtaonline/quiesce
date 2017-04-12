@@ -59,7 +59,7 @@ class SubgameScheduler(_BaseScheduler):
     def _profiles(self):
         support = self._sched._game.role_reduce(self.subgame_mask)
         return self._sched._red.expand_profiles(subgame.translate(
-            rsgame.BaseGame(self._sched._red.reduced_players,
+            rsgame.basegame(self._sched._red.reduced_players,
                             support).all_profiles(),
             self.subgame_mask))
 
@@ -68,7 +68,7 @@ class SubgameScheduler(_BaseScheduler):
                                    in self._profs])
         payoffs = np.concatenate([self._sched._prof_scheduler[phash][None]
                                   for phash in self._profs])
-        return subgame.subgame(self._sched._red.reduce_game(rsgame.Game(
+        return subgame.subgame(self._sched._red.reduce_game(rsgame.game_copy(
             self._sched._game, profiles, payoffs)), self.subgame_mask)
 
 
@@ -88,7 +88,7 @@ class DeviationScheduler(_BaseScheduler):
         profiles = np.concatenate([phash.array[None] for phash in hashes])
         payoffs = np.concatenate([self._sched._prof_scheduler[phash][None]
                                   for phash in hashes])
-        return self._sched._red.reduce_game(rsgame.Game(
+        return self._sched._red.reduce_game(rsgame.game_copy(
             self._sched._game, profiles, payoffs), True)
 
 
@@ -209,7 +209,7 @@ class ProfileScheduler(object):
             profiles[i] = phash.array
             payoffs[i] = pay
 
-        return rsgame.Game(self._game, profiles, payoffs)
+        return rsgame.game_copy(self._game, profiles, payoffs)
 
 
 # Sentinel

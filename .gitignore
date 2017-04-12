@@ -8,6 +8,8 @@
 /share
 /pyvenv.cfg
 /*.egg-info
+/.coverage*
+/.cache
 
 # Vim #
 #######
@@ -18,7 +20,4 @@
 ##########
 /pip-selfcheck.json
 __pycache__
-
-# Private Data #
-################
-auth_token.txt
+/dist

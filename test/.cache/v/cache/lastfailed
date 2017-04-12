@@ -1,0 +1,5 @@
+{
+  "egta_test.py::test_brute_dpr_game": true,
+  "egta_test.py::test_brute_game": true,
+  "egta_test.py::test_outerloop": true
+}
