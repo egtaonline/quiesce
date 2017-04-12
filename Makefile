@@ -36,7 +36,7 @@ format:
 upload:
 	cp ~/.pypirc ~/.pypirc.bak~ || touch ~/.pypirc.bak~
 	echo '[distutils]\nindex-servers =\n    pypi\n\n[pypi]\nrepository: https://pypi.python.org/pypi\nusername: strategic.reasoning.group' > ~/.pypirc
-	bin/python setup.py sdist bdist_wheel upload; mv ~/.pypirc.bak~ ~/.pypirc
+	bin/python setup.py sdist bdist_wheel && bin/twine upload dist/*; mv ~/.pypirc.bak~ ~/.pypirc
 
 clean:
 	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
