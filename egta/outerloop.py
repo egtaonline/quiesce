@@ -230,7 +230,8 @@ class _InnerLoop(object):
         with self._exp_subgames_lock:
             schedule = count > 1 or self._exp_subgames.add(sub_mask)
         if schedule:
-            _log.info('scheduling subgame %s', sub_mask.astype(int))
+            _log.info('scheduling subgame %s%s', sub_mask.astype(int),
+                      ' {:d}'.format(count) if count > 1 else '')
             thread = threading.Thread(
                 target=lambda: self._run_subgame(sub_mask, count))
             thread.start()
