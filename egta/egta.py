@@ -135,7 +135,7 @@ def main():
 
         email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,
                                              args.recipient, email_subject)
-        email_handler.setLevel(40 - args.email_verbosity * 10)
+        email_handler.setLevel(50 - args.email_verbosity * 10)
         log_handlers.append(email_handler)
 
     logging.basicConfig(level=0, handlers=log_handlers)
