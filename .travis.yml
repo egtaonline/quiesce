@@ -5,5 +5,5 @@ python:
     - "3.5"
 install:
     - "deactivate"  # Get out of virtualenv
-    - "PATH=\"/opt/python/3.5/bin:$PATH\" make setup"
+    - "make setup PYTHON=/opt/python/3.5/bin/python"
 script: "make test"

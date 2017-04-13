@@ -75,6 +75,7 @@ class SimulationScheduler(profsched.Scheduler):
                     time.sleep(self.sleep)
                 else:
                     payoffs = self.serial.from_payoff_json(json.loads(line))
+                    payoffs.setflags(write=False)
                     _log.debug("read payoff: %s", payoffs)
                     promise = self._queue.get()
                     promise._set(payoffs)

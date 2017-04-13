@@ -160,7 +160,9 @@ class EgtaScheduler(profsched.Scheduler):
                         _log.debug("obs json %s",  jobs)
                         # Parse all and slice to have accurate counts
                         new_obs = self._serial.from_samplepay_json(jobs)
-                        new_obs = new_obs[:new_obs.shape[0] - nums[2]]
+                        # Copy so old array can be deallocated
+                        new_obs = new_obs[:new_obs.shape[0] - nums[2]].copy()
+                        new_obs.setflags(write=False)
                         for obs in new_obs:
                             que.put(obs)
                         finished = max(min(nums[1] - nums[2], len(new_obs)), 0)
@@ -213,6 +215,7 @@ class EgtaScheduler(profsched.Scheduler):
         # Parse profiles
         for jprof in profiles:
             prof, spays = self._serial.from_profsamplepay_json(jprof)
+            spays.setflags(write=False)
             hprof = gu.hash_array(prof)
             que = queue.Queue()
             for pay in spays:

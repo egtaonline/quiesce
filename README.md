@@ -53,12 +53,5 @@ Development
 Typing `make` will print out everything it's setup to do.
 
 `make setup` will do a best effort to setup an appropriate development environment.
-One requirement is that `python --version` is at least 3.5.
-On ubunutu systems, `python3` points the latest python 3.x where `python` points to the latest 2.x version.
-This can be fixed by running
-
-```
-mkdir -p /tmp/python3 && ln -fs $(which python3) /tmp/python3/python && env PATH="/tmp/python3:$PATH" make setup
-```
-
-instead of just `make setup`.
+The script requires a python interpreter that's at least version 3.5.
+To specify a different interpreter than the default lookup on your path use `make setup PYTHON=<alternate-python>`, e.g. on many ubuntu systems you might need to run `make setup PYTHON=python3`.

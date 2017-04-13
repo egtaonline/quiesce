@@ -38,8 +38,9 @@ class _CountPromise(profsched.Promise):
     def get(self):
         if self._value is None:
             count = 1
-            self._value = next(self._proms).get()
+            self._value = next(self._proms).get().copy()
             for prom in self._proms:
                 count += 1
                 self._value += (prom.get() - self._value) / count
+            self._value.setflags(write=False)
         return self._value

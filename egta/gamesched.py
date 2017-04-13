@@ -50,6 +50,7 @@ class GameScheduler(profsched.Scheduler):
 
         payoff = pay + self._noise_dist(*params)
         payoff[profile == 0] = 0
+        payoff.setflags(write=False)
 
         return _GamePromise(payoff)
 

@@ -1,4 +1,5 @@
 FILES = egta test setup.py
+PYTHON = python
 
 help:
 	@echo "usage: make <tag>"
@@ -12,7 +13,7 @@ help:
 	@echo "add EGTA_TESTS=ON to run egta tests as well"
 
 setup:
-	python -m venv .
+	$(PYTHON) -m venv .
 	bin/pip install -U pip setuptools -r requirements.txt -e .
 
 test:

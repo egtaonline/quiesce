@@ -167,13 +167,16 @@ def main():
             with open(args.profile_data, 'w') as f:
                 json.dump(gamej, f)
 
+        _log.error('found equilibria %s',
+                   json.dumps(list(map(serial.to_prof_json, eqa)), indent=2))
         for eqm in eqa:
             json.dump(
                 serial.to_prof_json(game.trim_mixture_support(
                     eqm, args.support_thresh)), args.output)
             args.output.write('\n')
+        _log.critical('egta complete')
     except KeyboardInterrupt:  # pragma: no cover
-        _log.critical('execution interrupted by user or exception in thread')
+        _log.critical('execution interrupted by user')
 
     except Exception as ex:  # pragma: no cover
         exc_type, exc_value, exc_traceback = sys.exc_info()

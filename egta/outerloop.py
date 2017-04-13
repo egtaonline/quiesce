@@ -174,7 +174,7 @@ class _OuterLoop(object):
                                          self._init_role_dev)
                 while not self._threads.empty():
                     if self._thread_failed:
-                        raise RuntimeError("a thread failed, checl log for details")  # pragma: no cover # noqa
+                        raise RuntimeError("a thread failed, check log for details")  # pragma: no cover # noqa
                     else:
                         self._threads.get().join()
 
@@ -225,12 +225,12 @@ class _InnerLoop(object):
 
     def _add_subgame(self, sub_mask, count):
         if count > self._max_resamples:  # pragma: no cover
-            _log.warning("couldn't find equilibrium in subgame %s", sub_mask)
+            _log.error("couldn't find equilibrium in subgame %s", sub_mask.astype(int))
             return
         with self._exp_subgames_lock:
             schedule = count > 1 or self._exp_subgames.add(sub_mask)
         if schedule:
-            _log.info('scheduling subgame %s', sub_mask)
+            _log.info('scheduling subgame %s', sub_mask.astype(int))
             thread = threading.Thread(
                 target=lambda: self._run_subgame(sub_mask, count))
             thread.start()
@@ -277,6 +277,8 @@ class _InnerLoop(object):
             if role_index is None:
                 assert not np.isnan(gains).any(), "There were nan regrets"
                 if np.all(gains <= self._regret_thresh):  # Found equilibrium
+                    _log.warning('found equilibrium %s with regret %f', mix,
+                                 gains.max())
                     self._equilibria.append(mix)  # atomic
                 else:
                     for ri, rgains in enumerate(game.role_split(gains)):
@@ -290,6 +292,8 @@ class _InnerLoop(object):
                     if role_index < game.num_roles:  # Explore next deviation
                         self._add_deviations(mix, role_index)
                     else:  # found equilibrium
+                        _log.warning('found equilibrium %s with regret %f',
+                                     mix, gains.max())
                         self._equilibria.append(mix)  # atomic
                 else:
                     self._queue_subgames(support, rgains, role_index)
