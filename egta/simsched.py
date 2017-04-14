@@ -9,8 +9,6 @@ import threading
 import time
 import traceback
 
-import numpy as np
-
 from egta import profsched
 
 

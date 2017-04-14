@@ -14,7 +14,7 @@ Usage
 -----
 
 You need a set of supplementary files to actually run this.
-These files describe the game that's going to be run, and the processes of getting payoff data for each profile when requested.
+These files describe the game that's going to be run, and the process of getting payoff data for each profile when requested.
 This repository contains a sample simulator called `cdasim` that can be used for this purpose.
 Below are some example uses
 

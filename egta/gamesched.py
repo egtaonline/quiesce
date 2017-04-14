@@ -1,4 +1,3 @@
-import itertools
 import random
 
 from gameanalysis import rsgame
@@ -32,6 +31,7 @@ class GameScheduler(profsched.Scheduler):
         how payoff noise is distributed. By default there are no parameters,
         e.g. all noise comes from the same distribution.
     """
+
     def __init__(self, game, noise_dist=lambda: 0, param_dist=lambda: ()):
         self._noise_dist = noise_dist
         self._param_dist = param_dist
@@ -139,6 +139,7 @@ class AggfnScheduler(profsched.Scheduler):
         how payoff noise is distributed. By default there are no parameters,
         e.g. all noise comes from the same distribution.
     """
+
     def __init__(self, agame, noise_dist=lambda: 0, param_dist=lambda: ()):
         self._noise_dist = noise_dist
         self._param_dist = param_dist

@@ -168,7 +168,8 @@ def main():
                 json.dump(gamej, f)
 
         _log.error('found equilibria %s',
-                   json.dumps(list(map(serial.to_prof_json, eqa)), indent=2))
+                   json.dumps(list(map(serial.to_prof_json, eqa)), indent=2,
+                              sort_keys=True))
         for eqm in eqa:
             json.dump(
                 serial.to_prof_json(game.trim_mixture_support(

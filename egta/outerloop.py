@@ -225,7 +225,8 @@ class _InnerLoop(object):
 
     def _add_subgame(self, sub_mask, count):
         if count > self._max_resamples:  # pragma: no cover
-            _log.error("couldn't find equilibrium in subgame %s", sub_mask.astype(int))
+            _log.error("couldn't find equilibrium in subgame %s",
+                       sub_mask.astype(int))
             return
         with self._exp_subgames_lock:
             schedule = count > 1 or self._exp_subgames.add(sub_mask)
