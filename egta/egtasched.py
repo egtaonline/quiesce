@@ -96,12 +96,12 @@ class EgtaScheduler(profsched.Scheduler):
             self._schedule(hprof, val)
         return _EgtaPromise(que, self)
 
-    # FIXME This is a problem and needs to be fixed
-    # TODO When scheduling many profiles at once, this will repeatedly remove
-    # and readd the profile to the scheduler, making a lot of requests. This
-    # shouldn't be that bad as this isn't really a bottleneck, but it could be
-    # made more efficient.
     def _schedule(self, hprof, val):
+        """Internal implementation to actually schedule a profile
+
+        hprof is a hashed array profile, val is the tuple stored for each
+        profile. This allows differed profiles to be scheduled the same way as
+        new ones."""
         profile = hprof.array
         lock, que, rec = val
         with lock:
@@ -140,6 +140,12 @@ class EgtaScheduler(profsched.Scheduler):
                     self._num_running_profiles += self._simult_obs
 
     def _update_counts(self):
+        """Thread the constantly pings EGTA Online for updates
+
+        This thread constantly checks an egta online scheduler for updates to
+        profiles, and when found, pulls the observation data down into the
+        internal structures. It's also used to schedule any profiles that
+        couldn't be scheduled before because we were at max running."""
         try:
             while self._running:
                 # First update requirements and mark completed
@@ -260,6 +266,7 @@ class EgtaScheduler(profsched.Scheduler):
 
 
 class _Record(object):
+    """All mutable data associated with a profile"""
     def __init__(self, prof_id=None, num_rec=0):
         self.prof_id = prof_id
         self.num_req = 0

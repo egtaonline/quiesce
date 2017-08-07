@@ -1,3 +1,4 @@
+"""An abstract profile scheduler"""
 import abc
 
 

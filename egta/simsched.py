@@ -65,6 +65,10 @@ class SimulationScheduler(profsched.Scheduler):
         return promise
 
     def _dequeue(self):
+        """Thread used to get output from simulator
+
+        This thread is run as a daemon thread constantly polling the simulator
+        process and processing payoff data when its found."""
         try:
             # TODO It'd be good to have this timeout to notify of problems with
             # a simulator, but I can't really do this until there's a better

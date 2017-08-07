@@ -37,6 +37,7 @@ class _CountPromise(profsched.Promise):
 
     def get(self):
         if self._value is None:
+            # This is doing a streaming mean computation on all of the promises
             count = 1
             self._value = next(self._proms).get().copy()
             for prom in self._proms:

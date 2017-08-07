@@ -17,6 +17,11 @@ from gameanalysis import utils
 _log = logging.getLogger(__name__)
 
 
+# TODO Split outer loop from inner loop so that arbitrary best response / next
+# strategy oracles can be used. This change would require a significant
+# restructure in order to preserve existing data.
+
+
 def outer_loop(prof_sched, game, initial_subgame=None, *, red=None,
                regret_thresh=1e-3, dist_thresh=1e-3, max_resamples=10,
                subgame_size=3, num_equilibria=1, num_backups=1,
