@@ -58,3 +58,17 @@ def test_innerloop_simple():
 
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa, _ = outerloop.outer_loop(sched, sgame)
+
+
+def test_duplicate_prof():
+    game = gamegen.role_symmetric_game([4, 3], [3, 4])
+    profs = game.random_profiles(20)
+
+    with gamesched.GameScheduler(game) as sched:
+        proms = [sched.schedule(p) for p in profs]
+        pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
+
+        proms = [sched.schedule(p) for p in profs]
+        pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
