@@ -66,6 +66,11 @@ class SimulationScheduler(profsched.Scheduler):
 
     def _dequeue(self):
         try:
+            # TODO It'd be good to have this timeout to notify of problems with
+            # a simulator, but I can't really do this until there's a better
+            # way to interrupt the main thread.
+            # TODO Similarity it'd be good to check the process for termination
+            # / and error code to better notify users.
             while self._running:
                 line = self._stdout.readline()
                 if not line:
