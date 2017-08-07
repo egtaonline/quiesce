@@ -5,6 +5,7 @@ import threading
 import time
 import traceback
 
+import numpy as np
 from egtaonline import api
 from gameanalysis import rsgame
 from gameanalysis import utils as gu
@@ -59,7 +60,7 @@ class EgtaScheduler(profsched.Scheduler):
         self._game = rsgame.basegame_copy(basegame)
         self._serial = serial
 
-        # {hprof: (lock, obs, [id, num_sched, num_receved])}
+        # {hprof: (lock, obs, _Record)}
         self._profiles = {}
         self._prof_lock = threading.Lock()
         self._num_running_profiles = 0
@@ -85,7 +86,7 @@ class EgtaScheduler(profsched.Scheduler):
         hprof = gu.hash_array(profile)
         with self._prof_lock:
             val = self._profiles.setdefault(
-                hprof, (threading.Lock(), queue.Queue(), [None, 0, 0]))
+                hprof, (threading.Lock(), queue.Queue(), _Record()))
 
         _, que, _ = val
         if self._num_running_profiles > self._max_running:
@@ -102,28 +103,41 @@ class EgtaScheduler(profsched.Scheduler):
     # made more efficient.
     def _schedule(self, hprof, val):
         profile = hprof.array
-        lock, que, nums = val
-        prof_id = nums[0]
+        lock, que, rec = val
         with lock:
-            nums[1] += 1  # num scheduled
+            rec.num_req += 1
 
-            if prof_id is None:
+            if rec.prof_id is None:
+                # Unknown id, schedule new amount
+                rec.num_sched = self._simult_obs
                 _log.debug("new profile scheduled %s", profile)
-                prof_id = self._sched.add_profile(
-                    self._serial.to_prof_str(profile), nums[1]).id
-                nums[0] = prof_id
-                self._prof_ids[prof_id] = val
+                rec.prof_id = self._sched.add_profile(
+                    self._serial.to_prof_str(profile), rec.num_sched).id
+                self._prof_ids[rec.prof_id] = val
                 with self._runprof_lock:
-                    self._num_running_profiles += 1
+                    self._num_running_profiles += rec.num_sched
 
-            elif nums[2] < nums[1]:
-                self._prof_ids[prof_id] = val
-                _log.debug("old profile scheduled %s", profile)
-                self._sched.remove_profile(prof_id)
+            elif 0 < rec.num_rec < rec.num_req and rec.num_sched == 0:
+                # Id from previous data, schedule specially
+                rec.num_sched = ((((rec.num_req - 1) // self._simult_obs) + 1)
+                                 * self._simult_obs)
+                self._prof_ids[rec.prof_id] = val
+                _log.debug("new existing data profile scheduled %s", profile)
                 self._sched.add_profile(
-                    self._serial.to_prof_str(profile), nums[1])
+                    self._serial.to_prof_str(profile), rec.num_sched)
                 with self._runprof_lock:
-                    self._num_running_profiles += 1
+                    self._num_running_profiles += rec.num_sched - rec.num_rec
+
+            elif rec.num_rec < rec.num_req and rec.num_sched < rec.num_req:
+                # Existing profile
+                self._prof_ids[rec.prof_id] = val
+                rec.num_sched += self._simult_obs
+                _log.debug("old profile scheduled %s", profile)
+                self._sched.remove_profile(rec.prof_id)
+                self._sched.add_profile(
+                    self._serial.to_prof_str(profile), rec.num_sched)
+                with self._runprof_lock:
+                    self._num_running_profiles += self._simult_obs
 
     def _update_counts(self):
         try:
@@ -136,10 +150,10 @@ class EgtaScheduler(profsched.Scheduler):
                     prof_id = req['id']
                     if prof_id not in self._prof_ids:
                         continue  # race condition # pragma: no cover
-                    lock, que, nums = self._prof_ids[prof_id]
+                    lock, que, rec = self._prof_ids[prof_id]
 
                     # Check if updated counts is greater than before
-                    if req['current_count'] <= nums[2]:
+                    if req['current_count'] <= rec.num_rec:
                         continue
                     _log.debug("can update profile %d", prof_id)
 
@@ -154,6 +168,7 @@ class EgtaScheduler(profsched.Scheduler):
                         jobs = None
                         valid = False
                         while not valid:
+                            # TODO Timeouts here are probably preferred
                             jobs = egta_prof.get_info('observations')
                             valid = all(o['symmetry_groups'] is not None for o
                                         in jobs.observations)
@@ -161,12 +176,14 @@ class EgtaScheduler(profsched.Scheduler):
                         # Parse all and slice to have accurate counts
                         new_obs = self._serial.from_samplepay_json(jobs)
                         # Copy so old array can be deallocated
-                        new_obs = new_obs[:new_obs.shape[0] - nums[2]].copy()
+                        new_obs = np.copy(
+                            new_obs[:new_obs.shape[0] - rec.num_rec])
                         new_obs.setflags(write=False)
                         for obs in new_obs:
                             que.put(obs)
-                        finished = max(min(nums[1] - nums[2], len(new_obs)), 0)
-                        nums[2] += len(new_obs)
+                        finished = max(min(rec.num_sched - rec.num_rec,
+                                           len(new_obs)), 0)
+                        rec.num_rec += len(new_obs)
                         with self._runprof_lock:
                             self._num_running_profiles -= finished
 
@@ -215,7 +232,7 @@ class EgtaScheduler(profsched.Scheduler):
             que = queue.Queue()
             for pay in spays:
                 que.put(pay)
-            val = (threading.Lock(), que, [jprof.id, 0, len(spays)])
+            val = (threading.Lock(), que, _Record(jprof.id, len(spays)))
             self._profiles[hprof] = val
 
         # Create and start scheduler
@@ -240,6 +257,14 @@ class EgtaScheduler(profsched.Scheduler):
         if self._api is not None:
             self._api.close()
         _log.info("deactivated scheduler %d", self._sched.id)
+
+
+class _Record(object):
+    def __init__(self, prof_id=None, num_rec=0):
+        self.prof_id = prof_id
+        self.num_req = 0
+        self.num_sched = 0
+        self.num_rec = num_rec
 
 
 class _EgtaPromise(profsched.Promise):
