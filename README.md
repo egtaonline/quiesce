@@ -35,6 +35,14 @@ Below are some example uses
    By default the quiesce routine only uses one payoff sample per profile.
    Setting `--count` to a larger number will help reduce the noise.
 
+3. Perform the quiesce routine on a game that's defined by an EGTA Online zip file.
+   This will get profile by calling the batch script from a zip file the same way as EGTA Online.
+   To accomplish this, this repository has a simulator file called `zip-wrapper.sh` that takes a zip file and returns a compatable simulator for `egta`.
+
+   ```
+   egta --game-json cdasim/small_game.json quiesce sim -- ./zip-wrapper.sh cdasim/cdasim.zip
+   ```
+
 3. Perform the quiesce routine on a game with information on EGTA Online.
    The parameters specified here are for the same simulation that was uploaded there.
 

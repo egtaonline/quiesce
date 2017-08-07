@@ -70,7 +70,10 @@ class SimulationScheduler(profsched.Scheduler):
             # a simulator, but I can't really do this until there's a better
             # way to interrupt the main thread.
             # TODO Similarity it'd be good to check the process for termination
-            # / and error code to better notify users.
+            # / and error code to better notify users. We could use
+            # self._proc.wait instead of time.sleep, but we'd need to handle
+            # process being terminated and we'd probably want to capture stderr
+            # to report to user.
             while self._running:
                 line = self._stdout.readline()
                 if not line:
@@ -102,7 +105,13 @@ class SimulationScheduler(profsched.Scheduler):
     def __exit__(self, *args):
         self._running = False
         if self._proc is not None:
-            self._proc.kill()
+            # Kill process nicely, and then not nicely
+            self._proc.terminate()
+            try:
+                self._proc.wait(1)
+            except subprocess.TimeoutExpired:
+                _log.warning("couldn't terminate simulation, killing it...")
+                self._proc.kill()
 
 
 class _SimPromise(profsched.Promise):
