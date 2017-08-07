@@ -6,4 +6,4 @@ python:
 install:
     - "deactivate"  # Get out of virtualenv
     - "travis_wait 30 make setup PYTHON=/opt/python/3.5/bin/python"
-script: "make test"
+script: "travis_wait 30 make test"
