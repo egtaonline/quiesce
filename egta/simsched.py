@@ -52,7 +52,6 @@ class SimulationScheduler(profsched.Scheduler):
         self._stdout = None
         self._lock = threading.Lock()
         self._queue = queue.Queue()
-        self._thread_failed = False
 
     def schedule(self, profile):
         promise = _SimPromise(self)
@@ -79,12 +78,9 @@ class SimulationScheduler(profsched.Scheduler):
                     promise._set(payoffs)
                     self._queue.task_done()
         except Exception as ex:  # pragma: no cover
-            self._thread_failed = True
             exc_type, exc_value, exc_traceback = sys.exc_info()
             _log.critical(''.join(traceback.format_exception(
                 exc_type, exc_value, exc_traceback)))
-            while not self._queue.empty():
-                self._queue.get()._set(None)  # Trigger check for failure
             raise ex
 
     def __enter__(self):
@@ -94,7 +90,6 @@ class SimulationScheduler(profsched.Scheduler):
         self._stdout = io.TextIOWrapper(self._proc.stdout)
 
         self._running = True
-        self._thread_failed = False
         threading.Thread(target=self._dequeue, daemon=True).start()
 
         return self
@@ -116,7 +111,4 @@ class _SimPromise(profsched.Promise):
 
     def get(self):
         self._event.wait()
-        if self._sched._thread_failed:
-            raise RuntimeError("a thread failed, checl log for details")  # pragma: no cover # noqa
-        else:
-            return self._value
+        return self._value

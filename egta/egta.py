@@ -158,7 +158,8 @@ def main():
         if args.profile_data is not None:
             prof_data = savesched.SaveScheduler(game, sched)
             sched = prof_data
-        sched = countsched.CountScheduler(sched, args.count)
+        if args.count > 1:
+            sched = countsched.CountScheduler(sched, args.count)
         with sched:
             eqa = method.find_eqa(sched, game, serial, args)
 

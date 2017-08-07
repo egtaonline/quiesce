@@ -62,8 +62,8 @@ class EgtaScheduler(profsched.Scheduler):
         # {hprof: (lock, obs, [id, num_sched, num_receved])}
         self._profiles = {}
         self._prof_lock = threading.Lock()
-        # {prof_id: ^above^}
         self._num_running_profiles = 0
+        # {prof_id: ^above^}
         self._prof_ids = {}
         self._runprof_lock = threading.Lock()
         self._pending_profiles = queue.Queue()
@@ -80,7 +80,6 @@ class EgtaScheduler(profsched.Scheduler):
         self._api = None
         self._sched = None
         self._running = False
-        self._thread_failed = False
 
     def schedule(self, profile):
         hprof = gu.hash_array(profile)
@@ -96,6 +95,7 @@ class EgtaScheduler(profsched.Scheduler):
             self._schedule(hprof, val)
         return _EgtaPromise(que, self)
 
+    # FIXME This is a problem and needs to be fixed
     # TODO When scheduling many profiles at once, this will repeatedly remove
     # and readd the profile to the scheduler, making a lot of requests. This
     # shouldn't be that bad as this isn't really a bottleneck, but it could be
@@ -180,17 +180,12 @@ class EgtaScheduler(profsched.Scheduler):
                 time.sleep(self._sleep_time)
 
         except Exception as ex:  # pragma: no cover
-            self._thread_failed = True
             exc_type, exc_value, exc_traceback = sys.exc_info()
             _log.critical(''.join(traceback.format_exception(
                 exc_type, exc_value, exc_traceback)))
-            for _, que, [__, sched, rec] in self._profiles.values():
-                for _ in range(sched - rec):
-                    que.put(None)  # Notify all waiting threads
             raise ex
 
     def __enter__(self):
-        self._thread_failed = False
         self._api = api.EgtaOnlineApi(self._auth_token)
         name = 'egta_' + eu.random_string(20)
 
@@ -256,7 +251,4 @@ class _EgtaPromise(profsched.Promise):
     def get(self):
         if self._val is None:
             self._val = self._queue.get()
-        if self._sched._thread_failed:
-            raise RuntimeError("a thread failed, checl log for details")  # pragma: no cover # noqa
-        else:
-            return self._val
+        return self._val
