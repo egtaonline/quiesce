@@ -13,7 +13,7 @@ setuptools.setup(
     install_requires=[
         'gameanalysis~=3.1',
         'egtaonlineapi~=0.1',
-        'numpy~=1.12',
+        'numpy~=1.13',
     ],
     packages=['egta', 'egta.script'],
 )
