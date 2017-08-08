@@ -1,3 +1,4 @@
+dist: trusty
 git:
     submodules: false
 language: python
