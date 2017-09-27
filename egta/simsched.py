@@ -15,6 +15,7 @@ from egta import profsched
 _log = logging.getLogger(__name__)
 
 
+# FIXME Change zip wrapper to be independent scheduler
 class SimulationScheduler(profsched.Scheduler):
     """Schedule profiles using a command line program
 

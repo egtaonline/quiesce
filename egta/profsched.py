@@ -2,6 +2,8 @@
 import abc
 
 
+# TODO Create a scheduler that uses spark to run on flux / generally parallel
+# schedule them.
 class Scheduler(metaclass=abc.ABCMeta):  # pragma: no cover
     """A profile scheduler
 

@@ -231,22 +231,28 @@ class EgtaScheduler(profsched.Scheduler):
                 gamea.destroy_game()
 
         # Parse profiles
+        num_profs = len(profiles)
+        num_pays = 0
         for jprof in profiles:
             prof, spays = self._serial.from_profsamplepay_json(jprof)
             spays.setflags(write=False)
             hprof = gu.hash_array(prof)
             que = queue.Queue()
+            num_pays += len(spays)
             for pay in spays:
                 que.put(pay)
             val = (threading.Lock(), que, _Record(jprof.id, len(spays)))
             self._profiles[hprof] = val
+        _log.info("found %d existing profiles with %d payoffs", num_profs,
+                  num_pays)
 
         # Create and start scheduler
         self._sched = self._api.create_generic_scheduler(
             self._sim_id, name, True, self._obs_memory,
             self._game.num_all_players, self._obs_time, self._simult_obs, 1,
             self._configuration)
-        _log.info("created scheduler %s %d", name, self._sched.id)
+        _log.warning("created scheduler %s %d for running simulations", name,
+                     self._sched.id)
         for role, count in zip(self._serial.role_names,
                                self._game.num_players):
             self._sched.add_role(role, count)
@@ -267,6 +273,7 @@ class EgtaScheduler(profsched.Scheduler):
 
 class _Record(object):
     """All mutable data associated with a profile"""
+
     def __init__(self, prof_id=None, num_rec=0):
         self.prof_id = prof_id
         self.num_req = 0

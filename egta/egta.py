@@ -22,6 +22,10 @@ from egta.script import simsched
 _log = logging.getLogger(__name__)
 
 
+# FIXME Make sure the exceptions bubble appropriately and kill all threads as
+# necessary. Also, deamon threads should probably not be deamons so that we can
+# verify cleanup.
+
 def main():
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
