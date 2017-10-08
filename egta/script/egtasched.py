@@ -35,6 +35,7 @@ def add_parser(subparsers):
         help="""The maximum number of observations to schedule simultaneously.
         This isn't a strict limit, but it won't be violated by much. (default:
         %(default)s)""")
+    # FIXME Since these are required, they should be positional not flagged
     parser.add_argument(
         '--sim-memory', '-m', required=True, metavar='<mb>', type=int,
         help="""Maximum memory needed to run simulation. Standard limit per

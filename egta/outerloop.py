@@ -248,6 +248,9 @@ class _InnerLoop(object):
             game = subgame.subgame(self._sched.get_subgame(sub_mask, count),
                                    sub_mask)
             with self._nash_lock:
+                # FIXME For some reason, linesearch in optimize throws warnings
+                # here, but it's unclear as to why as it doesn't happen when
+                # pulling the data normally.
                 eqa = subgame.translate(nash.mixed_nash(
                     game, regret_thresh=self._regret_thresh,
                     dist_thresh=self._dist_thresh, processes=1), sub_mask)
@@ -350,7 +353,8 @@ class _InnerLoop(object):
                 self._add_subgame(sub_mask, 1)
             while not self._threads.empty():
                 if self._thread_failed:
-                    raise RuntimeError("a thread failed, checl log for details")  # pragma: no cover # noqa
+                    # FIXME store exception and re raise
+                    raise RuntimeError("a thread failed, check log for details")  # pragma: no cover # noqa
                 else:
                     self._threads.get().join()
 
@@ -365,7 +369,8 @@ class _InnerLoop(object):
                         self._add_subgame(back.get()[2], 1)
                 while not self._threads.empty():
                     if self._thread_failed:
-                        raise RuntimeError("a thread failed, checl log for details")  # pragma: no cover # noqa
+                        # FIXME store exception and re raise
+                        raise RuntimeError("a thread failed, check log for details")  # pragma: no cover # noqa
                     else:
                         self._threads.get().join()
 
