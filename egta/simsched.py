@@ -4,10 +4,7 @@ import json
 import logging
 import queue
 import subprocess
-import sys
 import threading
-import time
-import traceback
 
 from egta import profsched
 
@@ -49,20 +46,28 @@ class SimulationScheduler(profsched.Scheduler):
 
         self._running = False
         self._proc = None
+        self._thread = None
         self._stdin = None
         self._stdout = None
         self._lock = threading.Lock()
         self._queue = queue.Queue()
 
+        self._exception = None
+
     def schedule(self, profile):
         promise = _SimPromise(self)
         with self._lock:
-            self.base['assignment'] = self.serial.to_prof_json(profile)
+            if self._exception is not None:
+                raise self._exception
+            assert self._proc is not None and self._proc.poll() is None, \
+                "process is not running"
+            jprof = self.serial.to_prof_json(profile)
+            self.base['assignment'] = jprof
             json.dump(self.base, self._stdin, separators=(',', ':'))
             self._stdin.write('\n')
             self._stdin.flush()
             self._queue.put(promise)
-            _log.debug("sent profile: %s", profile)
+            _log.debug("sent profile: %s", jprof)
         return promise
 
     def _dequeue(self):
@@ -71,30 +76,30 @@ class SimulationScheduler(profsched.Scheduler):
         This thread is run as a daemon thread constantly polling the simulator
         process and processing payoff data when its found."""
         try:
-            # TODO It'd be good to have this timeout to notify of problems with
-            # a simulator, but I can't really do this until there's a better
-            # way to interrupt the main thread.
-            # TODO Similarity it'd be good to check the process for termination
-            # / and error code to better notify users. We could use
-            # self._proc.wait instead of time.sleep, but we'd need to handle
-            # process being terminated and we'd probably want to capture stderr
-            # to report to user.
             while self._running:
+                # This is blocking
                 line = self._stdout.readline()
-                if not line:
-                    time.sleep(self.sleep)
+                ret = self._proc.poll()
+                if not line and self._queue.empty():
+                    # Process closed stdout and had nothing else to run
+                    self._running = False
+                    self._proc.terminate()
+                elif ret is not None:
+                    # Process terminated unexpectedly
+                    raise RuntimeError(
+                        "Process died unexpectedly with code {:d}".format(ret))
                 else:
-                    payoffs = self.serial.from_payoff_json(json.loads(line))
+                    jpays = json.loads(line)
+                    payoffs = self.serial.from_payoff_json(jpays)
                     payoffs.setflags(write=False)
-                    _log.debug("read payoff: %s", payoffs)
+                    _log.debug("read payoff: %s", jpays)
                     promise = self._queue.get()
                     promise._set(payoffs)
-                    self._queue.task_done()
         except Exception as ex:  # pragma: no cover
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            _log.critical(''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback)))
-            raise ex
+            self._exception = ex
+            # Drain queue to notify of exception
+            while not self._queue.empty():
+                self._queue.get()._set(None)
 
     def __enter__(self):
         self._proc = subprocess.Popen(
@@ -102,21 +107,32 @@ class SimulationScheduler(profsched.Scheduler):
         self._stdin = io.TextIOWrapper(self._proc.stdin)
         self._stdout = io.TextIOWrapper(self._proc.stdout)
 
+        self._thread = threading.Thread(target=self._dequeue)
         self._running = True
-        threading.Thread(target=self._dequeue, daemon=True).start()
-
+        self._thread.start()
         return self
 
     def __exit__(self, *args):
         self._running = False
+
         if self._proc is not None:
             # Kill process nicely, and then not nicely
             self._proc.terminate()
             try:
-                self._proc.wait(1)
+                self._proc.wait(self.sleep)
             except subprocess.TimeoutExpired:
                 _log.warning("couldn't terminate simulation, killing it...")
                 self._proc.kill()
+
+        # After killing the process, the output should close and the thread
+        # should die
+        if self._thread is not None:
+            self._thread.join(self.sleep * 2)
+            if self._thread.is_alive():
+                _log.warning("couldn't kill dequeue thread...")
+
+        if self._exception is not None:
+            raise self._exception
 
 
 class _SimPromise(profsched.Promise):
@@ -130,4 +146,6 @@ class _SimPromise(profsched.Promise):
 
     def get(self):
         self._event.wait()
+        if self._sched._exception is not None:
+            raise self._sched._exception
         return self._value

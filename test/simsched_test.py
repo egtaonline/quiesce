@@ -19,7 +19,9 @@ def test_basic_profile():
     with simsched.SimulationScheduler(serial, conf, cmd) as sched:
         proms = [sched.schedule(p) for p in profs]
         pays = np.concatenate([p.get()[None] for p in proms])
+    assert pays.shape == profs.shape
     assert np.allclose(pays[profs == 0], 0)
+    assert np.any(pays != 0)
 
 
 def test_innerloop_simple():
