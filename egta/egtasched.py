@@ -1,9 +1,6 @@
 import logging
 import queue
-import sys
 import threading
-import time
-import traceback
 
 import numpy as np
 from egtaonline import api
@@ -17,6 +14,7 @@ from egta import utils as eu
 _log = logging.getLogger(__name__)
 
 
+# FIXME Change from egta to eo and to EgtaOnlineScheduler
 class EgtaScheduler(profsched.Scheduler):
     """A profile scheduler that schedules through egta online
 
@@ -81,8 +79,12 @@ class EgtaScheduler(profsched.Scheduler):
         self._api = None
         self._sched = None
         self._running = False
+        self._thread_timeout_lock = threading.Lock()
+        self._exception = None
 
     def schedule(self, profile):
+        if self._exception is not None:
+            raise self._exception
         hprof = gu.hash_array(profile)
         with self._prof_lock:
             val = self._profiles.setdefault(
@@ -139,6 +141,14 @@ class EgtaScheduler(profsched.Scheduler):
                 with self._runprof_lock:
                     self._num_running_profiles += self._simult_obs
 
+    def _drain_queues(self):
+        """Drain all profile queues when an assertion is thrown"""
+        assert self._exception is not None
+        with self._prof_lock:
+            for _, que, _ in self._profiles.values():
+                while que.empty():
+                    que.push(None)
+
     def _update_counts(self):
         """Thread the constantly pings EGTA Online for updates
 
@@ -146,6 +156,7 @@ class EgtaScheduler(profsched.Scheduler):
         profiles, and when found, pulls the observation data down into the
         internal structures. It's also used to schedule any profiles that
         couldn't be scheduled before because we were at max running."""
+        self._thread_timeout_lock.acquire()
         try:
             while self._running:
                 # First update requirements and mark completed
@@ -199,14 +210,19 @@ class EgtaScheduler(profsched.Scheduler):
                     hprof, val = self._pending_profiles.get()
                     self._schedule(hprof, val)
 
-                # Now wait some time
-                time.sleep(self._sleep_time)
+                # Now wait some time. By doing this with a lock, we allow this
+                # thread to be interrupted in the case of exception.
+                if self._thread_timeout_lock.acquire(True, self._sleep_time):
+                    assert not self._running, \
+                        "this should only be reached if we're not running"
 
         except Exception as ex:  # pragma: no cover
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            _log.critical(''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback)))
-            raise ex
+            self._exception = ex
+            self._drain_queues()
+
+        finally:
+            if self._thread_timeout_lock.locked():
+                self._thread_timeout_lock.release()
 
     def __enter__(self):
         self._api = api.EgtaOnlineApi(self._auth_token)
@@ -256,18 +272,21 @@ class EgtaScheduler(profsched.Scheduler):
         for role, count in zip(self._serial.role_names,
                                self._game.num_players):
             self._sched.add_role(role, count)
-        self._running = True
-        thread = threading.Thread(target=self._update_counts, daemon=True)
-        thread.start()
 
+        self._running = True
+        thread = threading.Thread(target=self._update_counts)
+        thread.start()
         return self
 
     def __exit__(self, *args):
         self._running = False
+        if self._thread_timeout_lock.locked():
+            self._thread_timeout_lock.release()
         if self._sched is not None:
             self._sched.deactivate()
         if self._api is not None:
             self._api.close()
+        self._drain_queues()
         _log.info("deactivated scheduler %d", self._sched.id)
 
 
@@ -290,4 +309,6 @@ class _EgtaPromise(profsched.Promise):
     def get(self):
         if self._val is None:
             self._val = self._queue.get()
+        if self._sched._exception is not None:
+            raise self._sched._exception
         return self._val

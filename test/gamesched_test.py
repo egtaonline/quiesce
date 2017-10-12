@@ -4,7 +4,7 @@ from gameanalysis import gamegen
 from gameanalysis import agggen
 
 from egta import gamesched
-from egta import outerloop
+from egta import innerloop
 
 
 def test_basic_profile():
@@ -57,7 +57,7 @@ def test_innerloop_simple():
         gamegen.role_symmetric_game([4, 3], [3, 4]), 1, 3)
 
     with gamesched.SampleGameScheduler(sgame) as sched:
-        eqa, _ = outerloop.outer_loop(sched, sgame)
+        innerloop.inner_loop(sched, sgame)
 
 
 def test_duplicate_prof():

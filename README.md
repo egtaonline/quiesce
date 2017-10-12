@@ -1,14 +1,16 @@
 Empirical Game-Theoretic Analysis
 =================================
 
-[![Build Status](https://travis-ci.org/egtaonline/quiesce.svg?branch=master)](https://travis-ci.org/egtaonline/quiesce)
+[![Build Status](https://img.shields.io/travis/egtaonline/quiesce.svg?style=flat-square)](https://travis-ci.org/egtaonline/quiesce)
 
 A command line tool for running egta on arbitrary simulators.
 
 Setup
 -----
 
-FIXME
+```
+pip install --user -U egta
+```
 
 Usage
 -----

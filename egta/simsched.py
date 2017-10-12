@@ -57,10 +57,13 @@ class SimulationScheduler(profsched.Scheduler):
     def schedule(self, profile):
         promise = _SimPromise(self)
         with self._lock:
+            assert self._proc is not None, \
+                "can't call schedule before entering scheduler"
+            rcode = self._proc.poll()
             if self._exception is not None:
                 raise self._exception
-            assert self._proc is not None and self._proc.poll() is None, \
-                "process is not running"
+            assert rcode is None, \
+                "process is not running {:d}".format(rcode)
             jprof = self.serial.to_prof_json(profile)
             self.base['assignment'] = jprof
             json.dump(self.base, self._stdin, separators=(',', ':'))
@@ -73,23 +76,27 @@ class SimulationScheduler(profsched.Scheduler):
     def _dequeue(self):
         """Thread used to get output from simulator
 
-        This thread is run as a daemon thread constantly polling the simulator
-        process and processing payoff data when its found."""
+        This thread is constantly polling the simulator process and processing
+        payoff data when its found."""
         try:
             while self._running:
                 # This is blocking
                 line = self._stdout.readline()
-                ret = self._proc.poll()
                 if not line and self._queue.empty():
                     # Process closed stdout and had nothing else to run
                     self._running = False
                     self._proc.terminate()
-                elif ret is not None:
+                elif self._proc.poll() is not None:
                     # Process terminated unexpectedly
                     raise RuntimeError(
-                        "Process died unexpectedly with code {:d}".format(ret))
+                        "Process died unexpectedly with code {:d}".format(
+                            self._proc.poll()))
                 else:
-                    jpays = json.loads(line)
+                    try:
+                        jpays = json.loads(line)
+                    except json.JSONDecodeError:
+                        raise RuntimeError(
+                            "Couldn't decode \"{}\" as json".format(line))
                     payoffs = self.serial.from_payoff_json(jpays)
                     payoffs.setflags(write=False)
                     _log.debug("read payoff: %s", jpays)
@@ -129,7 +136,7 @@ class SimulationScheduler(profsched.Scheduler):
         if self._thread is not None:
             self._thread.join(self.sleep * 2)
             if self._thread.is_alive():
-                _log.warning("couldn't kill dequeue thread...")
+                _log.warning("couldn't kill dequeue thread...")  # pragma: no cover # noqa
 
         if self._exception is not None:
             raise self._exception

@@ -1,9 +1,7 @@
-import argparse
-import json
-
+"""Script utility for running inner loop"""
 from gameanalysis import reduction
 
-from egta import outerloop
+from egta import innerloop
 
 
 def add_parser(subparsers):
@@ -15,13 +13,6 @@ def add_parser(subparsers):
     parser.add_argument(
         '--dpr', metavar='<role:count,role:count,...>', help="""Specify a DPR
         reduction.""")
-    parser.add_argument(
-        '--initial-subgame', metavar='<json-file>',
-        type=argparse.FileType('r'), help="""Specify an initial subgame to
-        outerloop over the remaining strategies in the game. If this is
-        specified the first line in output will be the final subgame after
-        outerlooping, and the remaining lines will be the equilibria.""")
-
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -75,19 +66,9 @@ def find_eqa(scheduler, game, serial, args):
     else:
         red = reduction.Identity(game.num_strategies, game.num_players)
 
-    initial_subgame = args.initial_subgame
-    if initial_subgame is not None:
-        initial_subgame = serial.from_subgame_json(
-            json.load(initial_subgame))
-
-    eqa, subgame = outerloop.outer_loop(
-        scheduler, game, initial_subgame, red=red,
-        regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
-        max_resamples=args.max_resamples, subgame_size=args.max_subgame_size,
-        num_equilibria=args.num_equilibria, num_backups=args.num_backups,
-        devs_by_role=args.dev_by_role)
-
-    if initial_subgame is not None:
-        json.dump(serial.to_subgame_json(subgame), args.output)
-        args.output.write('\n')
+    eqa = innerloop.inner_loop(
+        scheduler, game, red=red, regret_thresh=args.regret_thresh,
+        dist_thresh=args.dist_thresh, max_resamples=args.max_resamples,
+        subgame_size=args.max_subgame_size, num_equilibria=args.num_equilibria,
+        num_backups=args.num_backups, devs_by_role=args.dev_by_role)
     return eqa

@@ -1,16 +1,13 @@
 import json
-import os
 import pytest
 import subprocess
 import tempfile
 from os import path
 
-from gameanalysis import gameio
-
-
 DIR = path.dirname(path.realpath(__file__))
 EGTA = path.join(DIR, '..', 'bin', 'egta')
 SIM_DIR = path.join(DIR, '..', 'cdasim')
+TINY_GAME = path.join(SIM_DIR, 'tiny_game.json')
 SMALL_GAME = path.join(SIM_DIR, 'small_game.json')
 GAME = path.join(SIM_DIR, 'game.json')
 DATA_GAME = path.join(SIM_DIR, 'data_game.json')
@@ -54,6 +51,16 @@ def test_sim():
     assert run('--game-json', SMALL_GAME, 'brute', 'sim', '--', *SIM)
 
 
+def test_sim_delayed_fail():
+    assert not run('--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash',
+                   '-c', 'sleep 1 && false')
+
+
+def test_sim_read_delayed_fail():
+    assert not run('--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash',
+                   '-c', 'read line && false')
+
+
 def test_sim_conf():
     with open(SMALL_GAME) as f:
         conf = json.load(f)['configuration']
@@ -74,26 +81,13 @@ def test_innerloop_dpr():
                'buyers:2,sellers:2', 'game', '--load-game')
 
 
-def test_outerloop():
-    with open(DATA_GAME) as f:
-        bgame, serial = gameio.read_basegame(json.load(f))
-    sub_json = serial.to_prof_json(bgame.random_subgames())
-    with tempfile.NamedTemporaryFile('w') as sub_file:
-        json.dump(sub_json, sub_file)
-        sub_file.flush()
-        assert run('--game-json', DATA_GAME, 'quiesce', '--initial-subgame',
-                   sub_file.name, 'game', '--load-game')
-
-
-@pytest.mark.skipif('EGTA_TESTS' not in os.environ,
-                    reason="Don't run egta tests by default")
+@pytest.mark.egta
 def test_game_id_brute_egta_game():
     assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'egta',
                '-m2048', '-t60')
 
 
-@pytest.mark.skipif('EGTA_TESTS' not in os.environ,
-                    reason="Don't run egta tests by default")
+@pytest.mark.egta
 def test_game_id_brute_egta_game_wconf():
     with open(SMALL_GAME) as f:
         conf = json.load(f)['configuration']

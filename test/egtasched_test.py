@@ -1,5 +1,4 @@
 import json
-import os
 import pytest
 import random
 
@@ -15,8 +14,7 @@ sim_memory = 2048
 sim_time = 60
 
 
-@pytest.mark.skipif('EGTA_TESTS' not in os.environ,
-                    reason="Don't run egta tests by default")
+@pytest.mark.egta
 def test_basic_profile():
     with open('cdasim/game.json') as f:
         jgame = json.load(f)

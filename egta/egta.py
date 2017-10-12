@@ -15,17 +15,14 @@ from egta import savesched
 from egta.script import brute
 from egta.script import egtasched
 from egta.script import gamesched
-from egta.script import outerloop
+from egta.script import innerloop
 from egta.script import simsched
 
 
 _log = logging.getLogger(__name__)
 
 
-# FIXME Make sure the exceptions bubble appropriately and kill all threads as
-# necessary. Also, deamon threads should probably not be deamons so that we can
-# verify cleanup.
-
+# FIXME Add sample regret scheduler
 def main():
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
@@ -90,7 +87,7 @@ def main():
     eq_methods = parser.add_subparsers(
         title='methods', dest='method', metavar='<methods>', help="""The
         method to use to compute equilibria. Available commands are:""")
-    for module in [outerloop, brute]:
+    for module in [innerloop, brute]:
         method = module.add_parser(eq_methods)
         method.find_eqa = module.find_eqa
 
