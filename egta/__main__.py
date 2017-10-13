@@ -22,7 +22,6 @@ from egta.script import simsched
 _log = logging.getLogger(__name__)
 
 
-# FIXME Change this to __main__.py
 # FIXME Add sample regret scheduler
 def main():
     parser = argparse.ArgumentParser(
