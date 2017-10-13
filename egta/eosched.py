@@ -14,8 +14,7 @@ from egta import utils as eu
 _log = logging.getLogger(__name__)
 
 
-# FIXME Change from egta to eo and to EgtaOnlineScheduler
-class EgtaScheduler(profsched.Scheduler):
+class EgtaOnlineScheduler(profsched.Scheduler):
     """A profile scheduler that schedules through egta online
 
     Parameters
@@ -96,7 +95,7 @@ class EgtaScheduler(profsched.Scheduler):
             self._pending_profiles.put((hprof, val))
         else:
             self._schedule(hprof, val)
-        return _EgtaPromise(que, self)
+        return _EgtaOnlinePromise(que, self)
 
     def _schedule(self, hprof, val):
         """Internal implementation to actually schedule a profile
@@ -143,11 +142,11 @@ class EgtaScheduler(profsched.Scheduler):
 
     def _drain_queues(self):
         """Drain all profile queues when an assertion is thrown"""
-        assert self._exception is not None
+        # This can also be thrown on keyboard interrupt
         with self._prof_lock:
             for _, que, _ in self._profiles.values():
                 while que.empty():
-                    que.push(None)
+                    que.put(None)
 
     def _update_counts(self):
         """Thread the constantly pings EGTA Online for updates
@@ -300,7 +299,7 @@ class _Record(object):
         self.num_rec = num_rec
 
 
-class _EgtaPromise(profsched.Promise):
+class _EgtaOnlinePromise(profsched.Promise):
     def __init__(self, que, sched):
         self._val = None
         self._queue = que

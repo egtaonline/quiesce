@@ -13,7 +13,7 @@ from gameanalysis import gameio
 from egta import countsched
 from egta import savesched
 from egta.script import brute
-from egta.script import egtasched
+from egta.script import eosched
 from egta.script import gamesched
 from egta.script import innerloop
 from egta.script import simsched
@@ -22,6 +22,7 @@ from egta.script import simsched
 _log = logging.getLogger(__name__)
 
 
+# FIXME Change this to __main__.py
 # FIXME Add sample regret scheduler
 def main():
     parser = argparse.ArgumentParser(
@@ -96,7 +97,7 @@ def main():
             help="""The scheduler to use for acquiring samples from profiles.
             Available commands are:""")
         method.sched = schedulers
-        for module in [egtasched, gamesched, simsched]:
+        for module in [eosched, gamesched, simsched]:
             sched = module.add_parser(schedulers)
             sched.create_scheduler = module.create_scheduler
 

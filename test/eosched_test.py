@@ -6,13 +6,15 @@ import numpy as np
 from gameanalysis import gameio
 
 from egta import countsched
-from egta import egtasched
+from egta import eosched
 
 
 sleep_time = 60
 sim_memory = 2048
 sim_time = 60
 
+
+# FIXME Ideally we want a mock EgtaOnlineApi
 
 @pytest.mark.egta
 def test_basic_profile():
@@ -25,8 +27,8 @@ def test_basic_profile():
     profs = game.random_profiles(20)
 
     # Schedule all new profiles and verify it works
-    sched = egtasched.EgtaScheduler(107, game, serial, 1, conf, sleep_time, 25,
-                                    sim_memory, sim_time)
+    sched = eosched.EgtaOnlineScheduler(
+        107, game, serial, 1, conf, sleep_time, 25, sim_memory, sim_time)
     with sched:
         proms = [sched.schedule(p) for p in profs]
         pays = np.concatenate([p.get()[None] for p in proms])
@@ -34,8 +36,8 @@ def test_basic_profile():
     assert sched._num_running_profiles == 0
 
     # Schedule old profiles and verify it still works
-    sched = egtasched.EgtaScheduler(107, game, serial, 1, conf, sleep_time, 25,
-                                    sim_memory, sim_time)
+    sched = eosched.EgtaOnlineScheduler(
+        107, game, serial, 1, conf, sleep_time, 25, sim_memory, sim_time)
     with sched:
         proms = [sched.schedule(p) for p in profs]
         pays = np.concatenate([p.get()[None] for p in proms])
@@ -43,8 +45,8 @@ def test_basic_profile():
     assert sched._num_running_profiles == 0
 
     # Schedule two at a time, in two batches
-    base_sched = egtasched.EgtaScheduler(107, game, serial, 2, conf,
-                                         sleep_time, 15, sim_memory, sim_time)
+    base_sched = eosched.EgtaOnlineScheduler(
+        107, game, serial, 2, conf, sleep_time, 15, sim_memory, sim_time)
     sched = countsched.CountScheduler(base_sched, 2)
     with sched:
         proms = [sched.schedule(p) for p in profs]
@@ -53,8 +55,8 @@ def test_basic_profile():
     assert base_sched._num_running_profiles == 0
 
     # Try again now that everything should be scheduled
-    base_sched = egtasched.EgtaScheduler(107, game, serial, 2, conf,
-                                         sleep_time, 15, sim_memory, sim_time)
+    base_sched = eosched.EgtaOnlineScheduler(
+        107, game, serial, 2, conf, sleep_time, 15, sim_memory, sim_time)
     sched = countsched.CountScheduler(base_sched, 2)
     with sched:
         proms = [sched.schedule(p) for p in profs]

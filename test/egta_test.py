@@ -15,6 +15,8 @@ SIM = [path.join(DIR, '..', 'bin', 'python'), path.join(SIM_DIR, 'sim.py'),
        '1', '--single']
 
 
+# FIXME Test sending sigterm
+
 def run(*args):
     return not subprocess.run((EGTA,) + args).returncode
 
@@ -26,7 +28,7 @@ def test_help():
     assert run('brute', '--help')
     assert run('brute', 'game', '--help')
     assert run('brute', 'sim', '--help')
-    assert run('brute', 'egta', '--help')
+    assert run('brute', 'eo', '--help')
     assert run('quiesce', '--help')
 
 
@@ -83,8 +85,8 @@ def test_innerloop_dpr():
 
 @pytest.mark.egta
 def test_game_id_brute_egta_game():
-    assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'egta',
-               '-m2048', '-t60')
+    assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo',
+               '2048', '60')
 
 
 @pytest.mark.egta
@@ -94,5 +96,5 @@ def test_game_id_brute_egta_game_wconf():
     with tempfile.NamedTemporaryFile('w') as conf_file:
         json.dump(conf, conf_file)
         conf_file.flush()
-        assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'egta',
-                   '-c', conf_file.name, '-m2048', '-t60')
+        assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo',
+                   '-c', conf_file.name, '2048', '60')

@@ -5,7 +5,7 @@ import sys
 
 from egtaonline import api
 
-from egta import egtasched
+from egta import eosched
 
 
 _log = logging.getLogger(__name__)
@@ -13,8 +13,20 @@ _log = logging.getLogger(__name__)
 
 def add_parser(subparsers):
     parser = subparsers.add_parser(
-        'egta', help="""Schedule simulations through egta online""",
+        'eo', help="""Schedule simulations through egta online""",
         description="""Sample profiles from egta online.""")
+    parser.add_argument(
+        'sim_memory', metavar='sim-memory-mb', type=int, help="""Maximum memory
+        needed to run simulation. Standard limit per core is 4096, but if your
+        simulation needs less, you should request less. Note, that if you set
+        it too low you'll get biased samples for simulations that require less
+        memory to run which could be very bad.""")
+    parser.add_argument(
+        'sim_time', metavar='sim-time-sec', type=int, help="""Maximum amount of
+        time needed to run a single simulation.  Longer times will result in
+        simulations taking longer to schedule, but shorter times could result
+        in jobs being canceled from going over time which will bias payoff
+        results for shorter running simulations.""")
     parser.add_argument(
         '--conf', '-c', metavar='<conf-json>', type=argparse.FileType('r'),
         help="""The configuration file for the simulator. This only needs to be
@@ -35,20 +47,6 @@ def add_parser(subparsers):
         help="""The maximum number of observations to schedule simultaneously.
         This isn't a strict limit, but it won't be violated by much. (default:
         %(default)s)""")
-    # FIXME Since these are required, they should be positional not flagged
-    parser.add_argument(
-        '--sim-memory', '-m', required=True, metavar='<mb>', type=int,
-        help="""Maximum memory needed to run simulation. Standard limit per
-        core is 4096, but if your simulation needs less, you should request
-        less. Note, that if you set it too low you'll get biased samples for
-        simulations that require less memory to run which could be very
-        bad.""")
-    parser.add_argument(
-        '--sim-time', '-t', required=True, metavar='<seconds>', type=int,
-        help="""Maximum amount of time needed to run a single simulation.
-        Longer times will result in simulations taking longer to schedule, but
-        shorter times could result in jobs being canceled from going over time
-        which will bias payoff results for shorter running simulations.""")
     return parser
 
 
@@ -71,6 +69,6 @@ def create_scheduler(game, serial, args, configuration=None, simname=None,
             simname))
         sys.exit(1)
 
-    return egtasched.EgtaScheduler(
+    return eosched.EgtaOnlineScheduler(
         args.sim_id, game, serial, args.count, configuration, args.sleep,
         args.max_schedule, args.sim_memory, args.sim_time, args.auth_string)
