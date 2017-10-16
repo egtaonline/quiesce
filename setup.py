@@ -12,7 +12,7 @@ setuptools.setup(
     entry_points=dict(console_scripts=['egta=egta.__main__:main']),
     install_requires=[
         'gameanalysis~=3.2',
-        'egtaonlineapi~=0.1',
+        'egtaonlineapi~=0.2',
         'numpy~=1.13',
     ],
     packages=['egta', 'egta.script'],

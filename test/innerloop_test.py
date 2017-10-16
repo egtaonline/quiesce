@@ -1,3 +1,4 @@
+import mock
 import threading
 
 import numpy as np
@@ -58,7 +59,7 @@ def test_innerloop_by_role_simple(players, strats):
 
 
 @pytest.mark.parametrize('when', ['schedule', 'pre-get', 'post-get'])
-@pytest.mark.parametrize('count', [1, 5, 10, 20])
+@pytest.mark.parametrize('count', [1, 5, 10])
 @pytest.mark.parametrize('players,strats',
                          [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
 def test_innerloop_failures(players, strats, count, when):
@@ -66,6 +67,29 @@ def test_innerloop_failures(players, strats, count, when):
     with ExceptionScheduler(game, count, when) as sched:
         with pytest.raises(SchedulerException):
             innerloop.inner_loop(sched, game, subgame_size=5)
+
+
+@pytest.mark.parametrize('count', [1, 5, 10])
+@pytest.mark.parametrize('players,strats',
+                         [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
+def test_threading_failures(players, strats, count):
+    game = gamegen.role_symmetric_game(players, strats)
+    lock = threading.Lock()
+    num = [count]
+    old_thread = threading.Thread
+
+    def fail_in(*args, **kwargs):
+        with lock:
+            num[0] -= 1
+            if num[0] <= 0:
+                return ExceptionThread(*args, **kwargs)
+            else:
+                return old_thread(*args, **kwargs)
+
+    with gamesched.GameScheduler(game) as sched:
+        with mock.patch('threading.Thread', side_effect=fail_in):
+            with pytest.raises(ThreadException):
+                innerloop.inner_loop(sched, game, subgame_size=5)
 
 
 @pytest.mark.parametrize('eq_prob', [x / 10 for x in range(11)])
@@ -142,3 +166,16 @@ class ExceptionPromise(object):
         res = self._prom.get()
         self._sched._inc_and_check('post-get')
         return res
+
+
+class ThreadException(Exception):
+    """Exception to be thrown by ExceptionScheduler"""
+    pass
+
+
+class ExceptionThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def start(self, *args, **kwargs):
+        raise ThreadException()

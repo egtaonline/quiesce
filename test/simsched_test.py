@@ -100,6 +100,21 @@ def test_ignore_terminate_fail():
         time.sleep(1)
 
 
+def test_dequeue_fail():
+    with open('cdasim/game.json') as f:
+        jgame = json.load(f)
+    conf = jgame['configuration']
+    game, serial = gameio.read_basegame(jgame)
+    cmd = ['bash', '-c', 'echo "[" && while read line; do :; done']
+    opened = False
+    with pytest.raises(RuntimeError):
+        with simsched.SimulationScheduler(serial, conf, cmd) as sched:
+            opened = True
+            with pytest.raises(RuntimeError):
+                sched.schedule(game.random_profiles())
+    assert opened
+
+
 @pytest.mark.long
 def test_innerloop_simple():
     with open('cdasim/game.json') as f:

@@ -1,3 +1,4 @@
+PYTEST_ARGS =
 FILES = egta test setup.py
 PYTHON = python
 
@@ -16,11 +17,17 @@ setup:
 	$(PYTHON) -m venv .
 	bin/pip install -U pip setuptools -r requirements.txt -e .
 
+test-all: PYTEST_ARGS += -m ''
+test-all: test
+
 test:
-	bin/pytest test
+	bin/pytest test $(PYTEST_ARGS)
+
+coverage-all: PYTEST_ARGS += -m ''
+coverage-all: coverage
 
 coverage:
-	bin/pytest test --cov egta --cov test 2>/dev/null
+	bin/pytest test $(PYTEST_ARGS) --cov egta --cov test 2>/dev/null
 
 ubuntu-reqs:
 	sudo apt-get install libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev

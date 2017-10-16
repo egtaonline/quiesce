@@ -69,6 +69,21 @@ def create_scheduler(game, serial, args, configuration=None, simname=None,
             simname))
         sys.exit(1)
 
-    return eosched.EgtaOnlineScheduler(
-        args.sim_id, game, serial, args.count, configuration, args.sleep,
-        args.max_schedule, args.sim_memory, args.sim_time, args.auth_string)
+    egta = api.EgtaOnlineApi(auth_token=args.auth_string)
+    return ApiWrapper(
+        egta, args.sim_id, game, serial, args.count, configuration, args.sleep,
+        args.max_schedule, args.sim_memory, args.sim_time)
+
+
+class ApiWrapper(eosched.EgtaOnlineScheduler):
+    def __init__(self, api, *args, **kwargs):
+        super().__init__(api, *args, **kwargs)
+        self._enter_api = api
+
+    def __enter__(self):
+        self._enter_api.__enter__()
+        return super().__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        super().__exit__(*args, **kwargs)
+        self._enter_api.__exit__(*args, **kwargs)

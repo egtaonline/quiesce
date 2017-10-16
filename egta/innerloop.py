@@ -319,17 +319,15 @@ class _PayoffData(object):
         self._profile = profile
         self._payoffs = np.zeros(profile.size, float)
         self._count = 0
-        self._scheduled = 0
 
         self._lock = threading.Lock()
         self._promises = collections.deque()
 
     def schedule(self, n):
         with self._lock:
-            while self._scheduled < n:
-                self._scheduled += 1
-                self._promises.append(_UpdatePromise(
-                    self, self._prof_sched.schedule(self._profile)))
+            for _ in range(n - self._count - len(self._promises)):
+                prom = self._prof_sched.schedule(self._profile)
+                self._promises.append(_UpdatePromise(self, prom))
         return _PayoffPromise(self, n)
 
 
@@ -341,14 +339,10 @@ class _UpdatePromise(object):
         self._updated = False
 
     def wait(self):
-        pay = self._promise.get()
         with self._lock:
             if not self._updated:
+                pay = self._promise.get()
                 with self._data._lock:
-                    # This isn't strictly guaranteed, but the way this is
-                    # implemented, it should be the way it happens, because you
-                    # can't get a reference to a promise without the previous
-                    # one being popped by this call
                     assert self._data._promises.popleft() == self
                     self._data._count += 1
                     self._data._payoffs += (

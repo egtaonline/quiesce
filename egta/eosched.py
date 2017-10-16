@@ -3,7 +3,6 @@ import queue
 import threading
 
 import numpy as np
-from egtaonline import api
 from gameanalysis import rsgame
 from gameanalysis import utils as gu
 
@@ -19,6 +18,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
     Parameters
     ----------
+    api : EgtaOnlineApi
+        The api object to be uased to query EGTA Online.
     sim_id : int
         The id of the egtaonline simulator to use.
     basegame : BasgeGame
@@ -46,14 +47,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         The amount of time in seconds to give each simulation to run. Too low
         and long running simulations will get cancelled giving you biased
         samples, too long and it will take longer to schedule jobs on flux.
-    auth_token : str, optional
-        Authorization token for egtaonline. If unspecified, egtaonline will
-        search for an appropriate file containing it.
     """
 
-    def __init__(self, sim_id, basegame, serial, simultanious_obs,
+    # FIXME Take EgtaOnlineApi, have this opened by egta
+    def __init__(self, api, sim_id, basegame, serial, simultanious_obs,
                  configuration, sleep_time, max_scheduled, obs_memory,
-                 obs_time, auth_token=None):
+                 obs_time):
+        self._api = api
         self._game = rsgame.basegame_copy(basegame)
         self._serial = serial
 
@@ -68,14 +68,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
         self._sleep_time = sleep_time
         self._max_running = max_scheduled - 1
-        self._auth_token = auth_token
         self._sim_id = sim_id
         self._configuration = configuration
         self._obs_memory = obs_memory
         self._obs_time = obs_time
         self._simult_obs = simultanious_obs
 
-        self._api = None
         self._sched = None
         self._running = False
         self._thread_timeout_lock = threading.Lock()
@@ -113,7 +111,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 rec.num_sched = self._simult_obs
                 _log.debug("new profile scheduled %s", profile)
                 rec.prof_id = self._sched.add_profile(
-                    self._serial.to_prof_str(profile), rec.num_sched).id
+                    self._serial.to_prof_str(profile), rec.num_sched)['id']
                 self._prof_ids[rec.prof_id] = val
                 with self._runprof_lock:
                     self._num_running_profiles += rec.num_sched
@@ -159,8 +157,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         try:
             while self._running:
                 # First update requirements and mark completed
-                _log.info("query scheduler %d", self._sched.id)
-                reqs = self._sched.get_requirements().scheduling_requirements
+                _log.info("query scheduler %d", self._sched['id'])
+                reqs = self._sched.get_requirements(
+                )['scheduling_requirements']
                 _log.debug("got reqs %s", reqs)
                 for req in reqs:
                     prof_id = req['id']
@@ -187,7 +186,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                             # TODO Timeouts here are probably preferred
                             jobs = egta_prof.get_info('observations')
                             valid = all(o['symmetry_groups'] is not None for o
-                                        in jobs.observations)
+                                        in jobs['observations'])
                         _log.debug("obs json %s",  jobs)
                         # Parse all and slice to have accurate counts
                         new_obs = self._serial.from_samplepay_json(jobs)
@@ -224,23 +223,24 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 self._thread_timeout_lock.release()
 
     def __enter__(self):
-        self._api = api.EgtaOnlineApi(self._auth_token)
         name = 'egta_' + eu.random_string(20)
 
         # Create game to get initial profile data
+        # TODO It would be helpful if the api had a concept of a temporary
+        # game, that would be auto destroyed after context manager exit.
         gamea = None
         try:
             gamea = self._api.create_game(self._sim_id, name,
                                           self._game.num_all_players,
                                           self._configuration)
-            _log.debug("created temp game %s %d", name, gamea.id)
+            _log.debug("created temp game %s %d", name, gamea['id'])
             for role, count, strats in zip(self._serial.role_names,
                                            self._game.num_players,
                                            self._serial.strat_names):
                 gamea.add_role(role, count)
                 for strat in strats:
                     gamea.add_strategy(role, strat)
-            profiles = gamea.get_observations().profiles
+            profiles = gamea.get_observations().get('profiles', ()) or ()
         finally:
             if gamea is not None:
                 gamea.destroy_game()
@@ -256,7 +256,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             num_pays += len(spays)
             for pay in spays:
                 que.put(pay)
-            val = (threading.Lock(), que, _Record(jprof.id, len(spays)))
+            val = (threading.Lock(), que, _Record(jprof['id'], len(spays)))
             self._profiles[hprof] = val
         _log.info("found %d existing profiles with %d payoffs", num_profs,
                   num_pays)
@@ -267,7 +267,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._game.num_all_players, self._obs_time, self._simult_obs, 1,
             self._configuration)
         _log.warning("created scheduler %s %d for running simulations", name,
-                     self._sched.id)
+                     self._sched['id'])
         for role, count in zip(self._serial.role_names,
                                self._game.num_players):
             self._sched.add_role(role, count)
@@ -283,10 +283,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._thread_timeout_lock.release()
         if self._sched is not None:
             self._sched.deactivate()
-        if self._api is not None:
-            self._api.close()
         self._drain_queues()
-        _log.info("deactivated scheduler %d", self._sched.id)
+        _log.info("deactivated scheduler %d", self._sched['id'])
 
 
 class _Record(object):

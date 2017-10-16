@@ -1,65 +1,162 @@
 import json
 import pytest
-import random
+import time
 
 import numpy as np
+from egtaonline import mockapi
 from gameanalysis import gameio
 
 from egta import countsched
 from egta import eosched
 
 
-sleep_time = 60
-sim_memory = 2048
-sim_time = 60
-
-
-# FIXME Ideally we want a mock EgtaOnlineApi
-
-@pytest.mark.egta
 def test_basic_profile():
     with open('cdasim/game.json') as f:
         jgame = json.load(f)
-    conf = jgame['configuration']
-    # Guarantees that new profs will be scheduled
-    conf['nonce'] = random.randrange(2**31)
     game, serial = gameio.read_basegame(jgame)
     profs = game.random_profiles(20)
 
-    # Schedule all new profiles and verify it works
-    sched = eosched.EgtaOnlineScheduler(
-        107, game, serial, 1, conf, sleep_time, 25, sim_memory, sim_time)
-    with sched:
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
-    assert np.allclose(pays[profs == 0], 0)
-    assert sched._num_running_profiles == 0
+    with mockapi.EgtaOnlineApi() as api:
+        # Setup api
+        sim = api.create_simulator('sim', '1')
+        sim.add_dict({role: strats for role, strats
+                      in zip(serial.role_names, serial.strat_names)})
 
-    # Schedule old profiles and verify it still works
-    sched = eosched.EgtaOnlineScheduler(
-        107, game, serial, 1, conf, sleep_time, 25, sim_memory, sim_time)
-    with sched:
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
-    assert np.allclose(pays[profs == 0], 0)
-    assert sched._num_running_profiles == 0
+        # Schedule all new profiles and verify it works
+        # This first time should have to wait to schedule more
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 10, 0, 0)
+        with sched:
+            proms = [sched.schedule(p) for p in profs]
+            pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
+        assert sched._num_running_profiles == 0
 
-    # Schedule two at a time, in two batches
-    base_sched = eosched.EgtaOnlineScheduler(
-        107, game, serial, 2, conf, sleep_time, 15, sim_memory, sim_time)
-    sched = countsched.CountScheduler(base_sched, 2)
-    with sched:
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
-    assert np.allclose(pays[profs == 0], 0)
-    assert base_sched._num_running_profiles == 0
+        # Schedule old profiles and verify it still works
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        with sched:
+            proms = [sched.schedule(p) for p in profs]
+            pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
+        assert sched._num_running_profiles == 0
 
-    # Try again now that everything should be scheduled
-    base_sched = eosched.EgtaOnlineScheduler(
-        107, game, serial, 2, conf, sleep_time, 15, sim_memory, sim_time)
-    sched = countsched.CountScheduler(base_sched, 2)
-    with sched:
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
-    assert np.allclose(pays[profs == 0], 0)
-    assert base_sched._num_running_profiles == 0
+        # Schedule two at a time, in two batches
+        base_sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        sched = countsched.CountScheduler(base_sched, 2)
+        with sched:
+            proms = [sched.schedule(p) for p in profs]
+            pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
+        assert base_sched._num_running_profiles == 0
+
+        # Try again now that everything should be scheduled
+        base_sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        sched = countsched.CountScheduler(base_sched, 2)
+        with sched:
+            proms = [sched.schedule(p) for p in profs]
+            pays = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays[profs == 0], 0)
+        assert base_sched._num_running_profiles == 0
+
+
+def test_extra_samples():
+    with open('cdasim/game.json') as f:
+        jgame = json.load(f)
+    game, serial = gameio.read_basegame(jgame)
+    profs = game.random_profiles(20)
+
+    with mockapi.EgtaOnlineApi() as api:
+        # Setup api
+        sim = api.create_simulator('sim', '1')
+        sim.add_dict({role: strats for role, strats
+                      in zip(serial.role_names, serial.strat_names)})
+
+        # Schedule all new profiles and verify it works
+        # This first time should have to wait to schedule more
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        with sched:
+            proms = [sched.schedule(p) for p in profs]
+            pays1 = np.concatenate([p.get()[None] for p in proms])
+            proms = [sched.schedule(p) for p in profs]
+            pays2 = np.concatenate([p.get()[None] for p in proms])
+        assert np.allclose(pays1[profs == 0], 0)
+        assert np.allclose(pays2[profs == 0], 0)
+        assert sched._num_running_profiles == 0
+
+
+def test_exception_in_sechedule():
+    with open('cdasim/game.json') as f:
+        jgame = json.load(f)
+    game, serial = gameio.read_basegame(jgame)
+    profs = game.random_profiles(20)
+
+    with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 60) as api:
+        # Setup api
+        sim = api.create_simulator('sim', '1')
+        sim.add_dict({role: strats for role, strats
+                      in zip(serial.role_names, serial.strat_names)})
+
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        opened = False
+        with pytest.raises(TimeoutError):
+            with sched:
+                opened = True
+                with pytest.raises(TimeoutError):
+                    for p in profs:
+                        sched.schedule(p)
+        assert opened
+
+
+def test_exception_in_get():
+    with open('cdasim/game.json') as f:
+        jgame = json.load(f)
+    game, serial = gameio.read_basegame(jgame)
+    profs = game.random_profiles(20)
+
+    with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 110) as api:
+        # Setup api
+        sim = api.create_simulator('sim', '1')
+        sim.add_dict({role: strats for role, strats
+                      in zip(serial.role_names, serial.strat_names)})
+
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 1, 25, 0, 0)
+        scheduled = False
+        with pytest.raises(TimeoutError):
+            with sched:
+                proms = [sched.schedule(p) for p in profs]
+                scheduled = True
+                with pytest.raises(TimeoutError):
+                    for p in proms:
+                        p.get()
+        assert scheduled
+
+
+def test_exception_pre_schedule():
+    with open('cdasim/game.json') as f:
+        jgame = json.load(f)
+    game, serial = gameio.read_basegame(jgame)
+    prof = game.random_profiles()
+
+    with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 60) as api:
+        # Setup api
+        sim = api.create_simulator('sim', '1')
+        sim.add_dict({role: strats for role, strats
+                      in zip(serial.role_names, serial.strat_names)})
+
+        sched = eosched.EgtaOnlineScheduler(
+            api, sim['id'], game, serial, 1, {}, 0.1, 25, 0, 0)
+        slept = False
+        with pytest.raises(TimeoutError):
+            with sched:
+                # so that enough calls to get_requirements are made
+                time.sleep(1)
+                slept = True
+                with pytest.raises(TimeoutError):
+                    sched.schedule(prof)
+        assert slept
