@@ -1,5 +1,6 @@
 import json
 import pytest
+import random
 import time
 
 import numpy as np
@@ -18,7 +19,8 @@ def test_basic_profile():
 
     with mockapi.EgtaOnlineApi() as api:
         # Setup api
-        sim = api.create_simulator('sim', '1')
+        sim = api.create_simulator(
+            'sim', '1', delay_dist=lambda: random.random() / 10)
         sim.add_dict({role: strats for role, strats
                       in zip(serial.role_names, serial.strat_names)})
 
@@ -70,7 +72,8 @@ def test_extra_samples():
 
     with mockapi.EgtaOnlineApi() as api:
         # Setup api
-        sim = api.create_simulator('sim', '1')
+        sim = api.create_simulator(
+            'sim', '1', delay_dist=lambda: random.random() / 10)
         sim.add_dict({role: strats for role, strats
                       in zip(serial.role_names, serial.strat_names)})
 
@@ -96,7 +99,8 @@ def test_exception_in_sechedule():
 
     with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 60) as api:
         # Setup api
-        sim = api.create_simulator('sim', '1')
+        sim = api.create_simulator(
+            'sim', '1', delay_dist=lambda: random.random() / 10)
         sim.add_dict({role: strats for role, strats
                       in zip(serial.role_names, serial.strat_names)})
 
@@ -120,7 +124,8 @@ def test_exception_in_get():
 
     with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 110) as api:
         # Setup api
-        sim = api.create_simulator('sim', '1')
+        sim = api.create_simulator(
+            'sim', '1', delay_dist=lambda: random.random() / 10)
         sim.add_dict({role: strats for role, strats
                       in zip(serial.role_names, serial.strat_names)})
 
@@ -145,7 +150,8 @@ def test_exception_pre_schedule():
 
     with mockapi.ExceptionEgtaOnlineApi(TimeoutError, 60) as api:
         # Setup api
-        sim = api.create_simulator('sim', '1')
+        sim = api.create_simulator(
+            'sim', '1', delay_dist=lambda: random.random() / 10)
         sim.add_dict({role: strats for role, strats
                       in zip(serial.role_names, serial.strat_names)})
 
