@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name='egta',
-    version='0.0.5',
+    version='0.0.6',
     description='Scripts to perform EGTA',
     url='https://github.com/egtaonline/quiesce.git',
     author='Strategic Reasoning Group',

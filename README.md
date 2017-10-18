@@ -2,6 +2,7 @@ Empirical Game-Theoretic Analysis
 =================================
 
 [![Build Status](https://img.shields.io/travis/egtaonline/quiesce.svg?style=flat-square)](https://travis-ci.org/egtaonline/quiesce)
+[![Coverage](https://img.shields.io/coveralls/egtaonline/quiesce.svg?style=flat-square)](https://coveralls.io/github/egtaonline/quiesce)
 
 A command line tool for running egta on arbitrary simulators.
 
