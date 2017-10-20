@@ -10,8 +10,7 @@ help:
 	@echo "todo   - check for todo flags"
 	@echo "check  - check for comformance to pep8 standards"
 	@echo "format - autoformat python files"
-	@echo
-	@echo "add EGTA_TESTS=ON to run egta tests as well"
+	@echo "test   - run tests with coverage"
 
 setup:
 	$(PYTHON) -m venv .
@@ -21,12 +20,6 @@ test-all: PYTEST_ARGS += -m ''
 test-all: test
 
 test:
-	bin/pytest test $(PYTEST_ARGS)
-
-coverage-all: PYTEST_ARGS += -m ''
-coverage-all: coverage
-
-coverage:
 	bin/pytest test $(PYTEST_ARGS) --cov egta --cov test 2>/dev/null
 
 ubuntu-reqs:
