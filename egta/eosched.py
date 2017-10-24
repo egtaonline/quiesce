@@ -3,6 +3,7 @@ import queue
 import threading
 
 import numpy as np
+from gameanalysis import paygame
 from gameanalysis import rsgame
 from gameanalysis import utils as gu
 
@@ -22,11 +23,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         The api object to be uased to query EGTA Online.
     sim_id : int
         The id of the egtaonline simulator to use.
-    basegame : BasgeGame
+    game : RsGame
         The gameanalysis basegame representing the game to schedule.
-    serial : GameSerializer
-        The gameanalysis serializer that represents how to convery array
-        profiles into json profiles.
     simultanious_obs : int
         The number of simultanious observations to schedule at a time.
         Egtaonline will use this when scheduling.
@@ -49,13 +47,11 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         samples, too long and it will take longer to schedule jobs on flux.
     """
 
-    # FIXME Take EgtaOnlineApi, have this opened by egta
-    def __init__(self, api, sim_id, basegame, serial, simultanious_obs,
-                 configuration, sleep_time, max_scheduled, obs_memory,
-                 obs_time):
+    def __init__(self, api, sim_id, game, simultanious_obs, configuration,
+                 sleep_time, max_scheduled, obs_memory, obs_time):
         self._api = api
-        self._game = rsgame.basegame_copy(basegame)
-        self._serial = serial
+        # XXX Copy to samplegame to get sample payoff reading
+        self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
 
         # {hprof: (lock, obs, _Record)}
         self._profiles = {}
@@ -89,7 +85,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
         _, que, _ = val
         if self._num_running_profiles > self._max_running:
-            _log.debug("new profile queued %s", profile)
+            _log.debug("new profile queued %s",
+                       self._game.to_prof_repr(profile))
             self._pending_profiles.put((hprof, val))
         else:
             self._schedule(hprof, val)
@@ -109,9 +106,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             if rec.prof_id is None:
                 # Unknown id, schedule new amount
                 rec.num_sched = self._simult_obs
-                _log.debug("new profile scheduled %s", profile)
+                assignment = self._game.to_prof_repr(profile)
+                _log.debug("new profile scheduled %s", assignment)
                 rec.prof_id = self._sched.add_profile(
-                    self._serial.to_prof_str(profile), rec.num_sched)['id']
+                    assignment, rec.num_sched)['id']
                 self._prof_ids[rec.prof_id] = val
                 with self._runprof_lock:
                     self._num_running_profiles += rec.num_sched
@@ -121,9 +119,11 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 rec.num_sched = ((((rec.num_req - 1) // self._simult_obs) + 1)
                                  * self._simult_obs)
                 self._prof_ids[rec.prof_id] = val
-                _log.debug("new existing data profile scheduled %s", profile)
+                assignment = self._game.to_prof_repr(profile)
+                _log.debug(
+                    "new existing data profile scheduled %s", assignment)
                 self._sched.add_profile(
-                    self._serial.to_prof_str(profile), rec.num_sched)
+                    assignment, rec.num_sched)
                 with self._runprof_lock:
                     self._num_running_profiles += rec.num_sched - rec.num_rec
 
@@ -131,10 +131,11 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 # Existing profile
                 self._prof_ids[rec.prof_id] = val
                 rec.num_sched += self._simult_obs
-                _log.debug("old profile scheduled %s", profile)
+                _log.debug("old profile scheduled %s",
+                           self._game.to_prof_repr(profile))
                 self._sched.remove_profile(rec.prof_id)
                 self._sched.add_profile(
-                    self._serial.to_prof_str(profile), rec.num_sched)
+                    self._game.to_prof_repr(profile), rec.num_sched)
                 with self._runprof_lock:
                     self._num_running_profiles += self._simult_obs
 
@@ -189,7 +190,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                                         in jobs['observations'])
                         _log.debug("obs json %s",  jobs)
                         # Parse all and slice to have accurate counts
-                        new_obs = self._serial.from_samplepay_json(jobs)
+                        new_obs = self._game.from_samplepay_json(jobs)
                         # Copy so old array can be deallocated
                         new_obs = np.copy(
                             new_obs[:new_obs.shape[0] - rec.num_rec])
@@ -231,12 +232,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         gamea = None
         try:
             gamea = self._api.create_game(self._sim_id, name,
-                                          self._game.num_all_players,
+                                          self._game.num_players,
                                           self._configuration)
             _log.debug("created temp game %s %d", name, gamea['id'])
-            for role, count, strats in zip(self._serial.role_names,
-                                           self._game.num_players,
-                                           self._serial.strat_names):
+            for role, count, strats in zip(self._game.role_names,
+                                           self._game.num_role_players,
+                                           self._game.strat_names):
                 gamea.add_role(role, count)
                 for strat in strats:
                     gamea.add_strategy(role, strat)
@@ -249,7 +250,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         num_profs = len(profiles)
         num_pays = 0
         for jprof in profiles:
-            prof, spays = self._serial.from_profsamplepay_json(jprof)
+            prof, spays = self._game.from_profsamplepay_json(jprof)
             spays.setflags(write=False)
             hprof = gu.hash_array(prof)
             que = queue.Queue()
@@ -264,12 +265,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # Create and start scheduler
         self._sched = self._api.create_generic_scheduler(
             self._sim_id, name, True, self._obs_memory,
-            self._game.num_all_players, self._obs_time, self._simult_obs, 1,
+            self._game.num_players, self._obs_time, self._simult_obs, 1,
             self._configuration)
         _log.warning("created scheduler %s %d for running simulations", name,
                      self._sched['id'])
-        for role, count in zip(self._serial.role_names,
-                               self._game.num_players):
+        for role, count in zip(self._game.role_names,
+                               self._game.num_role_players):
             self._sched.add_role(role, count)
 
         self._running = True

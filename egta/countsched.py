@@ -38,6 +38,8 @@ class _CountPromise(profsched.Promise):
     def get(self):
         if self._value is None:
             # This is doing a streaming mean computation on all of the promises
+            # XXX We pull this first instead of initializing zeros because we
+            # don't know the size
             count = 1
             self._value = next(self._proms).get().copy()
             for prom in self._proms:

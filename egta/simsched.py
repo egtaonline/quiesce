@@ -6,21 +6,23 @@ import queue
 import subprocess
 import threading
 
+from gameanalysis import paygame
+from gameanalysis import rsgame
+
 from egta import profsched
 
 
 _log = logging.getLogger(__name__)
 
 
-# FIXME Change zip wrapper to be independent scheduler
 class SimulationScheduler(profsched.Scheduler):
     """Schedule profiles using a command line program
 
     Parameters
     ----------
-    serial : GameSerializer
-        A gameanalysis game serializer that indicates how array profiles should
-        be turned into json profiles.
+    game : RsGame
+        A gameanalysis game that indicates how array profiles should be turned
+        into json profiles.
     config : {key: value}
         A dictionary mapping string keys to values that will be passed to the
         simulator in the standard simulation spec format.
@@ -38,8 +40,8 @@ class SimulationScheduler(profsched.Scheduler):
         sleeping.
     """
 
-    def __init__(self, serial, config, command, sleep=1):
-        self.serial = serial
+    def __init__(self, game, config, command, sleep=1):
+        self.game = paygame.game_copy(rsgame.emptygame_copy(game))
         self.base = {'configuration': config}
         self.command = command
         self.sleep = sleep
@@ -55,7 +57,7 @@ class SimulationScheduler(profsched.Scheduler):
         self._exception = None
 
     def schedule(self, profile):
-        promise = _SimPromise(self)
+        promise = _SimPromise(self, profile)
         with self._lock:
             assert self._proc is not None, \
                 "can't call schedule before entering scheduler"
@@ -64,13 +66,13 @@ class SimulationScheduler(profsched.Scheduler):
                 raise self._exception
             assert rcode is None, \
                 "process is not running {:d}".format(rcode)
-            jprof = self.serial.to_prof_json(profile)
+            jprof = self.game.to_prof_json(profile)
             self.base['assignment'] = jprof
             json.dump(self.base, self._stdin, separators=(',', ':'))
             self._stdin.write('\n')
             self._stdin.flush()
             self._queue.put(promise)
-            _log.debug("sent profile: %s", jprof)
+            _log.debug("sent profile: %s", self.game.to_prof_repr(profile))
         return promise
 
     def _dequeue(self):
@@ -97,10 +99,11 @@ class SimulationScheduler(profsched.Scheduler):
                     except json.JSONDecodeError:
                         raise RuntimeError(
                             "Couldn't decode \"{}\" as json".format(line))
-                    payoffs = self.serial.from_payoff_json(jpays)
+                    payoffs = self.game.from_payoff_json(jpays)
                     payoffs.setflags(write=False)
-                    _log.debug("read payoff: %s", jpays)
                     promise = self._queue.get()
+                    _log.debug("read payoff for profile: %s",
+                               self.game.to_prof_repr(promise._prof))
                     promise._set(payoffs)
         except Exception as ex:  # pragma: no cover
             self._exception = ex
@@ -137,15 +140,17 @@ class SimulationScheduler(profsched.Scheduler):
             self._thread.join(self.sleep * 2)
             if self._thread.is_alive():
                 _log.warning("couldn't kill dequeue thread...")  # pragma: no cover # noqa
+            self._thread = None
 
         if self._exception is not None:
             raise self._exception
 
 
 class _SimPromise(profsched.Promise):
-    def __init__(self, sched):
+    def __init__(self, sched, prof):
         self._event = threading.Event()
         self._sched = sched
+        self._prof = prof
 
     def _set(self, value):
         self._value = value

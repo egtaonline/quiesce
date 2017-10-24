@@ -1,5 +1,9 @@
 """Script utility for running inner loop"""
-from gameanalysis import reduction
+import json
+
+from gameanalysis import rsgame
+from gameanalysis.reduction import deviation_preserving as dpr
+from gameanalysis.reduction import identity as ir
 
 from egta import innerloop
 
@@ -16,11 +20,11 @@ def add_parser(subparsers):
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
-        (default: %(default)s)""")
+        (default: %(default)g)""")
     parser.add_argument(
         '--dist-thresh', metavar='<norm>', type=float, default=1e-3,
         help="""Norm threshold for two mixtures to be considered distinct.
-        (default: %(default)s)""")
+        (default: %(default)g)""")
     parser.add_argument(
         '--max-resamples', metavar='<resamples>', type=int, default=10,
         help="""Number of times to resample all profiles in a subgame when
@@ -58,17 +62,20 @@ def parse_reduction(red):
     return {r.strip(): int(c) for r, c in strats}
 
 
-def find_eqa(scheduler, game, serial, args):
+def run(scheduler, game, args):
+    game = rsgame.emptygame_copy(game)
+    red = ir
+    red_players = None
     if args.dpr is not None:
-        red = reduction.DeviationPreserving(
-            game.num_strategies, game.num_players,
-            serial.from_role_json(parse_reduction(args.dpr), dtype=int))
-    else:
-        red = reduction.Identity(game.num_strategies, game.num_players)
+        red_players = game.from_role_json(parse_reduction(args.dpr), dtype=int)
+        red = dpr
 
     eqa = innerloop.inner_loop(
-        scheduler, game, red=red, regret_thresh=args.regret_thresh,
+        scheduler, game, red, red_players, regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh, max_resamples=args.max_resamples,
         subgame_size=args.max_subgame_size, num_equilibria=args.num_equilibria,
         num_backups=args.num_backups, devs_by_role=args.dev_by_role)
-    return eqa
+
+    for eqm in eqa:
+        json.dump(game.to_mix_json(eqm), args.output)
+        args.output.write('\n')

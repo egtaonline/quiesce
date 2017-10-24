@@ -14,4 +14,6 @@ def test_basic_profile():
     with sched:
         proms = [sched.schedule(p) for p in profs]
         pays = np.concatenate([p.get()[None] for p in proms])
+        pays2 = np.concatenate([p.get()[None] for p in proms])
     assert np.allclose(pays[profs == 0], 0)
+    assert np.allclose(pays, pays2)

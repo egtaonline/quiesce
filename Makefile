@@ -44,4 +44,4 @@ upload:
 clean:
 	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
 
-.PHONY: test coverage clean format check todo help
+.PHONY: test clean format check todo help

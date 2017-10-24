@@ -2,9 +2,7 @@
 import abc
 
 
-# TODO Create a scheduler that uses spark to run on flux / generally parallel
-# schedule them.
-class Scheduler(metaclass=abc.ABCMeta):  # pragma: no cover
+class Scheduler(abc.ABC):  # pragma: no cover
     """A profile scheduler
 
     It must be a context manager for its resources."""
@@ -25,7 +23,7 @@ class Scheduler(metaclass=abc.ABCMeta):  # pragma: no cover
         pass
 
 
-class Promise(metaclass=abc.ABCMeta):  # pragma: no cover
+class Promise(abc.ABC):  # pragma: no cover
     """A promise for the payoff to a profile"""
 
     @abc.abstractmethod

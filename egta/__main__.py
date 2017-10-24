@@ -8,7 +8,7 @@ import traceback
 from logging import handlers
 
 from egtaonline import api
-from gameanalysis import gameio
+from gameanalysis import gamereader
 
 from egta import countsched
 from egta import savesched
@@ -22,7 +22,10 @@ from egta.script import simsched
 _log = logging.getLogger(__name__)
 
 
-# FIXME Add sample regret scheduler
+# TODO Create a scheduler that runs jobs on flux, but without going through
+# egta online, potentially using spark
+# TODO Add zip scheduler that works like simsched, but with a zip
+# TODO Add sample regret scheduler
 def main():
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
@@ -57,9 +60,7 @@ def main():
     parser.add_argument(
         '--support-thresh', metavar='<support-thresh>', type=float,
         default=1e-3, help="""Threshold for a strategy probability to consider
-        it in support. (default: %(default)s)""")
-    parser.set_defaults(loaders=(lambda g: g.get_summary(),
-                                 gameio.read_basegame))
+        it in support. (default: %(default)g)""")
 
     # Egta online authentication
     parser_auth = parser.add_mutually_exclusive_group()
@@ -89,7 +90,7 @@ def main():
         method to use to compute equilibria. Available commands are:""")
     for module in [innerloop, brute]:
         method = module.add_parser(eq_methods)
-        method.find_eqa = module.find_eqa
+        method.run = module.run
 
         schedulers = method.add_subparsers(
             title='schedulers', dest='scheduler', metavar='<scheduler>',
@@ -144,10 +145,10 @@ def main():
     try:
         if args.game_id is not None:
             with api.EgtaOnlineApi(auth_token=args.auth_string) as ea:
-                jgame = args.loaders[0](ea.get_game(args.game_id))
+                jgame = ea.get_game(args.game_id).get_observations()
         else:
             jgame = json.load(args.game_json)
-        game, serial = args.loaders[1](jgame)
+        game = gamereader.read(jgame)
 
         extra = {}
         if 'configuration' in jgame:
@@ -155,29 +156,20 @@ def main():
         if 'simulator_fullname' in jgame:
             extra['simname'] = jgame['simulator_fullname']
 
-        sched = sched.create_scheduler(game, serial, args, **extra)
+        sched = sched.create_scheduler(game, args, **extra)
         if args.profile_data is not None:
             prof_data = savesched.SaveScheduler(game, sched)
             sched = prof_data
         if args.count > 1:
             sched = countsched.CountScheduler(sched, args.count)
         with sched:
-            eqa = method.find_eqa(sched, game, serial, args)
+            method.run(sched, game, args)
 
         if args.profile_data is not None:
-            gamej = serial.to_samplegame_json(prof_data.get_samplegame())
+            gamej = prof_data.get_samplegame().to_json()
             with open(args.profile_data, 'w') as f:
                 json.dump(gamej, f)
 
-        _log.error('found equilibria %s',
-                   json.dumps(list(map(serial.to_prof_json, eqa)), indent=2,
-                              sort_keys=True))
-        for eqm in eqa:
-            json.dump(
-                serial.to_prof_json(game.trim_mixture_support(
-                    eqm, args.support_thresh)), args.output)
-            args.output.write('\n')
-        _log.critical('egta complete')
     except KeyboardInterrupt:  # pragma: no cover
         _log.critical('execution interrupted by user')
 

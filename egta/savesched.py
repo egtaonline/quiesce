@@ -1,6 +1,7 @@
 import itertools
 
 import numpy as np
+from gameanalysis import paygame
 from gameanalysis import rsgame
 from gameanalysis import utils
 
@@ -19,7 +20,7 @@ class SaveScheduler(profsched.Scheduler):
     """
 
     def __init__(self, game, sched):
-        self._game = rsgame.basegame_copy(game)
+        self._game = rsgame.emptygame_copy(game)
         self._sched = sched
         self._payoffs = {}
 
@@ -35,8 +36,8 @@ class SaveScheduler(profsched.Scheduler):
             pays_list.append(pays)
         profiles = np.array(list(itertools.chain.from_iterable(
             p for p, _ in by_obs.values())), int)
-        sample_pays = [np.array(p).swapaxes(1, 2) for _, p in by_obs.values()]
-        return rsgame.samplegame_copy(self._game, profiles, sample_pays)
+        sample_pays = [np.array(p) for _, p in by_obs.values()]
+        return paygame.samplegame_replace(self._game, profiles, sample_pays)
 
     def __enter__(self):
         self._sched.__enter__()

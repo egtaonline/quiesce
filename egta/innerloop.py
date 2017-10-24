@@ -7,35 +7,37 @@ import warnings
 import numpy as np
 from gameanalysis import collect
 from gameanalysis import nash
-from gameanalysis import reduction
+from gameanalysis import paygame
 from gameanalysis import regret
 from gameanalysis import rsgame
 from gameanalysis import subgame
 from gameanalysis import utils
+from gameanalysis.reduction import identity as idr
 
 
 _log = logging.getLogger(__name__)
 
 
-# TODO Split outer loop from inner loop so that arbitrary best response / next
-# strategy oracles can be used. This change would require a significant
-# restructure in order to preserve existing data.
-
-
-def inner_loop(prof_sched, game, *, red=None, regret_thresh=1e-3,
-               dist_thresh=1e-3, max_resamples=10, subgame_size=3,
-               num_equilibria=1, num_backups=1, devs_by_role=False):
+def inner_loop(prof_sched, game, red=idr, red_players=None, *,
+               regret_thresh=1e-3, dist_thresh=1e-3, max_resamples=10,
+               subgame_size=3, num_equilibria=1, num_backups=1,
+               devs_by_role=False):
     """Inner loop a game using a scheduler
 
     Parameters
     ----------
     prof_sched : Scheduler
         The scheduler used to generate payoff data for profiles.
-    game : BaseGame
+    game : RsGame
         The gameanalysis basegame for the game to find equilibria on.
-    red : Reduction, optional
+    red : reduction, optional
         The reduction to apply to the game before scheduling. Using a reduction
-        will sample fewer profiles, while only approximating equilibria.
+        will sample fewer profiles, while only approximating equilibria. This
+        is any of the valid `classes` in gameanalysis.reduction.
+    red_players : ndarray-like, optional
+        The amount of players to reduce the game to. This is required for
+        reductions that require them, but can be left out for identity and
+        twins reductions.
     regret_thresh : float, optional
         The maximum regret to consider an equilibrium an equilibrium.
     dist_thresh : float, optional
@@ -64,26 +66,23 @@ def inner_loop(prof_sched, game, *, red=None, regret_thresh=1e-3,
         fail to find certain equilibria due to the different path through
         subgames.
     """
-    if red is None:
-        red = reduction.Identity(game.num_strategies, game.num_players)
-    assert rsgame.basegame_copy(game) == red.full_game, \
-        "reduction must match game format"
-
-    return _InnerLoop(prof_sched, game, red, regret_thresh=regret_thresh,
-                      dist_thresh=dist_thresh, max_resamples=max_resamples,
-                      subgame_size=subgame_size, num_equilibria=num_equilibria,
-                      num_backups=num_backups,
+    return _InnerLoop(prof_sched, rsgame.emptygame_copy(game), red,
+                      np.broadcast_to(np.asarray(red_players), game.num_roles)
+                      if red_players is not None else None,
+                      regret_thresh=regret_thresh, dist_thresh=dist_thresh,
+                      max_resamples=max_resamples, subgame_size=subgame_size,
+                      num_equilibria=num_equilibria, num_backups=num_backups,
                       devs_by_role=devs_by_role).run()
 
 
 class _InnerLoop(object):
     """Object to keep track of inner loop progress"""
 
-    def __init__(self, sched, game, red, regret_thresh, dist_thresh,
-                 max_resamples, subgame_size, num_equilibria, num_backups,
-                 devs_by_role):
+    def __init__(self, sched, game, red, red_players, regret_thresh,
+                 dist_thresh, max_resamples, subgame_size, num_equilibria,
+                 num_backups, devs_by_role):
         # Data
-        self._sched = _Scheduler(sched, red)
+        self._sched = _Scheduler(sched, game, red, red_players)
         self._game = game
 
         # Parameters
@@ -111,12 +110,13 @@ class _InnerLoop(object):
     def _add_subgame(self, sub_mask, count):
         if count > self._max_resamples:  # pragma: no cover
             _log.error("couldn't find equilibrium in subgame %s",
-                       sub_mask.astype(int))
+                       self._game.to_subgame_repr(sub_mask))
             return
         with self._exp_subgames_lock:
             schedule = count > 1 or self._exp_subgames.add(sub_mask)
         if schedule:
-            _log.info('scheduling subgame %s%s', sub_mask.astype(int),
+            _log.info('scheduling subgame %s%s',
+                      self._game.to_subgame_repr(sub_mask),
                       ' {:d}'.format(count) if count > 1 else '')
             thread = threading.Thread(
                 target=lambda: self._run_subgame(sub_mask, count))
@@ -127,8 +127,7 @@ class _InnerLoop(object):
         if self._exception is not None:
             return  # Something failed
         try:
-            game = subgame.subgame(self._sched.get_subgame(sub_mask, count),
-                                   sub_mask)
+            game = self._sched.get_subgame(sub_mask, count).subgame(sub_mask)
             with self._nash_lock:
                 with warnings.catch_warnings():
                     # XXX For some reason, linesearch in optimize throws a
@@ -155,8 +154,10 @@ class _InnerLoop(object):
             unseen = ((role_index is not None and role_index > 0)
                       or self._exp_mix.add(mix))
         if unseen:
-            _log.info('scheduling deviations from %s with role %s', mix,
-                      role_index)
+            _log.info(
+                'scheduling deviations from %s%s', self._game.to_mix_repr(mix),
+                '' if role_index is None else ' with role {}'.format(
+                    self._game.role_names[role_index]))
             thread = threading.Thread(
                 target=lambda: self._run_deviations(mix, role_index))
             thread.start()
@@ -172,15 +173,17 @@ class _InnerLoop(object):
             if role_index is None:
                 assert not np.isnan(gains).any(), "There were nan regrets"
                 if np.all(gains <= self._regret_thresh):  # Found equilibrium
-                    _log.warning('found equilibrium %s with regret %f', mix,
+                    _log.warning('found equilibrium %s with regret %f',
+                                 self._game.to_mix_repr(mix),
                                  gains.max())
                     self._equilibria.append(mix)  # atomic
                 else:
-                    for ri, rgains in enumerate(game.role_split(gains)):
+                    for ri, rgains in enumerate(np.split(
+                            gains, game.role_starts[1:])):
                         self._queue_subgames(support, rgains, ri)
 
             else:  # Set role index
-                rgains = game.role_split(gains)[role_index]
+                rgains = np.split(gains, game.role_starts[1:])[role_index]
                 assert not np.isnan(rgains).any(), "There were nan regrets"
                 if np.all(rgains <= self._regret_thresh):  # No deviations
                     role_index += 1
@@ -188,7 +191,7 @@ class _InnerLoop(object):
                         self._add_deviations(mix, role_index)
                     else:  # found equilibrium
                         _log.warning('found equilibrium %s with regret %f',
-                                     mix, gains.max())
+                                     self._game.to_mix_repr(mix), gains.max())
                         self._equilibria.append(mix)  # atomic
                 else:
                     self._queue_subgames(support, rgains, role_index)
@@ -273,11 +276,15 @@ class _InnerLoop(object):
 
 
 class _Scheduler(object):
-    """Scheduler abstraction that allows scheduling deviations and subgames as
+    """Scheduler abstraction
+
+    This abstraction supports scheduling deviations and subgames as
     primitives"""
 
-    def __init__(self, prof_sched, reduction):
-        self._red = reduction
+    def __init__(self, prof_sched, game, red, red_players):
+        self._game = game
+        self._red_game = red.reduce_game(game, red_players)
+        self._red = red
         self._prof_sched = prof_sched
         self._profiles = {}
         self._lock = threading.Lock()
@@ -292,13 +299,12 @@ class _Scheduler(object):
                 promise = prof.schedule(count)
                 promises.append(promise)
         payoffs = np.concatenate([prom.get()[None] for prom in promises])
-        return self._red.reduce_game(rsgame.game_copy(
-            self._red.full_game, profiles, payoffs), True)
+        return self._red.reduce_game(paygame.game_replace(
+            self._game, profiles, payoffs), self._red_game.num_role_players)
 
     def _subgame_profiles(self, subgame_mask):
-        return self._red.expand_profiles(subgame.translate(
-            subgame.subgame(self._red.red_game, subgame_mask).all_profiles(),
-            subgame_mask))
+        return self._red.expand_profiles(self._game, subgame.translate(
+            self._red_game.subgame(subgame_mask).all_profiles(), subgame_mask))
 
     def get_subgame(self, subgame_mask, count):
         return self._get_game(self._subgame_profiles(subgame_mask), count)
@@ -306,7 +312,8 @@ class _Scheduler(object):
     def get_deviations(self, subgame_mask, count, role_index):
         subgame_profiles = self._subgame_profiles(subgame_mask)
         dev_profiles = self._red.expand_deviation_profiles(
-            subgame_mask, role_index)
+            self._game, subgame_mask, self._red_game.num_role_players,
+            role_index)
         return self._get_game(np.concatenate((subgame_profiles, dev_profiles)),
                               count)
 

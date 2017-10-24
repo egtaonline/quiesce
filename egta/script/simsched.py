@@ -30,10 +30,10 @@ def add_parser(subparsers):
     return parser
 
 
-def create_scheduler(game, serial, args, configuration=None, **_):
+def create_scheduler(game, args, configuration=None, **_):
     assert configuration is not None or args.conf is not None, \
         "`conf` must be specified or supplied in the game"
     if args.conf is not None:
         configuration = json.load(args.conf)
-    return simsched.SimulationScheduler(serial, configuration, args.command,
+    return simsched.SimulationScheduler(game, configuration, args.command,
                                         sleep=args.sleep)

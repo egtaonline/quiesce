@@ -4,10 +4,12 @@ import subprocess
 import tempfile
 from os import path
 
+from gameanalysis import rsgame
+
+
 DIR = path.dirname(path.realpath(__file__))
 EGTA = path.join(DIR, '..', 'bin', 'egta')
 SIM_DIR = path.join(DIR, '..', 'cdasim')
-TINY_GAME = path.join(SIM_DIR, 'tiny_game.json')
 SMALL_GAME = path.join(SIM_DIR, 'small_game.json')
 GAME = path.join(SIM_DIR, 'game.json')
 DATA_GAME = path.join(SIM_DIR, 'data_game.json')
@@ -15,86 +17,184 @@ SIM = [path.join(DIR, '..', 'bin', 'python'), path.join(SIM_DIR, 'sim.py'),
        '1', '--single']
 
 
-# FIXME Test sending sigterm
+def run(inp, *args):
+    res = subprocess.run((EGTA,) + args, input=inp.encode('utf-8'),
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return (not res.returncode, res.stdout.decode('utf-8'),
+            res.stderr.decode('utf-8'))
 
-def run(*args):
-    return not subprocess.run((EGTA,) + args).returncode
+
+def assert_term(sleep1, sleep2, *args):
+    proc = subprocess.Popen((EGTA,) + args)
+    try:
+        proc.wait(sleep1)
+        proc.kill()
+        assert False, "process finished during first sleep"
+    except subprocess.TimeoutExpired:
+        pass
+    proc.terminate()
+    try:
+        assert proc.wait(sleep2), "process succeeded after termination"
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        assert False, "process didn't terminate in second sleep"
 
 
 def test_help():
-    assert not run('--fail')
-    assert not run()
-    assert run('--help')
-    assert run('brute', '--help')
-    assert run('brute', 'game', '--help')
-    assert run('brute', 'sim', '--help')
-    assert run('brute', 'eo', '--help')
-    assert run('quiesce', '--help')
+    succ, _, _ = run('')
+    assert not succ
+    succ, _, _ = run('', '--fail')
+    assert not succ
+    succ, _, err = run('', '--help')
+    assert succ, err
+    succ, _, err = run('', 'brute', '--help')
+    assert succ, err
+    succ, _, err = run('', 'brute', 'game', '--help')
+    assert succ, err
+    succ, _, err = run('', 'brute', 'sim', '--help')
+    assert succ, err
+    succ, _, err = run('', 'brute', 'eo', '--help')
+    assert succ, err
+    succ, _, err = run('', 'quiesce', '--help')
+    assert succ, err
 
 
 def test_brute_game():
-    assert not run('--game-json', DATA_GAME, 'brute', 'game', '--load-game',
-                   '--load-samplegame')
-    assert run('--count', '2', '--game-json', DATA_GAME, 'brute', 'game',
-               '--load-game')
+    succ, out, err = run(
+        '', '--count', '2', '--game-json', DATA_GAME, 'brute', 'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
+
+
+def test_brute_game_term():
+    assert_term(0.5, 0.5, '--count', '2', '--game-json', DATA_GAME, 'brute',
+                'game')
 
 
 def test_brute_dpr_game():
-    assert run('--count', '2', '--game-json', DATA_GAME, 'brute', '--dpr',
-               'buyers:2,sellers:2', 'game', '--load-game')
+    succ, out, err = run(
+        '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--dpr',
+        'buyers:2,sellers:2', 'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
 
 
 def test_prof_data():
-    assert run('--profile-data', '/dev/null', '--game-json', DATA_GAME,
-               'brute', 'game', '--load-samplegame')
+    succ, out, err = run(
+        '', '--profile-data', '/dev/null', '--game-json', DATA_GAME, 'brute',
+        'game', '--sample')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
 
 
 def test_sim():
-    assert run('--game-json', SMALL_GAME, 'brute', 'sim', '--', *SIM)
+    succ, out, err = run(
+        '', '--game-json', SMALL_GAME, 'brute', 'sim', '--', *SIM)
+    assert succ, err
+    with open(SMALL_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
+
+
+def test_brute_sim_term():
+    assert_term(0.5, 0.5, '--game-json', SMALL_GAME, 'brute', 'sim', '--',
+                *SIM)
 
 
 def test_sim_delayed_fail():
-    assert not run('--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash',
-                   '-c', 'sleep 1 && false')
+    succ, _, _ = run(
+        '', '--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash', '-c',
+        'sleep 1 && false')
+    assert not succ
 
 
 def test_sim_read_delayed_fail():
-    assert not run('--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash',
-                   '-c', 'read line && false')
+    succ, _, _ = run(
+        '', '--game-json', SMALL_GAME, 'brute', 'sim', '--', 'bash', '-c',
+        'read line && false')
+    assert not succ
 
 
 def test_sim_conf():
     with open(SMALL_GAME) as f:
-        conf = json.load(f)['configuration']
+        jgame = json.load(f)
+    conf = jgame['configuration']
     conf['markup'] = 'standard'
+    reader = rsgame.emptygame_json(jgame)
     with tempfile.NamedTemporaryFile('w') as conf_file:
         json.dump(conf, conf_file)
         conf_file.flush()
-        assert run('--game-json', SMALL_GAME, 'brute', 'sim', '-c',
-                   conf_file.name, '--', *SIM)
+        succ, out, err = run(
+            '', '--game-json', SMALL_GAME, 'brute', 'sim', '-c',
+            conf_file.name, '--', *SIM)
+    assert succ, err
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
 
 
 def test_innerloop():
-    assert run('--game-json', DATA_GAME, 'quiesce', 'game', '--load-game')
+    succ, out, err = run('', '--game-json', DATA_GAME, 'quiesce', 'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
+
+
+def test_innerloop_game_term():
+    assert_term(0.5, 0.5, '--game-json', DATA_GAME, 'quiesce', 'game')
+
+
+def test_innerloop_sim_term():
+    assert_term(0.5, 0.5, '--game-json', SMALL_GAME, 'quiesce', 'sim', '--',
+                *SIM)
 
 
 def test_innerloop_dpr():
-    assert run('--game-json', DATA_GAME, 'quiesce', '--dpr',
-               'buyers:2,sellers:2', 'game', '--load-game')
+    succ, out, err = run(
+        '', '--game-json', DATA_GAME, 'quiesce', '--dpr', 'buyers:2,sellers:2',
+        'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
 
 
 @pytest.mark.egta
 def test_game_id_brute_egta_game():
-    assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo',
-               '2048', '60')
+    succ, out, err = run(
+        '', '-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo', '2048',
+        '60')
+    assert succ, err
+    with open(SMALL_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))
 
 
 @pytest.mark.egta
 def test_game_id_brute_egta_game_wconf():
     with open(SMALL_GAME) as f:
-        conf = json.load(f)['configuration']
+        jgame = json.load(f)
+    conf = jgame['configuration']
+    reader = rsgame.emptygame_json(jgame)
     with tempfile.NamedTemporaryFile('w') as conf_file:
         json.dump(conf, conf_file)
         conf_file.flush()
-        assert run('-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo',
-                   '-c', conf_file.name, '2048', '60')
+        succ, out, err = run(
+            '', '-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo', '-c',
+            conf_file.name, '2048', '60')
+    assert succ, err
+    for eqm in out[:-1].split('\n'):
+        reader.from_mix_json(json.loads(eqm))

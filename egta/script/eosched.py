@@ -46,12 +46,11 @@ def add_parser(subparsers):
         '--max-schedule', metavar='<observations>', default=100, type=int,
         help="""The maximum number of observations to schedule simultaneously.
         This isn't a strict limit, but it won't be violated by much. (default:
-        %(default)s)""")
+        %(default)d)""")
     return parser
 
 
-def create_scheduler(game, serial, args, configuration=None, simname=None,
-                     **_):
+def create_scheduler(game, args, configuration=None, simname=None, **_):
     assert configuration is not None or args.conf is not None, \
         "`conf` must be specified or supplied in the game"
     assert simname is not None or args.sim_id is not None, \
@@ -65,13 +64,13 @@ def create_scheduler(game, serial, args, configuration=None, simname=None,
                 s['id'] for s in ea.get_simulators()
                 if '{}-{}'.format(s['name'], s['version']) == simname), None)
     if args.sim_id is None:  # pragma: no cover
-        _log.critical('couldn\'t find simulator with name "{}"'.format(
+        _log.critical("couldn't find simulator with name \"{}\"".format(
             simname))
         sys.exit(1)
 
     egta = api.EgtaOnlineApi(auth_token=args.auth_string)
     return ApiWrapper(
-        egta, args.sim_id, game, serial, args.count, configuration, args.sleep,
+        egta, args.sim_id, game, args.count, configuration, args.sleep,
         args.max_schedule, args.sim_memory, args.sim_time)
 
 
