@@ -2,8 +2,8 @@ import numpy as np
 from gameanalysis import rsgame
 
 
-def boot(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
-    """Bootstrap deviation gains
+def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
+    """Bootstrap deviation payoffs
 
     Parameters
     ----------
@@ -37,9 +37,9 @@ def boot(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
     Returns
     -------
     mean_gains : ndarray (num_strats,)
-        The mean deviation gains from the mixture.
+        The mean deviation payoffs from the mixture.
     boot_gains : ndarray (boots, num_strats)
-        The deviation gains for each bootstrap sample.
+        The deviation payoffs for each bootstrap sample.
     """
     chunk_size = chunk_size or boots * 10 or 1000
     game = rsgame.emptygame_copy(game)
@@ -56,12 +56,6 @@ def boot(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
         samps = np.random.binomial(remaining, 1 / (num - i))
         remaining -= samps
         boot_devs += samps[:, None] * devs / num
-
-    expected = np.add.reduceat(mean_devs * mix, game.role_starts)
-    mean_devs -= expected.repeat(game.num_role_strats)
-
-    expected = np.add.reduceat(boot_devs * mix, game.role_starts, 1)
-    boot_devs -= expected.repeat(game.num_role_strats, 1)
 
     return mean_devs, boot_devs
 

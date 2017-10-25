@@ -4,15 +4,15 @@ import json
 import numpy as np
 from gameanalysis import rsgame
 
-from egta import regret
+from egta import bootstrap
 
 
 def add_parser(subparsers):
     parser = subparsers.add_parser(
-        'regret', help="""Compute the regret of a mixture""",
-        description="""Samples profiles to compute a sample regret of the
-        mixture. By optionally specifying percentiles, bootstrap confidence
-        bounds will be returned.""")
+        'bootstrap', aliases=['boot'], help="""Compute the regret and surplus
+        of a mixture""", description="""Samples profiles to compute a sample
+        regret and sample surplus of the mixture. By optionally specifying
+        percentiles, bootstrap confidence bounds will be returned.""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -47,9 +47,27 @@ def run(scheduler, game, args):
     if not args.percentiles:
         args.boots = 0
     mix = game.from_mix_json(json.load(args.mixture))
-    means, boots = regret.boot(scheduler, game, mix, args.num,
-                               boots=args.boots, chunk_size=args.chunk_size)
-    json.dump(dict(zip(('{:g}'.format(p) for p in args.percentiles),
-                       np.percentile(boots.max(1), args.percentiles)),
-                   mean=means.max()), args.output)
+    means, boots = bootstrap.deviation_payoffs(
+        scheduler, game, mix, args.num, boots=args.boots,
+        chunk_size=args.chunk_size)
+
+    exp_mean = np.add.reduceat(means * mix, game.role_starts)
+    exp_boots = np.add.reduceat(boots * mix, game.role_starts, 1)
+
+    reg_mean = np.maximum(
+        np.max(means - exp_mean.repeat(game.num_role_strats)), 0)
+    reg_boots = np.maximum(
+        np.max(boots - exp_boots.repeat(game.num_role_strats, 1), 1), 0)
+
+    surp_mean = exp_mean.dot(game.num_role_players)
+    surp_boots = exp_boots.dot(game.num_role_players)
+
+    json.dump({
+        'surplus': dict(zip(('{:g}'.format(p) for p in args.percentiles),
+                            np.percentile(surp_boots, args.percentiles)),
+                        mean=surp_mean),
+        'regret': dict(zip(('{:g}'.format(p) for p in args.percentiles),
+                           np.percentile(reg_boots, args.percentiles)),
+                       mean=reg_mean),
+    }, args.output)
     args.output.write('\n')

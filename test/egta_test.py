@@ -200,7 +200,7 @@ def test_game_id_brute_egta_game_wconf():
         reader.from_mix_json(json.loads(eqm))
 
 
-def test_reg_game():
+def test_boot_game():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     mix = reader.random_mixtures()
@@ -208,32 +208,38 @@ def test_reg_game():
         json.dump(reader.to_mix_json(mix), mix_file)
         mix_file.flush()
         succ, out, err = run(
-            '', '--game-json', DATA_GAME, 'regret', mix_file.name, '10',
+            '', '--game-json', DATA_GAME, 'boot', mix_file.name, '10',
             'game')
     assert succ, err
     results = json.loads(out)
-    assert {'mean'} == results.keys()
+    assert {'surplus', 'regret'} == results.keys()
+    for val in results.values():
+        assert {'mean'} == val.keys()
 
 
-def test_reg_game_percs():
+def test_boot_game_percs():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     mix = reader.random_mixtures()
     succ, out, err = run(
         json.dumps(reader.to_mix_json(mix)), '--game-json', DATA_GAME,
-        'regret', '-', '20', '--percentiles', '95,99', 'game')
+        'boot', '-', '20', '--percentiles', '95,99', 'game')
     assert succ, err
     results = json.loads(out)
-    assert {'mean', '95', '99'} == results.keys()
+    assert {'surplus', 'regret'} == results.keys()
+    for val in results.values():
+        assert {'mean', '95', '99'} == val.keys()
 
 
-def test_reg_sim():
+def test_boot_sim():
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     mix = reader.random_mixtures()
     succ, out, err = run(
         json.dumps(reader.to_mix_json(mix)), '--game-json', SMALL_GAME,
-        'regret', '-', '50', '--chunk-size', '10', 'sim', '--', *SIM)
+        'boot', '-', '50', '--chunk-size', '10', 'sim', '--', *SIM)
     assert succ, err
     results = json.loads(out)
-    assert {'mean'} == results.keys()
+    assert {'surplus', 'regret'} == results.keys()
+    for val in results.values():
+        assert {'mean'} == val.keys()

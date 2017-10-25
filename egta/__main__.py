@@ -12,11 +12,11 @@ from gameanalysis import gamereader
 
 from egta import countsched
 from egta import savesched
+from egta.script import bootstrap
 from egta.script import brute
 from egta.script import eosched
 from egta.script import gamesched
 from egta.script import innerloop
-from egta.script import regret
 from egta.script import simsched
 
 
@@ -90,7 +90,7 @@ def main():
     eq_methods = parser.add_subparsers(
         title='operations', dest='method', metavar='<operation>', help="""The
         operation to run on the game. Available commands are:""")
-    for module in [innerloop, brute, regret]:
+    for module in [innerloop, brute, bootstrap]:
         method = module.add_parser(eq_methods)
         method.run = module.run
 
