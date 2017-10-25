@@ -16,6 +16,7 @@ from egta.script import brute
 from egta.script import eosched
 from egta.script import gamesched
 from egta.script import innerloop
+from egta.script import regret
 from egta.script import simsched
 
 
@@ -24,8 +25,9 @@ _log = logging.getLogger(__name__)
 
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
-# TODO Add zip scheduler that works like simsched, but with a zip
-# TODO Add sample regret scheduler
+# TODO Add zip scheduler that works like simsched, but with a zip and remove
+# zip wrapper
+
 def main():
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
@@ -86,9 +88,9 @@ def main():
 
     # All of the actual methods to run
     eq_methods = parser.add_subparsers(
-        title='methods', dest='method', metavar='<methods>', help="""The
-        method to use to compute equilibria. Available commands are:""")
-    for module in [innerloop, brute]:
+        title='operations', dest='method', metavar='<operation>', help="""The
+        operation to run on the game. Available commands are:""")
+    for module in [innerloop, brute, regret]:
         method = module.add_parser(eq_methods)
         method.run = module.run
 

@@ -198,3 +198,42 @@ def test_game_id_brute_egta_game_wconf():
     assert succ, err
     for eqm in out[:-1].split('\n'):
         reader.from_mix_json(json.loads(eqm))
+
+
+def test_reg_game():
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    mix = reader.random_mixtures()
+    with tempfile.NamedTemporaryFile('w') as mix_file:
+        json.dump(reader.to_mix_json(mix), mix_file)
+        mix_file.flush()
+        succ, out, err = run(
+            '', '--game-json', DATA_GAME, 'regret', mix_file.name, '10',
+            'game')
+    assert succ, err
+    results = json.loads(out)
+    assert {'mean'} == results.keys()
+
+
+def test_reg_game_percs():
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    mix = reader.random_mixtures()
+    succ, out, err = run(
+        json.dumps(reader.to_mix_json(mix)), '--game-json', DATA_GAME,
+        'regret', '-', '20', '--percentiles', '95,99', 'game')
+    assert succ, err
+    results = json.loads(out)
+    assert {'mean', '95', '99'} == results.keys()
+
+
+def test_reg_sim():
+    with open(SMALL_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    mix = reader.random_mixtures()
+    succ, out, err = run(
+        json.dumps(reader.to_mix_json(mix)), '--game-json', SMALL_GAME,
+        'regret', '-', '50', '--chunk-size', '10', 'sim', '--', *SIM)
+    assert succ, err
+    results = json.loads(out)
+    assert {'mean'} == results.keys()

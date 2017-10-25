@@ -10,7 +10,7 @@ from gameanalysis.reduction import identity as ir
 
 def add_parser(subparsers):
     parser = subparsers.add_parser(
-        'brute', help="""Compute equilibrium by sampling all profiles""",
+        'brute', help="""Compute equilibria by sampling all profiles""",
         description="""Samples profiles from the entire game, and then runs
         standard equilibrium finding. For games with a large number of players,
         a reduction should be specified.""")

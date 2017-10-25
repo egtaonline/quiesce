@@ -57,6 +57,10 @@ class SimulationScheduler(profsched.Scheduler):
         self._exception = None
 
     def schedule(self, profile):
+        # XXX There may be a problem here where if too many profiles are
+        # written, the stdin buffer will saturate and block instead of just
+        # queuing the profile and continuing. This could be fixed with another
+        # thread to enqueue.
         promise = _SimPromise(self, profile)
         with self._lock:
             assert self._proc is not None, \
@@ -64,8 +68,9 @@ class SimulationScheduler(profsched.Scheduler):
             rcode = self._proc.poll()
             if self._exception is not None:
                 raise self._exception
-            assert rcode is None, \
-                "process is not running {:d}".format(rcode)
+            if rcode is not None:
+                raise RuntimeError("process is not running {:d}".format(
+                    rcode))
             jprof = self.game.to_prof_json(profile)
             self.base['assignment'] = jprof
             json.dump(self.base, self._stdin, separators=(',', ':'))
@@ -125,9 +130,12 @@ class SimulationScheduler(profsched.Scheduler):
     def __exit__(self, *args):
         self._running = False
 
-        if self._proc is not None:
+        if self._proc is not None and self._proc.poll() is None:
             # Kill process nicely, and then not nicely
-            self._proc.terminate()
+            try:
+                self._proc.terminate()
+            except ProcessLookupError:
+                pass  # race condition, process died
             try:
                 self._proc.wait(self.sleep)
             except subprocess.TimeoutExpired:
@@ -136,10 +144,10 @@ class SimulationScheduler(profsched.Scheduler):
 
         # After killing the process, the output should close and the thread
         # should die
-        if self._thread is not None:
+        if self._thread is not None:  # pragma: no cover
             self._thread.join(self.sleep * 2)
             if self._thread.is_alive():
-                _log.warning("couldn't kill dequeue thread...")  # pragma: no cover # noqa
+                _log.warning("couldn't kill dequeue thread...")
             self._thread = None
 
         if self._exception is not None:

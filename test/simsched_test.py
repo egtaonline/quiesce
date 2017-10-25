@@ -80,6 +80,9 @@ def test_read_delay_schedule_fail():
     with pytest.raises(RuntimeError):
         with simsched.SimulationScheduler(game, conf, cmd) as sched:
             sched.schedule(game.random_profiles())
+            # XXX For some reason the process hasn't always terminated after 3
+            # seconds, but I can't afford to wait longer.
+            time.sleep(3)  # make sure process is dead
             with pytest.raises(RuntimeError):
                 got_here = True
                 sched.schedule(game.random_profiles())

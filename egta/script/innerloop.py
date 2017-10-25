@@ -10,7 +10,7 @@ from egta import innerloop
 
 def add_parser(subparsers):
     parser = subparsers.add_parser(
-        'quiesce', help="""Compute equilibrium using the quiesce procedure""",
+        'quiesce', help="""Compute equilibria using the quiesce procedure""",
         description="""Samples profiles from small subgames, expanding subgame
         support by best responses to candidate subgame equilibria. For games
         with a large number of players, a reduction should be specified.""")
