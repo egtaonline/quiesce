@@ -27,6 +27,7 @@ _log = logging.getLogger(__name__)
 # egta online, potentially using spark
 # TODO Add zip scheduler that works like simsched, but with a zip and remove
 # zip wrapper
+# TODO Add more efficient regret / deviation gains scheduler
 
 def main():
     parser = argparse.ArgumentParser(

@@ -51,23 +51,28 @@ def run(scheduler, game, args):
         scheduler, game, mix, args.num, boots=args.boots,
         chunk_size=args.chunk_size)
 
-    exp_mean = np.add.reduceat(means * mix, game.role_starts)
+    exp_means = np.add.reduceat(means * mix, game.role_starts)
     exp_boots = np.add.reduceat(boots * mix, game.role_starts, 1)
 
-    reg_mean = np.maximum(
-        np.max(means - exp_mean.repeat(game.num_role_strats)), 0)
-    reg_boots = np.maximum(
-        np.max(boots - exp_boots.repeat(game.num_role_strats, 1), 1), 0)
+    gain_means = means - exp_means.repeat(game.num_role_strats)
+    gain_boots = boots - exp_boots.repeat(game.num_role_strats, 1)
 
-    surp_mean = exp_mean.dot(game.num_role_players)
+    reg_means = np.maximum(np.max(gain_means), 0)
+    reg_boots = np.maximum(np.max(gain_boots, 1), 0)
+
+    surp_means = exp_means.dot(game.num_role_players)
     surp_boots = exp_boots.dot(game.num_role_players)
 
     json.dump({
         'surplus': dict(zip(('{:g}'.format(p) for p in args.percentiles),
                             np.percentile(surp_boots, args.percentiles)),
-                        mean=surp_mean),
+                        mean=surp_means),
         'regret': dict(zip(('{:g}'.format(p) for p in args.percentiles),
                            np.percentile(reg_boots, args.percentiles)),
-                       mean=reg_mean),
+                       mean=reg_means),
+        'gains': dict(zip(('{:g}'.format(p) for p in args.percentiles),
+                          (game.to_payoff_json(g) for g
+                           in np.percentile(gain_boots, args.percentiles, 0))),
+                      mean=game.to_payoff_json(gain_means)),
     }, args.output)
     args.output.write('\n')
