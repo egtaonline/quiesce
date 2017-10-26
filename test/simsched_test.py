@@ -32,10 +32,9 @@ def test_delayed_fail():
     prof = game.random_profiles()
     cmd = ['bash', '-c', 'sleep 1 && false']
 
-    with pytest.raises(RuntimeError):
-        with simsched.SimulationScheduler(game, conf, cmd) as sched:
-            with pytest.raises(RuntimeError):
-                sched.schedule(prof).get()
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        with pytest.raises(RuntimeError):
+            sched.schedule(prof).get()
 
 
 def test_early_exit():
@@ -47,12 +46,11 @@ def test_early_exit():
     cmd = ['bash', '-c', 'while read line; do : ; done']
 
     finished_scheduling = False
-    with pytest.raises(RuntimeError):
-        with simsched.SimulationScheduler(game, conf, cmd) as sched:
-            # Schedule promises but just exit
-            for p in profs:
-                sched.schedule(p)
-            finished_scheduling = True
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        # Schedule promises but just exit
+        for p in profs:
+            sched.schedule(p)
+        finished_scheduling = True
     assert finished_scheduling, \
         "didn't finish scheduling"
 
@@ -62,11 +60,15 @@ def test_read_delay_fail():
         jgame = json.load(f)
     conf = jgame['configuration']
     game = rsgame.emptygame_json(jgame)
-    cmd = ['bash', '-c', 'read line && false']
+    cmd = ['bash', '-c', 'read line && sleep 0.1 && false']
 
-    with pytest.raises(RuntimeError):
-        with simsched.SimulationScheduler(game, conf, cmd) as sched:
-            sched.schedule(game.random_profiles()).get()
+    scheduled = False
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        prom = sched.schedule(game.random_profiles())
+        scheduled = True
+        with pytest.raises(RuntimeError):
+            prom.get()
+    assert scheduled
 
 
 def test_read_delay_schedule_fail():
@@ -74,43 +76,43 @@ def test_read_delay_schedule_fail():
         jgame = json.load(f)
     conf = jgame['configuration']
     game = rsgame.emptygame_json(jgame)
-    cmd = ['bash', '-c', 'read line && false']
+    cmd = ['bash', '-c', 'read line && sleep 0.2 && false']
 
     got_here = False
-    with pytest.raises(RuntimeError):
-        with simsched.SimulationScheduler(game, conf, cmd) as sched:
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        sched.schedule(game.random_profiles())
+        # XXX For some reason the process hasn't always terminated after 3
+        # seconds, but I can't afford to wait longer.
+        time.sleep(3)  # make sure process is dead
+        got_here = True
+        with pytest.raises(RuntimeError):
             sched.schedule(game.random_profiles())
-            # XXX For some reason the process hasn't always terminated after 3
-            # seconds, but I can't afford to wait longer.
-            time.sleep(3)  # make sure process is dead
-            with pytest.raises(RuntimeError):
-                got_here = True
-                sched.schedule(game.random_profiles())
     assert got_here, \
         "didn't get to second schedule"
 
 
+@pytest.mark.timeout(10)
 def test_ignore_terminate_fail():
     with open('cdasim/game.json') as f:
         jgame = json.load(f)
     conf = jgame['configuration']
     game = rsgame.emptygame_json(jgame)
-    cmd = ['bash', '-c', 'trap "" SIGTERM && sleep 60']
+    cmd = ['bash', '-c', 'trap "" SIGTERM && sleep 20']
     with simsched.SimulationScheduler(game, conf, cmd):
         # Wait for term to be captured
         time.sleep(1)
 
 
-def test_dequeue_fail():
+def test_json_decode_fail():
     with open('cdasim/game.json') as f:
         jgame = json.load(f)
     conf = jgame['configuration']
     game = rsgame.emptygame_json(jgame)
     cmd = ['bash', '-c', 'echo "[" && while read line; do :; done']
     opened = False
-    with pytest.raises(RuntimeError):
-        with simsched.SimulationScheduler(game, conf, cmd) as sched:
-            opened = True
-            with pytest.raises(RuntimeError):
-                sched.schedule(game.random_profiles())
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        time.sleep(1)
+        opened = True
+        with pytest.raises(RuntimeError):
+            sched.schedule(game.random_profiles())
     assert opened

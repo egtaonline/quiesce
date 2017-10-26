@@ -3,6 +3,7 @@ flake8~=3.0
 ipython~=5.2
 mock~=2.0
 pytest-cov~=2.3
+pytest-timeout~=1.2
 pytest-xdist~=1.15
 pytest~=3.0
 twine~=1.8

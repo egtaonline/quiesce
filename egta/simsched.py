@@ -1,5 +1,4 @@
 """A scheduler that gets payoffs from a local simulation"""
-import io
 import json
 import logging
 import queue
@@ -48,37 +47,44 @@ class SimulationScheduler(profsched.Scheduler):
 
         self._running = False
         self._proc = None
-        self._thread = None
-        self._stdin = None
-        self._stdout = None
+        self._inthread = None
+        self._outthread = None
         self._lock = threading.Lock()
-        self._queue = queue.Queue()
+        self._inqueue = queue.Queue()
+        self._outqueue = queue.Queue()
 
         self._exception = None
 
     def schedule(self, profile):
-        # XXX There may be a problem here where if too many profiles are
-        # written, the stdin buffer will saturate and block instead of just
-        # queuing the profile and continuing. This could be fixed with another
-        # thread to enqueue.
+        assert self._running and self._proc is not None, \
+            "can't call schedule before entering scheduler"
+        if self._exception is not None:
+            raise self._exception
         promise = _SimPromise(self, profile)
-        with self._lock:
-            assert self._proc is not None, \
-                "can't call schedule before entering scheduler"
-            rcode = self._proc.poll()
-            if self._exception is not None:
-                raise self._exception
-            if rcode is not None:
-                raise RuntimeError("process is not running {:d}".format(
-                    rcode))
-            jprof = self.game.to_prof_json(profile)
-            self.base['assignment'] = jprof
-            json.dump(self.base, self._stdin, separators=(',', ':'))
-            self._stdin.write('\n')
-            self._stdin.flush()
-            self._queue.put(promise)
-            _log.debug("sent profile: %s", self.game.to_prof_repr(profile))
+        self._inqueue.put(promise)
         return promise
+
+    def _enqueue(self):
+        """Thread used to push lines to stdin"""
+        try:
+            while self._running:
+                prom = self._inqueue.get()
+                if prom is None:
+                    return  # told to terminate
+                jprof = self.game.to_prof_json(prom._prof)
+                self.base['assignment'] = jprof
+                json.dump(self.base, self._proc.stdin, separators=(',', ':'))
+                self._proc.stdin.write('\n')
+                self._proc.stdin.flush()
+                self._outqueue.put(prom)
+                _log.debug("sent profile: %s",
+                           self.game.to_prof_repr(prom._prof))
+        except Exception as ex:  # pragma: no cover
+            self._exception = ex
+        finally:
+            while not self._inqueue.empty():
+                prom = self._inqueue.get()
+                prom is None or prom._set(None)
 
     def _dequeue(self):
         """Thread used to get output from simulator
@@ -87,16 +93,18 @@ class SimulationScheduler(profsched.Scheduler):
         payoff data when its found."""
         try:
             while self._running:
-                # This is blocking
-                line = self._stdout.readline()
-                if not line and self._queue.empty():
+                # FIXME If proc is killed, it doesn't close the streams, and as
+                # a result, this call blocks indefinitely. I can't figure out a
+                # way around this, but as it currently stands, this thread
+                # doesn't die in that case.
+                line = self._proc.stdout.readline()
+                if not line and self._outqueue.empty():
                     # Process closed stdout and had nothing else to run
-                    self._running = False
-                    self._proc.terminate()
-                elif self._proc.poll() is not None:
+                    return
+                elif not line or self._proc.poll() is not None:
                     # Process terminated unexpectedly
                     raise RuntimeError(
-                        "Process died unexpectedly with code {:d}".format(
+                        "Process died unexpectedly with code {}".format(
                             self._proc.poll()))
                 else:
                     try:
@@ -106,52 +114,67 @@ class SimulationScheduler(profsched.Scheduler):
                             "Couldn't decode \"{}\" as json".format(line))
                     payoffs = self.game.from_payoff_json(jpays)
                     payoffs.setflags(write=False)
-                    promise = self._queue.get()
+                    promise = self._outqueue.get()
+                    if promise is None:
+                        return  # told to exit
                     _log.debug("read payoff for profile: %s",
                                self.game.to_prof_repr(promise._prof))
                     promise._set(payoffs)
         except Exception as ex:  # pragma: no cover
             self._exception = ex
-            # Drain queue to notify of exception
-            while not self._queue.empty():
-                self._queue.get()._set(None)
+        finally:
+            while not self._outqueue.empty():
+                prom = self._outqueue.get()
+                prom is None or prom._set(None)
 
     def __enter__(self):
-        self._proc = subprocess.Popen(
-            self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        self._stdin = io.TextIOWrapper(self._proc.stdin)
-        self._stdout = io.TextIOWrapper(self._proc.stdout)
-
-        self._thread = threading.Thread(target=self._dequeue)
         self._running = True
-        self._thread.start()
+
+        self._proc = subprocess.Popen(
+            self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            universal_newlines=True)
+
+        # We start these as daemons so that if we fail to close them for
+        # whatever reason, python still exits
+        self._inthread = threading.Thread(target=self._enqueue, daemon=True)
+        self._inthread.start()
+        self._outthread = threading.Thread(target=self._dequeue, daemon=True)
+        self._outthread.start()
         return self
 
     def __exit__(self, *args):
         self._running = False
 
+        # This tells threads to die
+        self._inqueue.put(None)
+        self._outqueue.put(None)
+
+        # killing the process should close the streams and kill the threads
         if self._proc is not None and self._proc.poll() is None:
             # Kill process nicely, and then not nicely
             try:
                 self._proc.terminate()
-            except ProcessLookupError:
+            except ProcessLookupError:  # pragma: no cover
                 pass  # race condition, process died
             try:
                 self._proc.wait(self.sleep)
             except subprocess.TimeoutExpired:
                 _log.warning("couldn't terminate simulation, killing it...")
                 self._proc.kill()
+            try:
+                self._proc.wait(self.sleep)
+            except subprocess.TimeoutExpired:  # pragma: no cover
+                _log.error("couldn't kill simulation")
 
-        # After killing the process, the output should close and the thread
-        # should die
-        if self._thread is not None:  # pragma: no cover
-            self._thread.join(self.sleep * 2)
-            if self._thread.is_alive():
+        # Threads should be dead at this point, but we close anyways
+        if self._inthread is not None and self._inthread.is_alive():  # pragma: no cover # noqa
+            self._inthread.join(self.sleep * 2)
+            if self._inthread.is_alive():
                 _log.warning("couldn't kill dequeue thread...")
-            self._thread = None
-
-        if self._exception is not None:
-            raise self._exception
+        if self._outthread is not None and self._outthread.is_alive():  # pragma: no cover # noqa
+            self._outthread.join(self.sleep * 2)
+            if self._outthread.is_alive():
+                _log.warning("couldn't kill dequeue thread...")
 
 
 class _SimPromise(profsched.Promise):
@@ -168,4 +191,6 @@ class _SimPromise(profsched.Promise):
         self._event.wait()
         if self._sched._exception is not None:
             raise self._sched._exception
+        assert self._sched._running, \
+            "can't get promise when scheduler is not running"
         return self._value

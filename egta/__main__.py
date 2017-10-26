@@ -119,6 +119,7 @@ def main():
         email_subject = 'EGTA Online Quiesce Status for Game {gid:d}'.format(
             gid=args.game_id)
     else:
+        # FIXME Add other info to distinguish games without id
         fmt_str = '%(asctime)s %(levelname)s %(message)s'
         email_subject = 'EGTA Online Quiesce Status'
 
