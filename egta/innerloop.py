@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 def inner_loop(prof_sched, game, red=idr, red_players=None, *,
                regret_thresh=1e-3, dist_thresh=1e-3, max_resamples=10,
                subgame_size=3, num_equilibria=1, num_backups=1,
-               devs_by_role=False):
+               devs_by_role=False, at_least_one=False):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -65,14 +65,20 @@ def inner_loop(prof_sched, game, red=idr, red_players=None, *,
         found. This can reduce the number of profiles sampled, but may also
         fail to find certain equilibria due to the different path through
         subgames.
+    at_least_one : boolean, optional
+        If specified, at least one equilibria will be found in each subgame.
+        This has the potential to run for a very long time as it may take
+        exponential time. If your regret threshold is not set too log for your
+        game, this is relatively reasonable though.
     """
-    return _InnerLoop(prof_sched, rsgame.emptygame_copy(game), red,
-                      np.broadcast_to(np.asarray(red_players), game.num_roles)
-                      if red_players is not None else None,
-                      regret_thresh=regret_thresh, dist_thresh=dist_thresh,
-                      max_resamples=max_resamples, subgame_size=subgame_size,
-                      num_equilibria=num_equilibria, num_backups=num_backups,
-                      devs_by_role=devs_by_role).run()
+    return _InnerLoop(
+        prof_sched, rsgame.emptygame_copy(game), red,
+        np.broadcast_to(np.asarray(red_players), game.num_roles)
+        if red_players is not None else None, regret_thresh=regret_thresh,
+        dist_thresh=dist_thresh, max_resamples=max_resamples,
+        subgame_size=subgame_size, num_equilibria=num_equilibria,
+        num_backups=num_backups, devs_by_role=devs_by_role,
+        at_least_one=at_least_one).run()
 
 
 class _InnerLoop(object):
@@ -80,7 +86,7 @@ class _InnerLoop(object):
 
     def __init__(self, sched, game, red, red_players, regret_thresh,
                  dist_thresh, max_resamples, subgame_size, num_equilibria,
-                 num_backups, devs_by_role):
+                 num_backups, devs_by_role, at_least_one):
         # Data
         self._sched = _Scheduler(sched, game, red, red_players)
         self._game = game
@@ -93,6 +99,7 @@ class _InnerLoop(object):
         self._regret_thresh = regret_thresh
         self._dist_thresh = dist_thresh
         self._init_role_dev = 0 if devs_by_role else None
+        self._at_least_one = at_least_one
 
         # Bookkeeping
         self._threads = queue.Queue()
@@ -138,7 +145,8 @@ class _InnerLoop(object):
                     eqa = subgame.translate(
                         nash.mixed_nash(
                             game, regret_thresh=self._regret_thresh,
-                            dist_thresh=self._dist_thresh, processes=1),
+                            dist_thresh=self._dist_thresh,
+                            at_least_one=self._at_least_one),
                         sub_mask)
 
             if eqa.size:
