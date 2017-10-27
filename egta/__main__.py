@@ -119,7 +119,9 @@ def main():
         email_subject = 'EGTA Online Quiesce Status for Game {gid:d}'.format(
             gid=args.game_id)
     else:
-        # FIXME Add other info to distinguish games without id
+        # FIXME Add other info to distinguish games without id. Have an
+        # optional argument for email identifier that will be populated with
+        # game id if possible.
         fmt_str = '%(asctime)s %(levelname)s %(message)s'
         email_subject = 'EGTA Online Quiesce Status'
 
@@ -142,6 +144,8 @@ def main():
         email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,
                                              args.recipient, email_subject)
         email_handler.setLevel(50 - args.email_verbosity * 10)
+        email_handler.setFormatter(logging.Formatter(
+            '%(levelname)s %(message)s'))
         log_handlers.append(email_handler)
 
     logging.basicConfig(level=0, handlers=log_handlers)

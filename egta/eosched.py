@@ -229,6 +229,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # Create game to get initial profile data
         # TODO It would be helpful if the api had a concept of a temporary
         # game, that would be auto destroyed after context manager exit.
+        # TODO Allow passing in a game id so that we don't keep creating
+        # temporary games all the time.
         gamea = None
         try:
             gamea = self._api.create_game(self._sim_id, name,
