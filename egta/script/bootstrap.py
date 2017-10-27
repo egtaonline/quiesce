@@ -70,6 +70,7 @@ def run(scheduler, game, args):
         'regret': dict(zip(('{:g}'.format(p) for p in args.percentiles),
                            np.percentile(reg_boots, args.percentiles)),
                        mean=reg_means),
+        # TODO this is a bad interface and should probably be somewhere else
         'gains': dict(zip(('{:g}'.format(p) for p in args.percentiles),
                           (game.to_payoff_json(g) for g
                            in np.percentile(gain_boots, args.percentiles, 0))),
