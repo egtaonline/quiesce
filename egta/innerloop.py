@@ -144,6 +144,8 @@ class _InnerLoop(object):
                     # This is potentially a error with the way we compute
                     # gradients, but it's not reproducible, so we ignore it.
                     warnings.simplefilter('ignore', RuntimeWarning)
+                    # TODO It'd probably be goo to put a warning here if the
+                    # equilibrium takes too long to compute.
                     eqa = subgame.translate(
                         nash.mixed_nash(
                             game, regret_thresh=self._regret_thresh,
