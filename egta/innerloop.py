@@ -2,6 +2,7 @@ import collections
 import logging
 import queue
 import threading
+import time
 import warnings
 
 import numpy as np
@@ -144,14 +145,19 @@ class _InnerLoop(object):
                     # This is potentially a error with the way we compute
                     # gradients, but it's not reproducible, so we ignore it.
                     warnings.simplefilter('ignore', RuntimeWarning)
-                    # TODO It'd probably be goo to put a warning here if the
-                    # equilibrium takes too long to compute.
+                    start = time.time()
                     eqa = subgame.translate(
                         nash.mixed_nash(
                             game, regret_thresh=self._regret_thresh,
                             dist_thresh=self._dist_thresh,
                             at_least_one=self._at_least_one),
                         sub_mask)
+                    duration = time.time() - start
+                    if duration > 600:  # pragma: no cover
+                        _log.warning(
+                            'equilibrium finding took %.0f seconds  in '
+                            'subgame %s', duration,
+                            self._game.to_subgame_repr(sub_mask))
 
             if eqa.size:
                 for eqm in eqa:

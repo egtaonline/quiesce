@@ -54,6 +54,10 @@ def add_parser(subparsers):
         time. Setting this will check one role at a time. If a beneficial
         deviation is found, then that subgame is scheduled without exploring
         deviations from the other roles.""")
+    parser.add_argument(
+        '--one', action='store_true', help="""Guarantee that an equilibrium is
+        found in every subgame. This may take up to exponential time, but a
+        warning will be logged if it takes more than five minutes.""")
     return parser
 
 
@@ -74,7 +78,8 @@ def run(scheduler, game, args):
         scheduler, game, red, red_players, regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh, max_resamples=args.max_resamples,
         subgame_size=args.max_subgame_size, num_equilibria=args.num_equilibria,
-        num_backups=args.num_backups, devs_by_role=args.dev_by_role)
+        num_backups=args.num_backups, devs_by_role=args.dev_by_role,
+        at_least_one=args.one)
 
     for eqm in eqa:
         json.dump(game.to_mix_json(eqm), args.output)
