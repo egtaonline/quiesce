@@ -135,6 +135,8 @@ class _InnerLoop(object):
             return  # Something failed
         try:
             game = self._sched.get_subgame(sub_mask, count).subgame(sub_mask)
+            if self._exception is not None:
+                return  # Something failed
             with self._nash_lock:
                 with warnings.catch_warnings():
                     # XXX For some reason, linesearch in optimize throws a
@@ -177,6 +179,8 @@ class _InnerLoop(object):
         try:
             support = mix > 0
             game = self._sched.get_deviations(support, 1, role_index)
+            if self._exception is not None:
+                return  # Something failed
             gains = regret.mixture_deviation_gains(game, mix)
             if role_index is None:
                 assert not np.isnan(gains).any(), "There were nan regrets"
@@ -273,7 +277,7 @@ class _InnerLoop(object):
         except Exception as ex:
             # Set exception so all threads exit
             self._exception = ex
-            # Kill scheduler
+            # Kill scheduler so all promises return
             self._sched._prof_sched.__exit__()
             # Wait for all threads to finish now that all scheduler promises
             # should have returned. This should only happen if an exception is
@@ -356,6 +360,8 @@ class _UpdatePromise(object):
     def wait(self):
         with self._lock:
             if not self._updated:
+                # FIXME This could block on exception if schedulers don't
+                # cancel all of their promises
                 pay = self._promise.get()
                 with self._data._lock:
                     assert self._data._promises.popleft() == self
