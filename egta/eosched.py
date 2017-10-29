@@ -14,6 +14,10 @@ from egta import utils as eu
 _log = logging.getLogger(__name__)
 
 
+# TODO This should have an option where strategies with the name "noop" are
+# omitted from the scheduled profile to make scheduling more efficient. This
+# should be an option as it won't always be desired, and there's no easy way to
+# get all of the profiles from a game.
 class EgtaOnlineScheduler(profsched.Scheduler):
     """A profile scheduler that schedules through egta online
 
