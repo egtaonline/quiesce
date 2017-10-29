@@ -136,6 +136,8 @@ class _InnerLoop(object):
             return  # Something failed
         try:
             game = self._sched.get_subgame(sub_mask, count).subgame(sub_mask)
+            assert game.is_complete(), \
+                "scheduled game is not complete somehow"
             if self._exception is not None:
                 return  # Something failed
             with self._nash_lock:

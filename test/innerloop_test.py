@@ -106,10 +106,11 @@ def test_innerloop_known_eq(eq_prob):
     verify_dist_thresh(eqa)
 
 
-@pytest.mark.parametrize('size', SIMPLE_SIZES)
+@pytest.mark.parametrize('players,strats', SIMPLE_SIZES)
 @pytest.mark.parametrize('num', [1, 2])
-def test_innerloop_num_eqa(size, num):
-    sgame = paygame.samplegame_copy(gamegen.role_symmetric_game(*size))
+def test_innerloop_num_eqa(players, strats, num):
+    sgame = paygame.samplegame_copy(
+        gamegen.role_symmetric_game(players, strats))
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(
             sched, sgame, num_equilibria=num, devs_by_role=True)
