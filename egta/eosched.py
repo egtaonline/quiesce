@@ -273,7 +273,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._sim_id, name, True, self._obs_memory,
             self._game.num_players, self._obs_time, self._simult_obs, 1,
             self._configuration)
-        _log.warning("created scheduler %s %d for running simulations", name,
+        # TODO Make this a link to the scheduler and/or include the url
+        _log.warning("created scheduler %s (%d) for running simulations", name,
                      self._sched['id'])
         for role, count in zip(self._game.role_names,
                                self._game.num_role_players):
