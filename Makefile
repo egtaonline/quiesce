@@ -15,7 +15,7 @@ help:
 setup:
 	$(PYTHON) -m venv .
 	bin/pip install -U pip setuptools
-	bin/pip install -r requirements.txt -e .
+	bin/pip install -e '.[dev]'
 
 test-all: PYTEST_ARGS += -m ''
 test-all: test
