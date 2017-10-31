@@ -71,7 +71,7 @@ def create_scheduler(game, args, configuration=None, simname=None, **_):
     egta = api.EgtaOnlineApi(auth_token=args.auth_string)
     return ApiWrapper(
         egta, args.sim_id, game, args.count, configuration, args.sleep,
-        args.max_schedule, args.sim_memory, args.sim_time)
+        args.max_schedule, args.sim_memory, args.sim_time, args.game_id)
 
 
 class ApiWrapper(eosched.EgtaOnlineScheduler):

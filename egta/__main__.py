@@ -64,6 +64,10 @@ def main():
         '--support-thresh', metavar='<support-thresh>', type=float,
         default=1e-3, help="""Threshold for a strategy probability to consider
         it in support. (default: %(default)g)""")
+    parser.add_argument(
+        '--tag', metavar='<identifier>', help="""This tag will be displayed in
+        logs to help identify which script the log refers to. If unspecified
+        but a Game ID is, then "Game <id>" will be used.""")
 
     # Egta online authentication
     parser_auth = parser.add_mutually_exclusive_group()
@@ -113,21 +117,17 @@ def main():
         with open(args.auth_file) as auth_file:  # pragma: no cover
             args.auth_string = auth_file.read().strip()
 
-    if args.game_id is not None:  # pragma: no cover
-        fmt_str = '%(asctime)s ({gid:d}) %(levelname)s %(message)s'.format(
-            gid=args.game_id)
-        email_subject = 'EGTA Online Quiesce Status for Game {gid:d}'.format(
-            gid=args.game_id)
+    if args.tag is not None:
+        tag = args.tag
+    elif args.game_id is not None:
+        tag = 'Game {:d}'.format(args.game_id)
     else:
-        # FIXME Add other info to distinguish games without id. Have an
-        # optional argument for email identifier that will be populated with
-        # game id if possible.
-        fmt_str = '%(asctime)s %(levelname)s %(message)s'
-        email_subject = 'EGTA Online Quiesce Status'
+        tag = '?'
 
     stderr_handle = logging.StreamHandler(sys.stderr)
     stderr_handle.setLevel(50 - 10 * min(args.verbose, 4))
-    stderr_handle.setFormatter(logging.Formatter(fmt_str))
+    stderr_handle.setFormatter(logging.Formatter(
+        '%(asctime)s ({}) %(levelname)s %(message)s'.format(tag)))
     log_handlers = [stderr_handle]
 
     # Email Logging
@@ -141,11 +141,12 @@ def main():
             smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
                 host=server.local_hostname)
 
-        email_handler = handlers.SMTPHandler(smtp_host, smtp_fromaddr,
-                                             args.recipient, email_subject)
+        email_handler = handlers.SMTPHandler(
+            smtp_host, smtp_fromaddr, args.recipient,
+            'EGTA Status for {}'.format(tag))
         email_handler.setLevel(50 - args.email_verbosity * 10)
         email_handler.setFormatter(logging.Formatter(
-            '%(levelname)s %(message)s'))
+            'Content-Type: text/html;\n%(levelname)s %(message)s'))
         log_handlers.append(email_handler)
 
     logging.basicConfig(level=0, handlers=log_handlers)

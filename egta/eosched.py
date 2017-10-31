@@ -49,10 +49,15 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         The amount of time in seconds to give each simulation to run. Too low
         and long running simulations will get cancelled giving you biased
         samples, too long and it will take longer to schedule jobs on flux.
+    game_id : int, optional
+        An optional game id corresponding to a game that matches the
+        configuration. This prevents creating a temporary game just to query
+        initial profile data.
     """
 
     def __init__(self, api, sim_id, game, simultanious_obs, configuration,
-                 sleep_time, max_scheduled, obs_memory, obs_time):
+                 sleep_time, max_scheduled, obs_memory, obs_time,
+                 game_id=None):
         self._api = api
         # XXX Copy to samplegame to get sample payoff reading
         self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
@@ -69,6 +74,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._sleep_time = sleep_time
         self._max_running = max_scheduled - 1
         self._sim_id = sim_id
+        self._game_id = game_id
         self._configuration = configuration
         self._obs_memory = obs_memory
         self._obs_time = obs_time
@@ -233,23 +239,39 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # Create game to get initial profile data
         # TODO It would be helpful if the api had a concept of a temporary
         # game, that would be auto destroyed after context manager exit.
-        # TODO Allow passing in a game id so that we don't keep creating
-        # temporary games all the time.
         gamea = None
         try:
-            gamea = self._api.create_game(self._sim_id, name,
-                                          self._game.num_players,
-                                          self._configuration)
-            _log.debug("created temp game %s %d", name, gamea['id'])
-            for role, count, strats in zip(self._game.role_names,
-                                           self._game.num_role_players,
-                                           self._game.strat_names):
-                gamea.add_role(role, count)
-                for strat in strats:
-                    gamea.add_strategy(role, strat)
-            profiles = gamea.get_observations().get('profiles', ()) or ()
+            if self._game_id is not None:
+                gamea = self._api.get_game(self._game_id)
+            else:
+                gamea = self._api.create_game(self._sim_id, name,
+                                              self._game.num_players,
+                                              self._configuration)
+                _log.debug("created temp game %s %d", name, gamea['id'])
+                for role, count, strats in zip(self._game.role_names,
+                                               self._game.num_role_players,
+                                               self._game.strat_names):
+                    gamea.add_role(role, count)
+                    for strat in strats:
+                        gamea.add_strategy(role, strat)
+            jgame = gamea.get_observations()
+            assert ({(k, str(v)) for k, v in self._configuration.items()} <=
+                    set(map(tuple, jgame['configuration']))), \
+                "games configuration didn't match"
+            sim = self._api.get_simulator(self._sim_id).get_info()
+            assert ('{}-{}'.format(sim['name'], sim['version']) ==
+                    jgame['simulator_fullname']), \
+                "game didn't use the appropriate simulator"
+            assert (
+                {(r, c, frozenset(s)) for r, c, s
+                 in zip(self._game.role_names, self._game.num_role_players,
+                        self._game.strat_names)} ==
+                {(s['name'], s['count'], frozenset(s['strategies'])) for s
+                 in jgame['roles']}), \
+                "game didn't have the proper role configuration"
+            profiles = jgame.get('profiles', ()) or ()
         finally:
-            if gamea is not None:
+            if gamea is not None and self._game_id is None:
                 gamea.destroy_game()
 
         # Parse profiles
@@ -273,9 +295,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._sim_id, name, True, self._obs_memory,
             self._game.num_players, self._obs_time, self._simult_obs, 1,
             self._configuration)
-        # TODO Make this a link to the scheduler and/or include the url
-        _log.warning("created scheduler %s (%d) for running simulations", name,
-                     self._sched['id'])
+        _log.warning(
+            "created scheduler <a href=\"https://%s/generic_schedulers/%d\">%s"
+            "</a> (%d) for running simulations", self._api.domain,
+            self._sched['id'], name, self._sched['id'])
         for role, count in zip(self._game.role_names,
                                self._game.num_role_players):
             self._sched.add_role(role, count)

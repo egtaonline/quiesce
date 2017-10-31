@@ -19,6 +19,8 @@ from gameanalysis.reduction import identity as idr
 _log = logging.getLogger(__name__)
 
 
+# FIXME In some cases some threads get left around and this doesn't terminate /
+# clean up appropriately.
 def inner_loop(prof_sched, game, red=idr, red_players=None, *,
                regret_thresh=1e-3, dist_thresh=1e-3, max_resamples=10,
                subgame_size=3, num_equilibria=1, num_backups=1,
