@@ -298,7 +298,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         _log.warning(
             "created scheduler %s (%d) for running simulations: "
             "https://%s/generic_schedulers/%d", name, self._sched['id'],
-            self._sched['id'], self._api.domain)
+            self._api.domain, self._sched['id'])
         for role, count in zip(self._game.role_names,
                                self._game.num_role_players):
             self._sched.add_role(role, count)
