@@ -146,7 +146,7 @@ def main():
             'EGTA Status for {}'.format(tag))
         email_handler.setLevel(50 - args.email_verbosity * 10)
         email_handler.setFormatter(logging.Formatter(
-            'Content-Type: text/html;\n%(levelname)s %(message)s'))
+            '%(levelname)s %(message)s'))
         log_handlers.append(email_handler)
 
     logging.basicConfig(level=0, handlers=log_handlers)
