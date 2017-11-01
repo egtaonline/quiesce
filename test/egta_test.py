@@ -65,8 +65,20 @@ def test_brute_game():
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
+
+
+def test_brute_game_subgame():
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    sub = json.dumps(reader.to_subgame_json(reader.random_subgames()))
+    succ, out, err = run(
+        sub, '--count', '2', '--game-json', DATA_GAME, 'brute', '--subgame',
+        '-', 'game')
+    assert succ, err
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_brute_game_term():
@@ -81,8 +93,8 @@ def test_brute_dpr_game():
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_prof_data():
@@ -92,8 +104,8 @@ def test_prof_data():
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_sim():
@@ -102,8 +114,8 @@ def test_sim():
     assert succ, err
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_brute_sim_term():
@@ -138,8 +150,8 @@ def test_sim_conf():
             '', '--game-json', SMALL_GAME, 'brute', 'sim', '-c',
             conf_file.name, '--', *SIM)
     assert succ, err
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_innerloop():
@@ -147,8 +159,8 @@ def test_innerloop():
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 def test_innerloop_game_term():
@@ -167,8 +179,8 @@ def test_innerloop_dpr():
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 @pytest.mark.egta
@@ -179,8 +191,8 @@ def test_game_id_brute_egta_game():
     assert succ, err
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
 
 
 @pytest.mark.egta

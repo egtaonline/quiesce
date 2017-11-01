@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 
 import numpy as np
 from gameanalysis import rsgame
@@ -7,12 +8,17 @@ from gameanalysis import rsgame
 from egta import bootstrap
 
 
+_log = logging.getLogger(__name__)
+
+
 def add_parser(subparsers):
     parser = subparsers.add_parser(
         'bootstrap', aliases=['boot'], help="""Compute the regret and surplus
         of a mixture""", description="""Samples profiles to compute a sample
         regret and sample surplus of the mixture. By optionally specifying
-        percentiles, bootstrap confidence bounds will be returned.""")
+        percentiles, bootstrap confidence bounds will be returned. The result
+        is a json dictionary mapping surplus and regret to either "mean" or a
+        string representation of the percentile.""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -62,6 +68,15 @@ def run(scheduler, game, args):
 
     surp_means = exp_means.dot(game.num_role_players)
     surp_boots = exp_boots.dot(game.num_role_players)
+
+    _log.error("bootstrap regret finished with regret %g and surplus %g%s",
+               reg_means, surp_means, '' if not args.percentiles else
+               ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
+               '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
+                         for p, r, s
+                         in zip(args.percentiles,
+                                np.percentile(reg_boots, args.percentiles),
+                                np.percentile(surp_boots, args.percentiles))))
 
     json.dump({
         'surplus': dict(zip(('{:g}'.format(p) for p in args.percentiles),

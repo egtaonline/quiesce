@@ -1,5 +1,6 @@
 """Script utility for running inner loop"""
 import json
+import logging
 
 from gameanalysis import rsgame
 from gameanalysis.reduction import deviation_preserving as dpr
@@ -8,12 +9,16 @@ from gameanalysis.reduction import identity as ir
 from egta import innerloop
 
 
+_log = logging.getLogger(__name__)
+
+
 def add_parser(subparsers):
     parser = subparsers.add_parser(
         'quiesce', help="""Compute equilibria using the quiesce procedure""",
         description="""Samples profiles from small subgames, expanding subgame
         support by best responses to candidate subgame equilibria. For games
-        with a large number of players, a reduction should be specified.""")
+        with a large number of players, a reduction should be specified. The
+        result is a list where each element specifies an "equilibrium".""")
     parser.add_argument(
         '--dpr', metavar='<role:count,role:count,...>', help="""Specify a DPR
         reduction.""")
@@ -81,6 +86,11 @@ def run(scheduler, game, args):
         num_backups=args.num_backups, devs_by_role=args.dev_by_role,
         at_least_one=args.one)
 
-    for eqm in eqa:
-        json.dump(game.to_mix_json(eqm), args.output)
-        args.output.write('\n')
+    _log.error("quiesce finished finding %d equilibria:\n%s",
+               eqa.shape[0], '\n'.join(
+                   '{:d}) {}'.format(i, game.to_mix_repr(eqm)) for i, eqm
+                   in enumerate(eqa, 1)))
+
+    json.dump([{'equilibrium': game.to_mix_json(eqm)} for eqm in eqa],
+              args.output)
+    args.output.write('\n')
