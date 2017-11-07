@@ -183,6 +183,17 @@ def test_innerloop_dpr():
         reader.from_mix_json(eqm['equilibrium'])
 
 
+def test_innerloop_hr():
+    succ, out, err = run(
+        '', '--game-json', DATA_GAME, 'quiesce', '--hr', 'buyers:2,sellers:2',
+        'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
+
+
 @pytest.mark.egta
 def test_game_id_brute_egta_game():
     succ, out, err = run(

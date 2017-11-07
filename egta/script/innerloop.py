@@ -2,9 +2,9 @@
 import json
 import logging
 
+import numpy as np
 from gameanalysis import rsgame
-from gameanalysis.reduction import deviation_preserving as dpr
-from gameanalysis.reduction import identity as ir
+from gameanalysis import reduction
 
 from egta import innerloop
 
@@ -19,9 +19,6 @@ def add_parser(subparsers):
         support by best responses to candidate subgame equilibria. For games
         with a large number of players, a reduction should be specified. The
         result is a list where each element specifies an "equilibrium".""")
-    parser.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a DPR
-        reduction.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -63,21 +60,35 @@ def add_parser(subparsers):
         '--one', action='store_true', help="""Guarantee that an equilibrium is
         found in every subgame. This may take up to exponential time, but a
         warning will be logged if it takes more than five minutes.""")
+    reductions = parser.add_mutually_exclusive_group()
+    reductions.add_argument(
+        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
+        deviation preserving reduction.""")
+    reductions.add_argument(
+        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
+        hierarchical reduction.""")
     return parser
 
 
-def parse_reduction(red):
-    strats = (s.strip().split(':') for s in red.strip().split(','))
-    return {r.strip(): int(c) for r, c in strats}
+def parse_reduction(game, red):
+    reduced_players = np.empty(game.num_roles, int)
+    for role_red in red.strip().split(','):
+        role, count = role_red.strip().split(':')
+        reduced_players[game.role_index(role.strip())] = int(count)
+    return reduced_players
 
 
 def run(scheduler, game, args):
     game = rsgame.emptygame_copy(game)
-    red = ir
-    red_players = None
     if args.dpr is not None:
-        red_players = game.from_role_json(parse_reduction(args.dpr), dtype=int)
-        red = dpr
+        red_players = parse_reduction(game, args.dpr)
+        red = reduction.deviation_preserving
+    elif args.hr is not None:
+        red_players = parse_reduction(game, args.hr)
+        red = reduction.hierarchical
+    else:
+        red = reduction.identity
+        red_players = None
 
     eqa = innerloop.inner_loop(
         scheduler, game, red, red_players, regret_thresh=args.regret_thresh,
