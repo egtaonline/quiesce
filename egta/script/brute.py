@@ -5,11 +5,10 @@ import logging
 import numpy as np
 from gameanalysis import nash
 from gameanalysis import paygame
+from gameanalysis import reduction
 from gameanalysis import regret
 from gameanalysis import rsgame
 from gameanalysis import subgame
-from gameanalysis.reduction import deviation_preserving as dpr
-from gameanalysis.reduction import identity as ir
 
 
 _log = logging.getLogger(__name__)
@@ -24,9 +23,6 @@ def add_parser(subparsers):
         element has an "equilibrium" and the corresponding "regret" in the full
         game.""")
     parser.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a DPR
-        reduction.""")
-    parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
         (default: %(default)g)""")
@@ -39,21 +35,37 @@ def add_parser(subparsers):
         type=argparse.FileType('r'), help="""Specify an optional subgame to
         sample instead of the whole game. Only deviations from the subgame will
         be scheduled.""")
+    reductions = parser.add_mutually_exclusive_group()
+    reductions.add_argument(
+        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
+        deviation preserving reduction.""")
+    reductions.add_argument(
+        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
+        hierarchical reduction.""")
     return parser
 
 
-def parse_reduction(red):
-    strats = (s.strip().split(':') for s in red.strip().split(','))
-    return {r.strip(): int(c) for r, c in strats}
+def parse_reduction(game, red):
+    reduced_players = np.empty(game.num_roles, int)
+    for role_red in red.strip().split(','):
+        role, count = role_red.strip().split(':')
+        reduced_players[game.role_index(role.strip())] = int(count)
+    return reduced_players
 
 
 def run(scheduler, game, args):
     game = rsgame.emptygame_copy(game)
-    red = ir
-    red_players = None
+
     if args.dpr is not None:
-        red_players = game.from_role_json(parse_reduction(args.dpr), dtype=int)
-        red = dpr
+        red_players = parse_reduction(game, args.dpr)
+        red = reduction.deviation_preserving
+    elif args.hr is not None:
+        red_players = parse_reduction(game, args.hr)
+        red = reduction.hierarchical
+    else:
+        red = reduction.identity
+        red_players = None
+
     if args.subgame is None:
         sub = np.ones(game.num_strats, bool)
     else:

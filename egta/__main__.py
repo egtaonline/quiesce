@@ -127,7 +127,8 @@ def main():
     stderr_handle = logging.StreamHandler(sys.stderr)
     stderr_handle.setLevel(50 - 10 * min(args.verbose, 4))
     stderr_handle.setFormatter(logging.Formatter(
-        '%(asctime)s ({}) %(levelname)s %(message)s'.format(tag)))
+        '%(asctime)s {} ({}) %(levelname)s %(message)s'.format(
+            args.method, tag)))
     log_handlers = [stderr_handle]
 
     # Email Logging
@@ -143,7 +144,7 @@ def main():
 
         email_handler = handlers.SMTPHandler(
             smtp_host, smtp_fromaddr, args.recipient,
-            'EGTA Status for {}'.format(tag))
+            'EGTA Status for {} {}'.format(args.method, tag))
         email_handler.setLevel(50 - args.email_verbosity * 10)
         email_handler.setFormatter(logging.Formatter(
             '%(levelname)s %(message)s'))

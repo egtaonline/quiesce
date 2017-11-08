@@ -97,6 +97,17 @@ def test_brute_dpr_game():
         reader.from_mix_json(eqm['equilibrium'])
 
 
+def test_brute_hr_game():
+    succ, out, err = run(
+        '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--hr',
+        'buyers:2,sellers:2', 'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
+
+
 def test_prof_data():
     succ, out, err = run(
         '', '--profile-data', '/dev/null', '--game-json', DATA_GAME, 'brute',
