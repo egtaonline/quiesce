@@ -84,14 +84,25 @@ def run(scheduler, game, args):
     eqa = subgame.translate(nash.mixed_nash(
         game.subgame(sub), regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh), sub)
-    regrets = [regret.mixture_regret(game, eqm) for eqm in eqa]
+    reg_info = []
+    for eqm in eqa:
+        gains = regret.mixture_deviation_gains(game, eqm)
+        bri = np.argmax(gains)
+        brr = game.role_indices[bri]
+        brs = bri - game.role_starts[brr]
+        reg_info.append((gains[bri], game.role_names[brr],
+                         game.strat_names[brr][brs]))
 
     _log.error("brute sampling finished finding %d equilibria:\n%s",
                eqa.shape[0], '\n'.join(
-                   '{:d}) {} with regret {:g}'.format(
-                       i, game.to_mix_repr(eqm), reg)
-                   for i, (eqm, reg) in enumerate(zip(eqa, regrets), 1)))
+                   '{:d}) {} with regret {:g} to {} {}'.format(
+                       i, game.to_mix_repr(eqm), reg, role, strat)
+                   for i, (eqm, (reg, role, strat))
+                   in enumerate(zip(eqa, reg_info), 1)))
 
-    json.dump([{'equilibrium': game.to_mix_json(eqm), 'regret': reg}
-               for eqm, reg in zip(eqa, regrets)], args.output)
+    json.dump([{'equilibrium': game.to_mix_json(eqm),
+                'regret': reg,
+                'best_response': {'role': role, 'strat': strat}}
+               for eqm, (reg, role, strat)
+               in zip(eqa, reg_info)], args.output)
     args.output.write('\n')
