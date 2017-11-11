@@ -88,10 +88,7 @@ def run(scheduler, game, args):
     for eqm in eqa:
         gains = regret.mixture_deviation_gains(game, eqm)
         bri = np.argmax(gains)
-        brr = game.role_indices[bri]
-        brs = bri - game.role_starts[brr]
-        reg_info.append((gains[bri], game.role_names[brr],
-                         game.strat_names[brr][brs]))
+        reg_info.append((gains[bri],) + game.role_strat_names[bri])
 
     _log.error("brute sampling finished finding %d equilibria:\n%s",
                eqa.shape[0], '\n'.join(
