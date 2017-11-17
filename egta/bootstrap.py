@@ -14,7 +14,7 @@ def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
     mix : ndarray
         The mixture to calculate the regret of.
     num : int
-        The number of samples to gather.
+        The number of samples to gather. Must be positive.
     boots : int, optional
         The number of bootstrap samples to take. The accuracy of bootstrap is
         independent of this number, but more will reduce the variance of the
@@ -41,6 +41,7 @@ def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
     boot_gains : ndarray (boots, num_strats)
         The deviation payoffs for each bootstrap sample.
     """
+    assert num > 0, "can't schedule zero samples"
     chunk_size = chunk_size or boots * 10 or 1000
     game = rsgame.emptygame_copy(game)
     profiles = _chunk_profiles(prof_sched, game, mix, num, chunk_size)
@@ -71,5 +72,5 @@ def _chunk_profiles(sched, game, mix, num, chunk_size):
         for prom in proms:
             yield prom.get()
         proms = new_proms
-    for prom in proms:
+    for prom in proms:  # pragma: no branch
         yield prom.get()

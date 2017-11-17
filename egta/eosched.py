@@ -230,8 +230,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._drain_queues()
 
         finally:
-            if self._thread_timeout_lock.locked():
+            try:
                 self._thread_timeout_lock.release()
+            except RuntimeError:
+                pass  # Don't care
 
     def __enter__(self):
         name = 'egta_' + eu.random_string(20)

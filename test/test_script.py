@@ -69,6 +69,17 @@ def test_brute_game():
         reader.from_mix_json(eqm['equilibrium'])
 
 
+def test_brute_game_tag():
+    succ, out, err = run(
+        '', '--tag', 'test', '--count', '2', '--game-json', DATA_GAME, 'brute',
+        'game')
+    assert succ, err
+    with open(DATA_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in json.loads(out):
+        reader.from_mix_json(eqm['equilibrium'])
+
+
 def test_brute_game_subgame():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))

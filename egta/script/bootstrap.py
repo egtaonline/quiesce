@@ -78,7 +78,7 @@ def run(scheduler, game, args):
                                 np.percentile(reg_boots, args.percentiles),
                                 np.percentile(surp_boots, args.percentiles))))
 
-    json.dump({
+    json.dump({  # pragma: no branch
         'surplus': dict(zip(('{:g}'.format(p) for p in args.percentiles),
                             np.percentile(surp_boots, args.percentiles)),
                         mean=surp_means),
