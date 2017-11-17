@@ -258,8 +258,8 @@ class _InnerLoop(object):
                 self._thread_failed = False
 
                 # Quiesce first time
-                for sub_mask in self._game.pure_subgames():
-                    self._add_subgame(sub_mask, 1)
+                for mix in self._game.pure_mixtures():
+                    self._add_deviations(mix, self._init_role_dev)
                 while not self._threads.empty():
                     self._threads.get().join()
                 if self._exception is not None:
