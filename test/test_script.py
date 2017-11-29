@@ -1,3 +1,4 @@
+import itertools
 import json
 import pytest
 import subprocess
@@ -257,11 +258,9 @@ def test_boot_game():
             'game')
     assert succ, err
     results = json.loads(out)
-    assert {'surplus', 'regret', 'gains'} == results.keys()
+    assert {'total', 'buyers', 'sellers'} == results.keys()
     for val in results.values():
-        assert {'mean'} == val.keys()
-    for val in results['gains'].values():
-        reader.from_payoff_json(val)
+        assert {'surplus', 'regret', 'response'} == val.keys()
 
 
 def test_boot_game_percs():
@@ -273,11 +272,13 @@ def test_boot_game_percs():
         'boot', '-', '20', '--percentiles', '95,99', 'game')
     assert succ, err
     results = json.loads(out)
-    assert {'surplus', 'regret', 'gains'} == results.keys()
+    assert {'mean', '99', '95'} == results.keys()
     for val in results.values():
-        assert {'mean', '95', '99'} == val.keys()
-    for val in results['gains'].values():
-        reader.from_payoff_json(val)
+        assert {'total', 'buyers', 'sellers'} == val.keys()
+    for val in results['mean'].values():
+        assert {'surplus', 'regret', 'response'} == val.keys()
+    for val in itertools.chain(results['95'].values(), results['99'].values()):
+        assert {'surplus', 'regret'} == val.keys()
 
 
 def test_boot_sim():
@@ -289,8 +290,6 @@ def test_boot_sim():
         'boot', '-', '50', '--chunk-size', '10', 'sim', '--', *SIM)
     assert succ, err
     results = json.loads(out)
-    assert {'surplus', 'regret', 'gains'} == results.keys()
+    assert {'total', 'buyers', 'sellers'} == results.keys()
     for val in results.values():
-        assert {'mean'} == val.keys()
-    for val in results['gains'].values():
-        reader.from_payoff_json(val)
+        assert {'surplus', 'regret', 'response'} == val.keys()

@@ -45,6 +45,10 @@ def add_parser(subparsers):
         should roughly correspond to the time to process chunk_size payoffs.
         Keeping this on the order of the number of bootstraps keeps the memory
         requirement constant.""")
+    parser.add_argument(
+        '--standard', action='store_true', help="""Force output to be
+        consistent irrespective of if percentiles is specified or the game is
+        symmetric.""")
     return parser
 
 
@@ -63,32 +67,66 @@ def run(scheduler, game, args):
     gain_means = means - exp_means.repeat(game.num_role_strats)
     gain_boots = boots - exp_boots.repeat(game.num_role_strats, 1)
 
-    reg_means = np.maximum(np.max(gain_means), 0)
-    reg_boots = np.maximum(np.max(gain_boots, 1), 0)
+    role_ind_reg_means = np.fromiter(map(np.argmax, np.split(
+        gain_means, game.role_starts[1:])), int, game.num_roles)
+    role_reg_means = gain_means[role_ind_reg_means + game.role_starts]
+    ind_reg_means = np.argmax(role_reg_means)
+    reg_means = role_reg_means[ind_reg_means]
 
-    surp_means = exp_means.dot(game.num_role_players)
-    surp_boots = exp_boots.dot(game.num_role_players)
+    role_reg_boots = np.maximum.reduceat(gain_boots, game.role_starts, 1)
+    reg_boots = role_reg_boots.max(1)
+
+    role_surp_means = exp_means * game.num_role_players
+    surp_means = role_surp_means.sum()
+    role_surp_boots = exp_boots * game.num_role_players
+    surp_boots = role_surp_boots.sum(1)
+
+    reg_percs = np.percentile(reg_boots, args.percentiles)
+    surp_percs = np.percentile(surp_boots, args.percentiles)
 
     _log.error("bootstrap regret finished with regret %g and surplus %g%s",
                reg_means, surp_means, '' if not args.percentiles else
                ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
                '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
                          for p, r, s
-                         in zip(args.percentiles,
-                                np.percentile(reg_boots, args.percentiles),
-                                np.percentile(surp_boots, args.percentiles))))
+                         in zip(args.percentiles, reg_percs, surp_percs)))
 
-    json.dump({  # pragma: no branch
-        'surplus': dict(zip(('{:g}'.format(p) for p in args.percentiles),
-                            np.percentile(surp_boots, args.percentiles)),
-                        mean=surp_means),
-        'regret': dict(zip(('{:g}'.format(p) for p in args.percentiles),
-                           np.percentile(reg_boots, args.percentiles)),
-                       mean=reg_means),
-        # TODO this is a bad interface and should probably be somewhere else
-        'gains': dict(zip(('{:g}'.format(p) for p in args.percentiles),
-                          (game.to_payoff_json(g) for g
-                           in np.percentile(gain_boots, args.percentiles, 0))),
-                      mean=game.to_payoff_json(gain_means)),
-    }, args.output)
+    # format output
+    if game.is_symmetric() and not args.standard:
+        result = {'surplus': surp_means,
+                  'regret': reg_means,
+                  'response': game.strat_names[0][role_ind_reg_means[0]]}
+
+        if args.percentiles:
+            result = {'mean': result}
+            for p, surp, reg in zip(args.percentiles, surp_percs, reg_percs):
+                result['{:g}'.format(p)] = {'surplus': surp, 'regret': reg}
+    else:
+        mean_dev = '{}: {}'.format(
+            game.role_names[ind_reg_means],
+            game.strat_names[ind_reg_means][role_ind_reg_means[ind_reg_means]])
+        result = {'total': {'surplus': surp_means,
+                            'regret': reg_means,
+                            'response': mean_dev}}
+        for role, strats, surp, reg, dev in zip(
+                game.role_names, game.strat_names, role_surp_means,
+                role_reg_means, role_ind_reg_means):
+            result[role] = {'surplus': surp,
+                            'regret': reg,
+                            'response': strats[dev]}
+
+        if args.percentiles or args.standard:
+            result = {'mean': result}
+
+        for p, surp, reg, role_surps, role_regs in zip(
+                args.percentiles, surp_percs, reg_percs,
+                np.percentile(role_surp_boots, args.percentiles, 0),
+                np.percentile(role_reg_boots, args.percentiles, 0)):
+            perc = {'total': {'surplus': surp,
+                              'regret': reg}}
+            for role, surp, reg in zip(game.role_names, role_surps, role_regs):
+                perc[role] = {'surplus': surp, 'regret': reg}
+            result['{:g}'.format(p)] = perc
+
+    json.dump(result, args.output)
     args.output.write('\n')
