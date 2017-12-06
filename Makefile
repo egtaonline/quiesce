@@ -5,12 +5,15 @@ PYTHON = python
 help:
 	@echo "usage: make <tag>"
 	@echo
-	@echo "setup  - setup for development"
+	@echo "setup    - setup for development"
 	@echo "ubuntu-reqs - install required files on ubuntu (requires root)"
-	@echo "todo   - check for todo flags"
-	@echo "check  - check for comformance to pep8 standards"
-	@echo "format - autoformat python files"
-	@echo "test   - run tests with coverage"
+	@echo "todo     - check for todo flags"
+	@echo "check    - check for comformance to pep8 standards"
+	@echo "format   - autoformat python files"
+	@echo "test     - run fast tests with coverage"
+	@echo "test-all - run all tests with coverage"
+	@echo "publish  - publish package to pypi"
+	@echo "clean    - remove build artifacts"
 
 setup:
 	$(PYTHON) -m venv .
@@ -35,12 +38,11 @@ check:
 format:
 	bin/autopep8 -ri $(FILES)
 
-upload:
-	cp ~/.pypirc ~/.pypirc.bak~ || touch ~/.pypirc.bak~
-	echo '[distutils]\nindex-servers =\n    pypi\n\n[pypi]\nusername: strategic.reasoning.group' > ~/.pypirc
-	bin/python setup.py sdist bdist_wheel upload; mv ~/.pypirc.bak~ ~/.pypirc
+publish:
+	bin/python setup.py sdist bdist_wheel
+	bin/twine upload -u strategic.reasoning.group dist/*
 
 clean:
 	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
 
-.PHONY: test clean format check todo help
+.PHONY: setup test-all test ubuntu-reqs todo check format publish clean
