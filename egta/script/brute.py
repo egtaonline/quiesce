@@ -93,7 +93,7 @@ def run(scheduler, game, args):
     _log.error("brute sampling finished finding %d equilibria:\n%s",
                eqa.shape[0], '\n'.join(
                    '{:d}) {} with regret {:g} to {} {}'.format(
-                       i, game.to_mix_repr(eqm), reg, role, strat)
+                       i, game.mixture_to_repr(eqm), reg, role, strat)
                    for i, (eqm, (reg, role, strat))
                    in enumerate(zip(eqa, reg_info), 1)))
 

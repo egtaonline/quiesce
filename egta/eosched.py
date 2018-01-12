@@ -14,10 +14,6 @@ from egta import utils as eu
 _log = logging.getLogger(__name__)
 
 
-# TODO This should have an option where strategies with the name "noop" are
-# omitted from the scheduled profile to make scheduling more efficient. This
-# should be an option as it won't always be desired, and there's no easy way to
-# get all of the profiles from a game.
 class EgtaOnlineScheduler(profsched.Scheduler):
     """A profile scheduler that schedules through egta online
 
@@ -96,7 +92,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         _, que, _ = val
         if self._num_running_profiles > self._max_running:
             _log.debug("new profile queued %s",
-                       self._game.to_prof_repr(profile))
+                       self._game.profile_to_repr(profile))
             self._pending_profiles.put((hprof, val))
         else:
             self._schedule(hprof, val)
@@ -116,7 +112,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             if rec.prof_id is None:
                 # Unknown id, schedule new amount
                 rec.num_sched = self._simult_obs
-                assignment = self._game.to_prof_repr(profile)
+                assignment = self._game.profile_to_repr(profile)
                 _log.debug("new profile scheduled %s", assignment)
                 rec.prof_id = self._sched.add_profile(
                     assignment, rec.num_sched)['id']
@@ -129,7 +125,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 rec.num_sched = ((((rec.num_req - 1) // self._simult_obs) + 1)
                                  * self._simult_obs)
                 self._prof_ids[rec.prof_id] = val
-                assignment = self._game.to_prof_repr(profile)
+                assignment = self._game.profile_to_repr(profile)
                 _log.debug(
                     "new existing data profile scheduled %s", assignment)
                 self._sched.add_profile(
@@ -142,10 +138,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 self._prof_ids[rec.prof_id] = val
                 rec.num_sched += self._simult_obs
                 _log.debug("old profile scheduled %s",
-                           self._game.to_prof_repr(profile))
+                           self._game.profile_to_repr(profile))
                 self._sched.remove_profile(rec.prof_id)
                 self._sched.add_profile(
-                    self._game.to_prof_repr(profile), rec.num_sched)
+                    self._game.profile_to_repr(profile), rec.num_sched)
                 with self._runprof_lock:
                     self._num_running_profiles += self._simult_obs
 
@@ -200,7 +196,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                                         in jobs['observations'])
                         _log.debug("obs json %s",  jobs)
                         # Parse all and slice to have accurate counts
-                        new_obs = self._game.from_samplepay_json(jobs)
+                        new_obs = self._game.samplepay_from_json(jobs)
                         # Copy so old array can be deallocated
                         new_obs = np.copy(
                             new_obs[:new_obs.shape[0] - rec.num_rec])
@@ -232,55 +228,47 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         finally:
             try:
                 self._thread_timeout_lock.release()
-            except RuntimeError:
+            except RuntimeError:  # pragma: no cover
                 pass  # Don't care
 
     def __enter__(self):
-        name = 'egta_' + eu.random_string(20)
-
         # Create game to get initial profile data
-        # TODO It would be helpful if the api had a concept of a temporary
-        # game, that would be auto destroyed after context manager exit.
-        gamea = None
-        try:
-            if self._game_id is not None:
-                gamea = self._api.get_game(self._game_id)
-            else:
-                gamea = self._api.create_game(self._sim_id, name,
-                                              self._game.num_players,
-                                              self._configuration)
-                _log.debug("created temp game %s %d", name, gamea['id'])
+        if self._game_id is not None:
+            jgame = self._api.get_game(self._game_id).get_observations()
+        else:
+            with self._api.create_temp_game(
+                    self._sim_id, self._game.num_players,
+                    self._configuration) as gamea:
+                _log.debug("created temp game %s %d", gamea['name'],
+                           gamea['id'])
                 for role, count, strats in zip(self._game.role_names,
                                                self._game.num_role_players,
                                                self._game.strat_names):
                     gamea.add_role(role, count)
                     for strat in strats:
                         gamea.add_strategy(role, strat)
-            jgame = gamea.get_observations()
-            assert ({(k, str(v)) for k, v in self._configuration.items()} <=
-                    set(map(tuple, jgame['configuration']))), \
-                "games configuration didn't match"
-            sim = self._api.get_simulator(self._sim_id).get_info()
-            assert ('{}-{}'.format(sim['name'], sim['version']) ==
-                    jgame['simulator_fullname']), \
-                "game didn't use the appropriate simulator"
-            assert (
-                {(r, c, frozenset(s)) for r, c, s
-                 in zip(self._game.role_names, self._game.num_role_players,
-                        self._game.strat_names)} ==
-                {(s['name'], s['count'], frozenset(s['strategies'])) for s
-                 in jgame['roles']}), \
-                "game didn't have the proper role configuration"
-            profiles = jgame.get('profiles', ()) or ()
-        finally:
-            if gamea is not None and self._game_id is None:
-                gamea.destroy_game()
+                jgame = gamea.get_observations()
+        assert ({(k, str(v)) for k, v in self._configuration.items()} <=
+                set(map(tuple, jgame['configuration']))), \
+            "games configuration didn't match"
+        sim = self._api.get_simulator(self._sim_id).get_info()
+        assert ('{}-{}'.format(sim['name'], sim['version']) ==
+                jgame['simulator_fullname']), \
+            "game didn't use the appropriate simulator"
+        assert (
+            {(r, c, frozenset(s)) for r, c, s
+             in zip(self._game.role_names, self._game.num_role_players,
+                    self._game.strat_names)} ==
+            {(s['name'], s['count'], frozenset(s['strategies'])) for s
+             in jgame['roles']}), \
+            "game didn't have the proper role configuration"
+        profiles = jgame.get('profiles', ()) or ()
 
         # Parse profiles
         num_profs = len(profiles)
         num_pays = 0
         for jprof in profiles:
-            prof, spays = self._game.from_profsamplepay_json(jprof)
+            prof, spays = self._game.profsamplepay_from_json(jprof)
             spays.setflags(write=False)
             hprof = gu.hash_array(prof)
             que = queue.Queue()
@@ -294,13 +282,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
         # Create and start scheduler
         self._sched = self._api.create_generic_scheduler(
-            self._sim_id, name, True, self._obs_memory,
-            self._game.num_players, self._obs_time, self._simult_obs, 1,
-            self._configuration)
+            self._sim_id, 'egta_' + eu.random_string(20), True,
+            self._obs_memory, self._game.num_players, self._obs_time,
+            self._simult_obs, 1, self._configuration)
         _log.warning(
             "created scheduler %s (%d) for running simulations: "
-            "https://%s/generic_schedulers/%d", name, self._sched['id'],
-            self._api.domain, self._sched['id'])
+            "https://%s/generic_schedulers/%d", self._sched['name'],
+            self._sched['id'], self._api.domain, self._sched['id'])
         for role, count in zip(self._game.role_names,
                                self._game.num_role_players):
             self._sched.add_role(role, count)
@@ -314,8 +302,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._running = False
         if self._thread_timeout_lock.locked():
             self._thread_timeout_lock.release()
-        if self._sched is not None:
-            self._sched.deactivate()
+        self._sched.deactivate()
         self._drain_queues()
         _log.info("deactivated scheduler %d", self._sched['id'])
 

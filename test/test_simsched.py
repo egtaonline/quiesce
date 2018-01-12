@@ -29,7 +29,7 @@ def test_delayed_fail():
         jgame = json.load(f)
     conf = jgame['configuration']
     game = rsgame.emptygame_json(jgame)
-    prof = game.random_profiles()
+    prof = game.random_profile()
     cmd = ['bash', '-c', 'sleep 1 && false']
 
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
@@ -64,7 +64,7 @@ def test_read_delay_fail():
 
     scheduled = False
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        prom = sched.schedule(game.random_profiles())
+        prom = sched.schedule(game.random_profile())
         scheduled = True
         with pytest.raises(RuntimeError):
             prom.get()
@@ -80,13 +80,13 @@ def test_read_delay_schedule_fail():
 
     got_here = False
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        sched.schedule(game.random_profiles())
+        sched.schedule(game.random_profile())
         # XXX For some reason the process hasn't always terminated after 3
         # seconds, but I can't afford to wait longer.
         time.sleep(3)  # make sure process is dead
         got_here = True
         with pytest.raises(RuntimeError):
-            sched.schedule(game.random_profiles())
+            sched.schedule(game.random_profile())
     assert got_here, \
         "didn't get to second schedule"
 
@@ -114,5 +114,5 @@ def test_json_decode_fail():
         time.sleep(1)
         opened = True
         with pytest.raises(RuntimeError):
-            sched.schedule(game.random_profiles())
+            sched.schedule(game.random_profile())
     assert opened

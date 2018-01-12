@@ -43,7 +43,7 @@ def test_duplicate_profile_sample():
 
 
 def test_basic_profile_aggfn():
-    agame = agggen.random_aggfn([4, 3], [3, 4], 5)
+    agame = agggen.normal_aggfn([4, 3], [3, 4], 5)
     profs = agame.random_profiles(20)
 
     with gamesched.RsGameScheduler(agame) as sched:

@@ -99,7 +99,7 @@ def run(scheduler, game, args):
 
     _log.error("quiesce finished finding %d equilibria:\n%s",
                eqa.shape[0], '\n'.join(
-                   '{:d}) {}'.format(i, game.to_mix_repr(eqm)) for i, eqm
+                   '{:d}) {}'.format(i, game.mixture_to_repr(eqm)) for i, eqm
                    in enumerate(eqa, 1)))
 
     json.dump([{'equilibrium': game.to_mix_json(eqm)} for eqm in eqa],

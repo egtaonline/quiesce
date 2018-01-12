@@ -18,9 +18,14 @@ from gameanalysis.reduction import identity as idr
 
 _log = logging.getLogger(__name__)
 
+# TODO There's something to be said about individual rationality constraints
+# relative to best deviation, i.e. if all are positive gains, but negative
+# payoff, that might mean we should warn, or at least explore something else.
 
 # FIXME In some cases some threads get left around and this doesn't terminate /
 # clean up appropriately.
+
+
 def inner_loop(prof_sched, game, red=idr, red_players=None, *,
                regret_thresh=1e-3, dist_thresh=1e-3, max_resamples=10,
                subgame_size=3, num_equilibria=1, num_backups=1,
@@ -120,13 +125,13 @@ class _InnerLoop(object):
     def _add_subgame(self, sub_mask, count):
         if count > self._max_resamples:  # pragma: no cover
             _log.error("couldn't find equilibrium in subgame %s",
-                       self._game.to_subgame_repr(sub_mask))
+                       self._game.subgame_to_repr(sub_mask))
             return
         with self._exp_subgames_lock:
             schedule = count > 1 or self._exp_subgames.add(sub_mask)
         if schedule:
             _log.info('scheduling subgame %s%s',
-                      self._game.to_subgame_repr(sub_mask),
+                      self._game.subgame_to_repr(sub_mask),
                       ' {:d}'.format(count) if count > 1 else '')
             thread = threading.Thread(
                 target=lambda: self._run_subgame(sub_mask, count))
@@ -161,7 +166,7 @@ class _InnerLoop(object):
                         _log.warning(
                             'equilibrium finding took %.0f seconds  in '
                             'subgame %s', duration,
-                            self._game.to_subgame_repr(sub_mask))
+                            self._game.subgame_to_repr(sub_mask))
 
             if eqa.size:
                 for eqm in eqa:
@@ -177,7 +182,8 @@ class _InnerLoop(object):
                       or self._exp_mix.add(mix))
         if unseen:
             _log.info(
-                'scheduling deviations from %s%s', self._game.to_mix_repr(mix),
+                'scheduling deviations from %s%s',
+                self._game.mixture_to_repr(mix),
                 '' if role_index is None else ' with role {}'.format(
                     self._game.role_names[role_index]))
             thread = threading.Thread(
@@ -198,7 +204,7 @@ class _InnerLoop(object):
                 assert not np.isnan(gains).any(), "There were nan regrets"
                 if np.all(gains <= self._regret_thresh):  # Found equilibrium
                     _log.warning('found equilibrium %s with regret %f',
-                                 self._game.to_mix_repr(mix),
+                                 self._game.mixture_to_repr(mix),
                                  gains.max())
                     self._equilibria.append(mix)  # atomic
                 else:
@@ -215,7 +221,8 @@ class _InnerLoop(object):
                         self._add_deviations(mix, role_index)
                     else:  # found equilibrium
                         _log.warning('found equilibrium %s with regret %f',
-                                     self._game.to_mix_repr(mix), gains.max())
+                                     self._game.mixture_to_repr(mix),
+                                     gains.max())
                         self._equilibria.append(mix)  # atomic
                 else:
                     self._queue_subgames(support, rgains, role_index)
@@ -284,7 +291,7 @@ class _InnerLoop(object):
                     return np.concatenate(
                         [eq[None] for eq in self._equilibria])
                 else:
-                    return np.empty((0, self._game.num_role_strats), float)  # pragma: no cover # noqa
+                    return np.empty((0, self._game.num_strats), float)  # pragma: no cover # noqa
 
         except Exception as ex:
             # Set exception so all threads exit

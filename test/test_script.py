@@ -60,6 +60,7 @@ def test_help():
     assert succ, err
 
 
+@pytest.mark.long
 def test_brute_game():
     succ, out, err = run(
         '', '--count', '2', '--game-json', DATA_GAME, 'brute', 'game')
@@ -67,9 +68,10 @@ def test_brute_game():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
+@pytest.mark.long
 def test_brute_game_tag():
     succ, out, err = run(
         '', '--tag', 'test', '--count', '2', '--game-json', DATA_GAME, 'brute',
@@ -78,19 +80,20 @@ def test_brute_game_tag():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
+@pytest.mark.long
 def test_brute_game_subgame():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    sub = json.dumps(reader.to_subgame_json(reader.random_subgames()))
+    sub = json.dumps(reader.subgame_to_json(reader.random_subgame()))
     succ, out, err = run(
         sub, '--count', '2', '--game-json', DATA_GAME, 'brute', '--subgame',
         '-', 'game')
     assert succ, err
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 def test_brute_game_term():
@@ -106,9 +109,10 @@ def test_brute_dpr_game():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
+@pytest.mark.long
 def test_brute_hr_game():
     succ, out, err = run(
         '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--hr',
@@ -117,9 +121,10 @@ def test_brute_hr_game():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
+@pytest.mark.long
 def test_prof_data():
     succ, out, err = run(
         '', '--profile-data', '/dev/null', '--game-json', DATA_GAME, 'brute',
@@ -128,9 +133,10 @@ def test_prof_data():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
+@pytest.mark.long
 def test_sim():
     succ, out, err = run(
         '', '--game-json', SMALL_GAME, 'brute', 'sim', '--', *SIM)
@@ -138,7 +144,7 @@ def test_sim():
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 def test_brute_sim_term():
@@ -160,6 +166,7 @@ def test_sim_read_delayed_fail():
     assert not succ
 
 
+@pytest.mark.long
 def test_sim_conf():
     with open(SMALL_GAME) as f:
         jgame = json.load(f)
@@ -174,7 +181,7 @@ def test_sim_conf():
             conf_file.name, '--', *SIM)
     assert succ, err
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 def test_innerloop():
@@ -183,7 +190,7 @@ def test_innerloop():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 def test_innerloop_game_term():
@@ -203,7 +210,7 @@ def test_innerloop_dpr():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 def test_innerloop_hr():
@@ -214,7 +221,7 @@ def test_innerloop_hr():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 @pytest.mark.egta
@@ -226,7 +233,7 @@ def test_game_id_brute_egta_game():
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     for eqm in json.loads(out):
-        reader.from_mix_json(eqm['equilibrium'])
+        reader.mixture_from_json(eqm['equilibrium'])
 
 
 @pytest.mark.egta
@@ -243,15 +250,15 @@ def test_game_id_brute_egta_game_wconf():
             conf_file.name, '2048', '60')
     assert succ, err
     for eqm in out[:-1].split('\n'):
-        reader.from_mix_json(json.loads(eqm))
+        reader.mixture_from_json(json.loads(eqm))
 
 
 def test_boot_game():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    mix = reader.random_mixtures()
+    mix = reader.random_mixture()
     with tempfile.NamedTemporaryFile('w') as mix_file:
-        json.dump(reader.to_mix_json(mix), mix_file)
+        json.dump(reader.mixture_to_json(mix), mix_file)
         mix_file.flush()
         succ, out, err = run(
             '', '--game-json', DATA_GAME, 'boot', mix_file.name, '10',
@@ -266,9 +273,9 @@ def test_boot_game():
 def test_boot_game_percs():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    mix = reader.random_mixtures()
+    mix = reader.random_mixture()
     succ, out, err = run(
-        json.dumps(reader.to_mix_json(mix)), '--game-json', DATA_GAME,
+        json.dumps(reader.mixture_to_json(mix)), '--game-json', DATA_GAME,
         'boot', '-', '20', '--percentiles', '95,99', 'game')
     assert succ, err
     results = json.loads(out)
@@ -284,9 +291,9 @@ def test_boot_game_percs():
 def test_boot_sim():
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    mix = reader.random_mixtures()
+    mix = reader.random_mixture()
     succ, out, err = run(
-        json.dumps(reader.to_mix_json(mix)), '--game-json', SMALL_GAME,
+        json.dumps(reader.mixture_to_json(mix)), '--game-json', SMALL_GAME,
         'boot', '-', '50', '--chunk-size', '10', 'sim', '--', *SIM)
     assert succ, err
     results = json.loads(out)

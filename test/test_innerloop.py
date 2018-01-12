@@ -72,7 +72,7 @@ def test_innerloop_failures(players, strats, count, when):
             innerloop.inner_loop(sched, game, subgame_size=5)
 
 
-@pytest.mark.parametrize('count', [1, 5, 10])
+@pytest.mark.parametrize('count', [1, 5])
 @pytest.mark.parametrize('players,strats',
                          [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
 def test_threading_failures(players, strats, count):

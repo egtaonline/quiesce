@@ -65,8 +65,8 @@ def _chunk_profiles(sched, game, mix, num, chunk_size):
     """Return a generator over payoffs that schedules somewhat efficiently"""
     proms = []
     while 0 < num:
-        new_profs = game.random_deviator_profiles(
-            mix, min(num, chunk_size)).reshape((-1, game.num_strats))
+        new_profs = game.random_deviation_profiles(
+            min(num, chunk_size), mix).reshape((-1, game.num_strats))
         num -= chunk_size
         new_proms = [sched.schedule(prof) for prof in new_profs]
         for prom in proms:

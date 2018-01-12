@@ -1,6 +1,6 @@
 PYTEST_ARGS =
 FILES = egta test setup.py
-PYTHON = python
+PYTHON = python3
 
 help:
 	@echo "usage: make <tag>"
@@ -14,6 +14,7 @@ help:
 	@echo "test-all - run all tests with coverage"
 	@echo "publish  - publish package to pypi"
 	@echo "clean    - remove build artifacts"
+	@echo "travis   - run travis test script"
 
 setup:
 	$(PYTHON) -m venv .
@@ -45,4 +46,7 @@ publish:
 clean:
 	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
 
-.PHONY: setup test-all test ubuntu-reqs todo check format publish clean
+travis: PYTEST_ARGS += -v -n2
+travis: check test
+
+.PHONY: setup test-all test ubuntu-reqs todo check format publish clean travis

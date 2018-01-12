@@ -71,14 +71,14 @@ class SimulationScheduler(profsched.Scheduler):
                 prom = self._inqueue.get()
                 if prom is None:
                     return  # told to terminate
-                jprof = self.game.to_prof_json(prom._prof)
+                jprof = self.game.profile_to_json(prom._prof)
                 self.base['assignment'] = jprof
                 json.dump(self.base, self._proc.stdin, separators=(',', ':'))
                 self._proc.stdin.write('\n')
                 self._proc.stdin.flush()
                 self._outqueue.put(prom)
                 _log.debug("sent profile: %s",
-                           self.game.to_prof_repr(prom._prof))
+                           self.game.profile_to_repr(prom._prof))
         except Exception as ex:  # pragma: no cover
             self._exception = ex
         finally:
@@ -112,13 +112,13 @@ class SimulationScheduler(profsched.Scheduler):
                     except json.JSONDecodeError:
                         raise RuntimeError(
                             "Couldn't decode \"{}\" as json".format(line))
-                    payoffs = self.game.from_payoff_json(jpays)
+                    payoffs = self.game.payoff_from_json(jpays)
                     payoffs.setflags(write=False)
                     promise = self._outqueue.get()
                     if promise is None:
                         return  # told to exit
                     _log.debug("read payoff for profile: %s",
-                               self.game.to_prof_repr(promise._prof))
+                               self.game.profile_to_repr(promise._prof))
                     promise._set(payoffs)
         except Exception as ex:  # pragma: no cover
             self._exception = ex
