@@ -40,10 +40,10 @@ Below are some example uses
 
 3. Perform the quiesce routine on a game that's defined by an EGTA Online zip file.
    This will get profile by calling the batch script from a zip file the same way as EGTA Online.
-   To accomplish this, this repository has a simulator file called `zip-wrapper.sh` that takes a zip file and returns a compatable simulator for `egta`.
+   To accomplish this, this repository has a zip scheduler that takes a zip file and schedules like EGTA Online does.
 
    ```
-   egta --game-json cdasim/small_game.json quiesce sim -- ./zip-wrapper.sh cdasim/cdasim.zip
+   egta --game-json cdasim/small_game.json quiesce zip cdasim/cdasim.zip
    ```
 
 3. Perform the quiesce routine on a game with information on EGTA Online.

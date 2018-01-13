@@ -18,6 +18,7 @@ from egta.script import eosched
 from egta.script import gamesched
 from egta.script import innerloop
 from egta.script import simsched
+from egta.script import zipsched
 
 
 _log = logging.getLogger(__name__)
@@ -25,8 +26,6 @@ _log = logging.getLogger(__name__)
 
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
-# TODO Add zip scheduler that works like simsched, but with a zip and remove
-# zip wrapper
 # TODO Add more efficient regret / deviation gains scheduler
 
 def main():
@@ -104,7 +103,7 @@ def main():
             help="""The scheduler to use for acquiring samples from profiles.
             Available commands are:""")
         method.sched = schedulers
-        for module in [eosched, gamesched, simsched]:
+        for module in [eosched, gamesched, simsched, zipsched]:
             sched = module.add_parser(schedulers)
             sched.create_scheduler = module.create_scheduler
 

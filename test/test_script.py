@@ -12,6 +12,7 @@ DIR = path.dirname(path.realpath(__file__))
 EGTA = path.join(DIR, '..', 'bin', 'egta')
 SIM_DIR = path.join(DIR, '..', 'cdasim')
 SMALL_GAME = path.join(SIM_DIR, 'small_game.json')
+ZIP_GAME = path.join(SIM_DIR, 'cdasim.zip')
 GAME = path.join(SIM_DIR, 'game.json')
 DATA_GAME = path.join(SIM_DIR, 'data_game.json')
 SIM = [path.join(DIR, '..', 'bin', 'python'), path.join(SIM_DIR, 'sim.py'),
@@ -53,6 +54,8 @@ def test_help():
     succ, _, err = run('', 'brute', 'game', '--help')
     assert succ, err
     succ, _, err = run('', 'brute', 'sim', '--help')
+    assert succ, err
+    succ, _, err = run('', 'brute', 'zip', '--help')
     assert succ, err
     succ, _, err = run('', 'brute', 'eo', '--help')
     assert succ, err
@@ -101,6 +104,7 @@ def test_brute_game_term():
                 'game')
 
 
+@pytest.mark.long
 def test_brute_dpr_game():
     succ, out, err = run(
         '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--dpr',
@@ -140,6 +144,17 @@ def test_prof_data():
 def test_sim():
     succ, out, err = run(
         '', '--game-json', SMALL_GAME, 'brute', 'sim', '--', *SIM)
+    assert succ, err
+    with open(SMALL_GAME) as f:
+        reader = rsgame.emptygame_json(json.load(f))
+    for eqm in json.loads(out):
+        reader.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.long
+def test_zip():
+    succ, out, err = run(
+        '', '--game-json', SMALL_GAME, 'brute', 'zip', ZIP_GAME, '-p1')
     assert succ, err
     with open(SMALL_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
