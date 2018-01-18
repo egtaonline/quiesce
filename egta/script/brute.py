@@ -4,11 +4,12 @@ import logging
 
 import numpy as np
 from gameanalysis import nash
-from gameanalysis import paygame
 from gameanalysis import reduction
 from gameanalysis import regret
-from gameanalysis import rsgame
 from gameanalysis import subgame
+
+from egta import sparsesched
+from egta import utils
 
 
 _log = logging.getLogger(__name__)
@@ -45,57 +46,38 @@ def add_parser(subparsers):
     return parser
 
 
-def parse_reduction(game, red):
-    reduced_players = np.empty(game.num_roles, int)
-    for role_red in red.strip().split(','):
-        role, count = role_red.strip().split(':')
-        reduced_players[game.role_index(role.strip())] = int(count)
-    return reduced_players
-
-
-def run(scheduler, game, args):
-    game = rsgame.emptygame_copy(game)
-
+def run(scheduler, args):
+    game = scheduler.game()
     if args.dpr is not None:
-        red_players = parse_reduction(game, args.dpr)
+        red_players = utils.parse_reduction(game, args.dpr)
         red = reduction.deviation_preserving
     elif args.hr is not None:
-        red_players = parse_reduction(game, args.hr)
+        red_players = utils.parse_reduction(game, args.hr)
         red = reduction.hierarchical
     else:
         red = reduction.identity
         red_players = None
 
-    if args.subgame is None:
-        sub = np.ones(game.num_strats, bool)
-    else:
-        sub = game.from_subgame_json(json.load(args.subgame))
-
-    subg = game.subgame(sub)
-    devprofs = red.expand_deviation_profiles(game, sub, red_players)
-    subprofs = subgame.translate(
-        red.expand_profiles(subg, red.reduce_game(
-            subg, red_players).all_profiles()), sub)
-    profiles = np.concatenate([subprofs, devprofs])
-    promises = [scheduler.schedule(prof) for prof in profiles]
-    payoffs = np.concatenate([prom.get()[None] for prom in promises])
-    game = red.reduce_game(paygame.game_replace(
-        game, profiles, payoffs), red_players)
+    sub = (np.ones(game.num_strats, bool) if args.subgame is None
+           else game.from_subgame_json(json.load(args.subgame)))
+    sched = sparsesched.SparseScheduler(scheduler, red, red_players)
+    data = sched.get_deviations(sub, 1)
     eqa = subgame.translate(nash.mixed_nash(
-        game.subgame(sub), regret_thresh=args.regret_thresh,
+        data.subgame(sub), regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh), sub)
     reg_info = []
     for eqm in eqa:
-        gains = regret.mixture_deviation_gains(game, eqm)
+        gains = regret.mixture_deviation_gains(data, eqm)
         bri = np.argmax(gains)
         reg_info.append((gains[bri],) + game.role_strat_names[bri])
 
-    _log.error("brute sampling finished finding %d equilibria:\n%s",
-               eqa.shape[0], '\n'.join(
-                   '{:d}) {} with regret {:g} to {} {}'.format(
-                       i, game.mixture_to_repr(eqm), reg, role, strat)
-                   for i, (eqm, (reg, role, strat))
-                   in enumerate(zip(eqa, reg_info), 1)))
+    _log.error(
+        "brute sampling finished finding %d equilibria:\n%s",
+        eqa.shape[0], '\n'.join(
+            '{:d}) {} with regret {:g} to {} {}'.format(
+                i, game.mixture_to_repr(eqm), reg, role, strat)
+            for i, (eqm, (reg, role, strat))
+            in enumerate(zip(eqa, reg_info), 1)))
 
     json.dump([{'equilibrium': game.to_mix_json(eqm),
                 'regret': reg,

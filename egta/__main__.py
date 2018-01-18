@@ -167,12 +167,11 @@ def main():
 
         sched = sched.create_scheduler(game, args, **extra)
         if args.profile_data is not None:
-            prof_data = savesched.SaveScheduler(game, sched)
-            sched = prof_data
+            sched = prof_data = savesched.SaveScheduler(sched)
         if args.count > 1:
             sched = countsched.CountScheduler(sched, args.count)
         with sched:
-            method.run(sched, game, args)
+            method.run(sched, args)
 
         if args.profile_data is not None:
             gamej = prof_data.get_samplegame().to_json()

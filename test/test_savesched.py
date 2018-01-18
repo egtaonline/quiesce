@@ -13,8 +13,7 @@ def test_basic_profile(_):
         gamegen.role_symmetric_game([4, 3], [3, 4]))
     profs = sgame.all_profiles()
 
-    sched = savesched.SaveScheduler(
-        sgame, gamesched.SampleGameScheduler(sgame))
+    sched = savesched.SaveScheduler(gamesched.SampleGameScheduler(sgame))
     with sched:
         proms = [sched.schedule(p) for p in profs]
         for p in proms:

@@ -1,3 +1,5 @@
+import numpy as np
+
 from egta import profsched
 
 
@@ -19,8 +21,12 @@ class CountScheduler(profsched.Scheduler):
         self._count = count
 
     def schedule(self, profile):
-        return _CountPromise(iter([self._sched.schedule(profile)
-                                   for _ in range(self._count)]))
+        return _CountPromise(
+            [self._sched.schedule(profile) for _ in range(self._count)],
+            np.zeros(self.game().num_strats))
+
+    def game(self):
+        return self._sched.game()
 
     def __enter__(self):
         self._sched.__enter__()
@@ -31,19 +37,15 @@ class CountScheduler(profsched.Scheduler):
 
 
 class _CountPromise(profsched.Promise):
-    def __init__(self, proms):
+    def __init__(self, proms, val):
         self._proms = proms
-        self._value = None
+        self._value = val
+        self._unset = True
 
     def get(self):
-        if self._value is None:
-            # This is doing a streaming mean computation on all of the promises
-            # XXX We pull this first instead of initializing zeros because we
-            # don't know the size
-            count = 1
-            self._value = next(self._proms).get().copy()
-            for prom in self._proms:
-                count += 1
-                self._value += (prom.get() - self._value) / count
+        if self._unset:
+            for i, prom in enumerate(self._proms, 1):
+                self._value += (prom.get() - self._value) / i
             self._value.setflags(write=False)
+            self._unset = False
         return self._value

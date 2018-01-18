@@ -61,6 +61,9 @@ class RsGameScheduler(profsched.Scheduler):
         payoff.setflags(write=False)
         return _GamePromise(payoff)
 
+    def game(self):
+        return self._game
+
     def __enter__(self):
         return self
 
@@ -114,6 +117,9 @@ class SampleGameScheduler(profsched.Scheduler):
         payoff = pay + self._noise_dist(*params)
         payoff[profile == 0] = 0
         return _GamePromise(payoff)
+
+    def game(self):
+        return self._sgame
 
     def __enter__(self):
         return self

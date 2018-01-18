@@ -3,7 +3,6 @@ import json
 import logging
 
 import numpy as np
-from gameanalysis import rsgame
 
 from egta import bootstrap
 
@@ -52,8 +51,8 @@ def add_parser(subparsers):
     return parser
 
 
-def run(scheduler, game, args):
-    game = rsgame.emptygame_copy(game)
+def run(scheduler, args):
+    game = scheduler.game()
     if not args.percentiles:
         args.boots = 0
     mix = game.from_mix_json(json.load(args.mixture))

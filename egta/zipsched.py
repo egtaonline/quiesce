@@ -38,7 +38,7 @@ class ZipScheduler(profsched.Scheduler):
     """
 
     def __init__(self, game, config, zipcommand, *, sleep=1, max_procs=4):
-        self.game = paygame.game_copy(rsgame.emptygame_copy(game))
+        self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self.conf = config
         self._base = {'configuration': None, 'assignment': None}
         self.zipcommand = zipcommand
@@ -70,6 +70,9 @@ class ZipScheduler(profsched.Scheduler):
         self._try_run()
         return promise
 
+    def game(self):
+        return self._game
+
     def _try_run(self):
         with self._lock:
             if self.max_procs <= self._proc_queue.qsize():
@@ -80,7 +83,7 @@ class ZipScheduler(profsched.Scheduler):
                 return
             direc = os.path.join(self._prof_dir.name, str(self._num))
             os.makedirs(direc)
-            self._base['assignment'] = self.game.profile_to_assignment(prof)
+            self._base['assignment'] = self._game.profile_to_assignment(prof)
             with open(os.path.join(direc, 'simulation_spec.json'), 'w') as f:
                 json.dump(self._base, f)
             # FIXME Schedule several at once
@@ -108,12 +111,12 @@ class ZipScheduler(profsched.Scheduler):
                     f for f in os.listdir(direc)
                     if 'observation' in f and f.endswith('.json'))
                 with open(os.path.join(direc, obs_file)) as f:
-                    pay = self.game.payoff_from_json(json.load(f))
+                    pay = self._game.payoff_from_json(json.load(f))
                 pay.setflags(write=False)
                 shutil.rmtree(direc)
                 prom = self._prom_queue.get()
                 _log.debug("read payoff for profile: %s",
-                           self.game.profile_to_repr(prom._prof))
+                           self._game.profile_to_repr(prom._prof))
                 prom._set(pay)
         except Exception as ex:  # pragma: no cover
             self._exception = ex

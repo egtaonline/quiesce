@@ -2,11 +2,12 @@
 import json
 import logging
 
-import numpy as np
-from gameanalysis import rsgame
 from gameanalysis import reduction
+from gameanalysis import regret
 
 from egta import innerloop
+from egta import sparsesched
+from egta import utils
 
 
 _log = logging.getLogger(__name__)
@@ -70,38 +71,35 @@ def add_parser(subparsers):
     return parser
 
 
-def parse_reduction(game, red):
-    reduced_players = np.empty(game.num_roles, int)
-    for role_red in red.strip().split(','):
-        role, count = role_red.strip().split(':')
-        reduced_players[game.role_index(role.strip())] = int(count)
-    return reduced_players
-
-
-def run(scheduler, game, args):
-    game = rsgame.emptygame_copy(game)
+def run(scheduler, args):
+    game = scheduler.game()
     if args.dpr is not None:
-        red_players = parse_reduction(game, args.dpr)
+        red_players = utils.parse_reduction(game, args.dpr)
         red = reduction.deviation_preserving
     elif args.hr is not None:
-        red_players = parse_reduction(game, args.hr)
+        red_players = utils.parse_reduction(game, args.hr)
         red = reduction.hierarchical
     else:
         red = reduction.identity
         red_players = None
 
+    sched = sparsesched.SparseScheduler(scheduler, red, red_players)
     eqa = innerloop.inner_loop(
-        scheduler, game, red, red_players, regret_thresh=args.regret_thresh,
-        dist_thresh=args.dist_thresh, max_resamples=args.max_resamples,
-        subgame_size=args.max_subgame_size, num_equilibria=args.num_equilibria,
-        num_backups=args.num_backups, devs_by_role=args.dev_by_role,
-        at_least_one=args.one)
+        sched, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
+        max_resamples=args.max_resamples, subgame_size=args.max_subgame_size,
+        num_equilibria=args.num_equilibria, num_backups=args.num_backups,
+        devs_by_role=args.dev_by_role, at_least_one=args.one)
+    data = sched.get_data()
+    regrets = [float(regret.mixture_regret(data, eqm)) for eqm in eqa]
 
-    _log.error("quiesce finished finding %d equilibria:\n%s",
-               eqa.shape[0], '\n'.join(
-                   '{:d}) {}'.format(i, game.mixture_to_repr(eqm)) for i, eqm
-                   in enumerate(eqa, 1)))
+    _log.error(
+        "quiesce finished finding %d equilibria:\n%s",
+        eqa.shape[0], '\n'.join(
+            '{:d}) {} with regret {:g}'.format(
+                i, game.mixture_to_repr(eqm), reg)
+            for i, (eqm, reg) in enumerate(zip(eqa, regrets), 1)))
 
-    json.dump([{'equilibrium': game.to_mix_json(eqm)} for eqm in eqa],
+    json.dump([{'equilibrium': game.to_mix_json(eqm), 'regret': reg}
+               for eqm, reg in zip(eqa, regrets)],
               args.output)
     args.output.write('\n')

@@ -13,7 +13,7 @@ def test_basic_profile():
     sched = countsched.CountScheduler(gamesched.SampleGameScheduler(sgame), 10)
     with sched:
         proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
-        pays2 = np.concatenate([p.get()[None] for p in proms])
+        pays = np.stack([p.get() for p in proms])
+        pays2 = np.stack([p.get() for p in proms])
     assert np.allclose(pays[profs == 0], 0)
     assert np.allclose(pays, pays2)

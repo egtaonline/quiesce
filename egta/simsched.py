@@ -40,7 +40,7 @@ class SimulationScheduler(profsched.Scheduler):
     """
 
     def __init__(self, game, config, command, sleep=1):
-        self.game = paygame.game_copy(rsgame.emptygame_copy(game))
+        self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self.base = {'configuration': config}
         self.command = command
         self.sleep = sleep
@@ -64,6 +64,9 @@ class SimulationScheduler(profsched.Scheduler):
         self._inqueue.put(promise)
         return promise
 
+    def game(self):
+        return self._game
+
     def _enqueue(self):
         """Thread used to push lines to stdin"""
         try:
@@ -71,14 +74,14 @@ class SimulationScheduler(profsched.Scheduler):
                 prom = self._inqueue.get()
                 if prom is None:
                     return  # told to terminate
-                jprof = self.game.profile_to_json(prom._prof)
+                jprof = self._game.profile_to_json(prom._prof)
                 self.base['assignment'] = jprof
                 json.dump(self.base, self._proc.stdin, separators=(',', ':'))
                 self._proc.stdin.write('\n')
                 self._proc.stdin.flush()
                 self._outqueue.put(prom)
                 _log.debug("sent profile: %s",
-                           self.game.profile_to_repr(prom._prof))
+                           self._game.profile_to_repr(prom._prof))
         except Exception as ex:  # pragma: no cover
             self._exception = ex
         finally:
@@ -112,13 +115,13 @@ class SimulationScheduler(profsched.Scheduler):
                     except json.JSONDecodeError:
                         raise RuntimeError(
                             "Couldn't decode \"{}\" as json".format(line))
-                    payoffs = self.game.payoff_from_json(jpays)
+                    payoffs = self._game.payoff_from_json(jpays)
                     payoffs.setflags(write=False)
                     promise = self._outqueue.get()
                     if promise is None:
                         return  # told to exit
                     _log.debug("read payoff for profile: %s",
-                               self.game.profile_to_repr(promise._prof))
+                               self._game.profile_to_repr(promise._prof))
                     promise._set(payoffs)
         except Exception as ex:  # pragma: no cover
             self._exception = ex

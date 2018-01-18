@@ -51,7 +51,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         initial profile data.
     """
 
-    def __init__(self, api, sim_id, game, simultanious_obs, configuration,
+    def __init__(self, game, api, sim_id, simultanious_obs, configuration,
                  sleep_time, max_scheduled, obs_memory, obs_time,
                  game_id=None):
         self._api = api
@@ -97,6 +97,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         else:
             self._schedule(hprof, val)
         return _EgtaOnlinePromise(que, self)
+
+    def game(self):
+        return self._game
 
     def _schedule(self, hprof, val):
         """Internal implementation to actually schedule a profile

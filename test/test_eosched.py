@@ -25,7 +25,7 @@ def test_basic_profile():
         # Schedule all new profiles and verify it works
         # This first time should have to wait to schedule more
         sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 10, 0, 0)
+            game, egta, sim['id'], 1, {}, 1, 10, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
             pays = np.concatenate([p.get()[None] for p in proms])
@@ -34,7 +34,7 @@ def test_basic_profile():
 
         # Schedule old profiles and verify it still works
         sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 25, 0, 0)
+            game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
             pays = np.concatenate([p.get()[None] for p in proms])
@@ -43,7 +43,7 @@ def test_basic_profile():
 
         # Schedule two at a time, in two batches
         base_sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 25, 0, 0)
+            game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         sched = countsched.CountScheduler(base_sched, 2)
         with sched:
             proms = [sched.schedule(p) for p in profs]
@@ -53,7 +53,7 @@ def test_basic_profile():
 
         # Try again now that everything should be scheduled
         base_sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 25, 0, 0)
+            game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         sched = countsched.CountScheduler(base_sched, 2)
         with sched:
             proms = [sched.schedule(p) for p in profs]
@@ -76,7 +76,7 @@ def test_extra_samples():
         # Schedule all new profiles and verify it works
         # This first time should have to wait to schedule more
         sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 25, 0, 0)
+            game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
             pays1 = np.concatenate([p.get()[None] for p in proms])
@@ -109,7 +109,7 @@ def test_existing_game():
         # Schedule all new profiles and verify it works
         # This first time should have to wait to schedule more
         sched = eosched.EgtaOnlineScheduler(
-            egta, sim['id'], game, 1, {}, 1, 25, 0, 0, game_id=eogame['id'])
+            game, egta, sim['id'], 1, {}, 1, 25, 0, 0, game_id=eogame['id'])
         with sched:
             proms = [sched.schedule(p) for p in profs]
             pays1 = np.concatenate([p.get()[None] for p in proms])
@@ -133,7 +133,7 @@ def test_exception_in_get():
                       in zip(game.role_names, game.strat_names)})
 
         with eosched.EgtaOnlineScheduler(
-                egta, sim['id'], game, 1, {}, 1, 25, 0, 0) as sched:
+                game, egta, sim['id'], 1, {}, 1, 25, 0, 0) as sched:
             proms = [sched.schedule(p) for p in profs]
             server.throw_exception(TimeoutError)
             with pytest.raises(TimeoutError):
@@ -153,7 +153,7 @@ def test_exception_in_schedule():
                       in zip(game.role_names, game.strat_names)})
 
         with eosched.EgtaOnlineScheduler(
-                egta, sim['id'], game, 1, {}, 0.1, 25, 0, 0) as sched:
+                game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as sched:
             # so that enough calls to get_requirements are made
             server.throw_exception(TimeoutError)
             time.sleep(1)
