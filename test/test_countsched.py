@@ -1,19 +1,24 @@
 import numpy as np
 from gameanalysis import gamegen
+from gameanalysis import utils
 
-from egta import gamesched
 from egta import countsched
+from egta import gamesched
+from egta import savesched
 
 
+# TODO Use savesched to test that is is scheduling 10
 def test_basic_profile():
-    sgame = gamegen.add_noise(
-        gamegen.role_symmetric_game([4, 3], [3, 4]), 1, 3)
-    profs = sgame.random_profiles(20)
+    sgame = gamegen.samplegame([4, 3], [3, 4])
+    profs = utils.unique_axis(sgame.random_profiles(20))
 
-    sched = countsched.CountScheduler(gamesched.SampleGameScheduler(sgame), 10)
-    with sched:
+    save = savesched.SaveScheduler(gamesched.SampleGameScheduler(sgame))
+    with countsched.CountScheduler(save, 10) as sched:
         proms = [sched.schedule(p) for p in profs]
         pays = np.stack([p.get() for p in proms])
         pays2 = np.stack([p.get() for p in proms])
     assert np.allclose(pays[profs == 0], 0)
     assert np.allclose(pays, pays2)
+
+    savegame = save.get_samplegame()
+    assert list(savegame.num_samples) == [10]

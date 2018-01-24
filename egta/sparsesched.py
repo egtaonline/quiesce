@@ -4,8 +4,8 @@ import threading
 
 import numpy as np
 from gameanalysis import paygame
+from gameanalysis import restrict
 from gameanalysis import rsgame
-from gameanalysis import subgame
 from gameanalysis import utils
 from gameanalysis.reduction import identity as idr
 
@@ -16,9 +16,9 @@ _log = logging.getLogger(__name__)
 class SparseScheduler(object):
     """Construct games with sparse payoff data
 
-    This abstraction supports scheduling deviations and subgames as
-    primitives, so that profile data can be reused between different
-    subgames.
+    This abstraction supports scheduling deviations and restricted games as
+    primitives, so that profile data can be reused between different restricted
+    games.
 
     Parameters
     ----------
@@ -58,34 +58,34 @@ class SparseScheduler(object):
         return self._red.reduce_game(paygame.game_replace(
             self.game(), profiles, payoffs), self._red_game.num_role_players)
 
-    def _subgame_profiles(self, subgame_mask):
-        """All profiles for the subgame"""
-        return self._red.expand_profiles(self.game(), subgame.translate(
-            self._red_game.subgame(subgame_mask).all_profiles(), subgame_mask))
+    def _restricted_game_profiles(self, rest):
+        """All profiles for the restricted game"""
+        return self._red.expand_profiles(self.game(), restrict.translate(
+            self._red_game.restrict(rest).all_profiles(), rest))
 
-    def get_subgame(self, subgame_mask, count):
+    def get_restricted_game(self, rest, count):
         """Get game with all payoff data
 
-        The returned game is complete for the subgame specified."""
-        _log.info('scheduling %d samples from subgame %s',
-                  count, self.game().subgame_to_repr(subgame_mask))
-        return self._get_game(self._subgame_profiles(subgame_mask), count)
+        The returned game is complete for the restriction specified."""
+        _log.info('scheduling %d samples from restricted game %s',
+                  count, self.game().restriction_to_repr(rest))
+        return self._get_game(self._restricted_game_profiles(rest), count)
 
-    def get_deviations(self, subgame_mask, count, role_index=None):
+    def get_deviations(self, rest, count, role_index=None):
         """Get game with all payoff data and deviations
 
         The returned game has complete payoff data and deviation data for the
-        subgame specified."""
+        restricted game specified."""
         _log.info(
             'scheduling %d samples of deviations from %s%s',
-            count, self.game().subgame_to_repr(subgame_mask),
+            count, self.game().restriction_to_repr(rest),
             '' if role_index is None else ' with role {}'.format(
                 self.game().role_names[role_index]))
-        subgame_profiles = self._subgame_profiles(subgame_mask)
+        rest_profiles = self._restricted_game_profiles(rest)
         dev_profiles = self._red.expand_deviation_profiles(
-            self.game(), subgame_mask, self._red_game.num_role_players,
+            self.game(), rest, self._red_game.num_role_players,
             role_index)
-        return self._get_game(np.concatenate((subgame_profiles, dev_profiles)),
+        return self._get_game(np.concatenate((rest_profiles, dev_profiles)),
                               count)
 
     def get_data(self):

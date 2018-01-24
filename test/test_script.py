@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from os import path
 
+from gameanalysis import gamegen
 from gameanalysis import rsgame
 
 
@@ -87,12 +88,12 @@ def test_brute_game_tag():
 
 
 @pytest.mark.long
-def test_brute_game_subgame():
+def test_brute_game_restriction():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
-    sub = json.dumps(reader.subgame_to_json(reader.random_subgame()))
+    sub = json.dumps(reader.restriction_to_json(reader.random_restriction()))
     succ, out, err = run(
-        sub, '--count', '2', '--game-json', DATA_GAME, 'brute', '--subgame',
+        sub, '--count', '2', '--game-json', DATA_GAME, 'brute', '--restrict',
         '-', 'game')
     assert succ, err
     for eqm in json.loads(out):
@@ -108,7 +109,7 @@ def test_brute_game_term():
 def test_brute_dpr_game():
     succ, out, err = run(
         '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--dpr',
-        'buyers:2,sellers:2', 'game')
+        'buyers:2;sellers:2', 'game')
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
@@ -120,7 +121,7 @@ def test_brute_dpr_game():
 def test_brute_hr_game():
     succ, out, err = run(
         '', '--count', '2', '--game-json', DATA_GAME, 'brute', '--hr',
-        'buyers:2,sellers:2', 'game')
+        'buyers:2;sellers:2', 'game', '--sample')
     assert succ, err
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
@@ -219,7 +220,7 @@ def test_innerloop_sim_term():
 
 def test_innerloop_dpr():
     succ, out, err = run(
-        '', '--game-json', DATA_GAME, 'quiesce', '--dpr', 'buyers:2,sellers:2',
+        '', '--game-json', DATA_GAME, 'quiesce', '--dpr', 'buyers:2;sellers:2',
         'game')
     assert succ, err
     with open(DATA_GAME) as f:
@@ -230,7 +231,7 @@ def test_innerloop_dpr():
 
 def test_innerloop_hr():
     succ, out, err = run(
-        '', '--game-json', DATA_GAME, 'quiesce', '--hr', 'buyers:2,sellers:2',
+        '', '--game-json', DATA_GAME, 'quiesce', '--hr', 'buyers:2;sellers:2',
         'game')
     assert succ, err
     with open(DATA_GAME) as f:
@@ -242,7 +243,7 @@ def test_innerloop_hr():
 @pytest.mark.egta
 def test_game_id_brute_egta_game():
     succ, out, err = run(
-        '', '-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo', '2048',
+        '', '-g1466', 'brute', '--dpr', 'buyers:2;sellers:2', 'eo', '2048',
         '60')
     assert succ, err
     with open(SMALL_GAME) as f:
@@ -261,7 +262,7 @@ def test_game_id_brute_egta_game_wconf():
         json.dump(conf, conf_file)
         conf_file.flush()
         succ, out, err = run(
-            '', '-g1466', 'brute', '--dpr', 'buyers:2,sellers:2', 'eo', '-c',
+            '', '-g1466', 'brute', '--dpr', 'buyers:2;sellers:2', 'eo', '-c',
             conf_file.name, '2048', '60')
     assert succ, err
     for eqm in out[:-1].split('\n'):
@@ -285,13 +286,43 @@ def test_boot_game():
         assert {'surplus', 'regret', 'response'} == val.keys()
 
 
+def test_boot_symmetric():
+    game = gamegen.game(4, 3)
+    mix = game.random_mixture()
+    with tempfile.NamedTemporaryFile('w') as mix_file:
+        json.dump(game.mixture_to_json(mix), mix_file)
+        mix_file.flush()
+        succ, out, err = run(
+            json.dumps(game.to_json()), '--game-json', '-', 'boot',
+            mix_file.name, '10', 'game')
+    assert succ, err
+    results = json.loads(out)
+    assert {'surplus', 'regret', 'response'} == results.keys()
+
+
+def test_boot_symmetric_percs():
+    game = gamegen.game(4, 3)
+    mix = game.random_mixture()
+    with tempfile.NamedTemporaryFile('w') as mix_file:
+        json.dump(game.mixture_to_json(mix), mix_file)
+        mix_file.flush()
+        succ, out, err = run(
+            json.dumps(game.to_json()), '--game-json', '-', 'boot',
+            mix_file.name, '10', '-p', '95', 'game')
+    assert succ, err
+    results = json.loads(out)
+    assert {'95', 'mean'} == results.keys()
+    assert {'surplus', 'regret', 'response'} == results['mean'].keys()
+    assert {'surplus', 'regret'} == results['95'].keys()
+
+
 def test_boot_game_percs():
     with open(DATA_GAME) as f:
         reader = rsgame.emptygame_json(json.load(f))
     mix = reader.random_mixture()
     succ, out, err = run(
         json.dumps(reader.mixture_to_json(mix)), '--game-json', DATA_GAME,
-        'boot', '-', '20', '--percentiles', '95,99', 'game')
+        'boot', '-', '20', '--percentile', '95', '-p99', 'game')
     assert succ, err
     results = json.loads(out)
     assert {'mean', '99', '95'} == results.keys()

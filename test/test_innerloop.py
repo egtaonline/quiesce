@@ -29,8 +29,7 @@ def verify_dist_thresh(eqa, thresh=1e-3):
 
 @pytest.mark.parametrize('players,strats', SIMPLE_SIZES)
 def test_innerloop_simple(players, strats):
-    sgame = paygame.samplegame_copy(gamegen.role_symmetric_game(
-        players, strats))
+    sgame = gamegen.samplegame(players, strats)
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(sparsesched.SparseScheduler(sched))
     verify_dist_thresh(eqa)
@@ -54,8 +53,7 @@ def test_innerloop_dpr(players, strats):
 
 @pytest.mark.parametrize('players,strats', SIMPLE_SIZES)
 def test_innerloop_by_role_simple(players, strats):
-    sgame = paygame.samplegame_copy(gamegen.role_symmetric_game(
-        players, strats))
+    sgame = gamegen.samplegame(players, strats)
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(
             sparsesched.SparseScheduler(sched), devs_by_role=True)
@@ -67,18 +65,18 @@ def test_innerloop_by_role_simple(players, strats):
 @pytest.mark.parametrize('players,strats',
                          [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
 def test_innerloop_failures(players, strats, count, when):
-    game = gamegen.role_symmetric_game(players, strats)
+    game = gamegen.game(players, strats)
     with ExceptionScheduler(game, count, when) as prof_sched:
         sched = sparsesched.SparseScheduler(prof_sched)
         with pytest.raises(SchedulerException):
-            innerloop.inner_loop(sched, subgame_size=5)
+            innerloop.inner_loop(sched, restricted_game_size=5)
 
 
 @pytest.mark.parametrize('count', [1, 5])
 @pytest.mark.parametrize('players,strats',
                          [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
 def test_threading_failures(players, strats, count):
-    game = gamegen.role_symmetric_game(players, strats)
+    game = gamegen.game(players, strats)
     lock = threading.Lock()
     num = [count]
     old_thread = threading.Thread
@@ -95,7 +93,7 @@ def test_threading_failures(players, strats, count):
         sched = sparsesched.SparseScheduler(prof_sched)
         with mock.patch('threading.Thread', side_effect=fail_in):
             with pytest.raises(ThreadException):
-                innerloop.inner_loop(sched, subgame_size=5)
+                innerloop.inner_loop(sched, restricted_game_size=5)
 
 
 @pytest.mark.parametrize('eq_prob', [x / 10 for x in range(11)])
@@ -113,8 +111,7 @@ def test_innerloop_known_eq(eq_prob):
 @pytest.mark.parametrize('players,strats', SIMPLE_SIZES)
 @pytest.mark.parametrize('num', [1, 2])
 def test_innerloop_num_eqa(players, strats, num):
-    sgame = paygame.samplegame_copy(
-        gamegen.role_symmetric_game(players, strats))
+    sgame = gamegen.samplegame(players, strats)
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(
             sparsesched.SparseScheduler(sched),
@@ -125,28 +122,28 @@ def test_innerloop_num_eqa(players, strats, num):
 def test_backups_used():
     """Test that outerloop uses backups
 
-    Since subgame size is 1, but the only equilibria has support two, this must
-    use backups to find an equilibrium."""
+    Since restricted game size is 1, but the only equilibria has support two,
+    this must use backups to find an equilibrium."""
     sgame = paygame.samplegame_copy(gamegen.sym_2p2s_known_eq(0.5))
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(
-            sparsesched.SparseScheduler(sched), subgame_size=1)
+            sparsesched.SparseScheduler(sched), restricted_game_size=1)
     assert eqa.size, "didn't find equilibrium"
     expected = [0.5, 0.5]
     assert np.isclose(eqa, expected, atol=1e-3, rtol=1e-3).all(-1).any()
     verify_dist_thresh(eqa)
 
 
-def test_initial_subgames():
+def test_initial_restrictions():
     """Test that outerloop uses backups
 
-    Since subgame size is 1, but the only equilibria has support two, this must
-    use backups to find an equilibrium."""
+    Since restricted game size is 1, but the only equilibria has support two,
+    this must use backups to find an equilibrium."""
     sgame = paygame.samplegame_copy(gamegen.sym_2p2s_known_eq(0.5))
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(
             sparsesched.SparseScheduler(sched),
-            initial_subgames=[[True, True]], subgame_size=1)
+            initial_restrictions=[[True, True]], restricted_game_size=1)
     assert eqa.size, "didn't find equilibrium"
     expected = [0.5, 0.5]
     assert np.isclose(eqa, expected, atol=1e-3, rtol=1e-3).all(-1).any()

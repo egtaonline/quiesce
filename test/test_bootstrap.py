@@ -16,7 +16,7 @@ SIZES = [
 
 @pytest.mark.parametrize('players,strats', SIZES)
 def test_random_mean_reg(players, strats):
-    game = gamegen.role_symmetric_game(players, strats)
+    game = gamegen.game(players, strats)
     mix = game.random_mixture()
     with gamesched.RsGameScheduler(game) as sched:
         mean, boot = bootstrap.deviation_payoffs(sched, game, mix, 20)
@@ -26,7 +26,7 @@ def test_random_mean_reg(players, strats):
 
 @pytest.mark.parametrize('players,strats', SIZES)
 def test_random_boot_reg(players, strats):
-    game = gamegen.role_symmetric_game(players, strats)
+    game = gamegen.game(players, strats)
     mix = game.random_mixture()
     devs = game.deviation_payoffs(mix)
     with gamesched.RsGameScheduler(game) as sched:
@@ -41,7 +41,7 @@ def test_random_boot_reg(players, strats):
 
 @pytest.mark.parametrize('players,strats', SIZES)
 def test_random_pure_boot_reg(players, strats):
-    game = gamegen.role_symmetric_game(players, strats)
+    game = gamegen.game(players, strats)
     with gamesched.RsGameScheduler(game) as sched:
         for mix in game.pure_mixtures():
             devs = game.deviation_payoffs(mix)

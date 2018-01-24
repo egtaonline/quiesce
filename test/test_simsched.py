@@ -17,6 +17,7 @@ def test_basic_profile():
     cmd = ['python3', 'cdasim/sim.py', '--single', '1']
 
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        assert rsgame.emptygame_copy(sched.game()) == game
         proms = [sched.schedule(p) for p in profs]
         pays = np.concatenate([p.get()[None] for p in proms])
     assert pays.shape == profs.shape

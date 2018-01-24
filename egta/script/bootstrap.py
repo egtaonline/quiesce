@@ -27,11 +27,11 @@ def add_parser(subparsers):
         to compute for the regret. One sample for each strategy in the game
         will be taken.""")
     parser.add_argument(
-        '--percentiles', '-p', metavar='<percentile>,...', default=(),
-        type=lambda s: list(map(float, s.split(','))), help="""A comma
-        separated list of confidence percentiles to compute. Specifying
-        automatically switches this to use a bootstrap method which takes
-        memory proportional to the number of bootstrap samples to run.""")
+        '--percentile', '-p', metavar='<percentile>', default=[],
+        action='append', type=float, help="""A confidence percentile to
+        compute.  Specifying at least once switches this to use a bootstrap
+        method which takes memory proportional to the number of bootstrap
+        samples to run.""")
     parser.add_argument(
         '--boots', '-b', metavar='<num-samples>', type=int, default=101,
         help="""The number of bootstrap samples to take if percentiles is
@@ -53,9 +53,9 @@ def add_parser(subparsers):
 
 def run(scheduler, args):
     game = scheduler.game()
-    if not args.percentiles:
+    if not args.percentile:
         args.boots = 0
-    mix = game.from_mix_json(json.load(args.mixture))
+    mix = game.mixture_from_json(json.load(args.mixture))
     means, boots = bootstrap.deviation_payoffs(
         scheduler, game, mix, args.num, boots=args.boots,
         chunk_size=args.chunk_size)
@@ -80,15 +80,15 @@ def run(scheduler, args):
     role_surp_boots = exp_boots * game.num_role_players
     surp_boots = role_surp_boots.sum(1)
 
-    reg_percs = np.percentile(reg_boots, args.percentiles)
-    surp_percs = np.percentile(surp_boots, args.percentiles)
+    reg_percs = np.percentile(reg_boots, args.percentile)
+    surp_percs = np.percentile(surp_boots, args.percentile)
 
     _log.error("bootstrap regret finished with regret %g and surplus %g%s",
-               reg_means, surp_means, '' if not args.percentiles else
+               reg_means, surp_means, '' if not args.percentile else
                ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
                '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
                          for p, r, s
-                         in zip(args.percentiles, reg_percs, surp_percs)))
+                         in zip(args.percentile, reg_percs, surp_percs)))
 
     # format output
     if game.is_symmetric() and not args.standard:
@@ -96,9 +96,9 @@ def run(scheduler, args):
                   'regret': reg_means,
                   'response': game.strat_names[0][role_ind_reg_means[0]]}
 
-        if args.percentiles:
+        if args.percentile:
             result = {'mean': result}
-            for p, surp, reg in zip(args.percentiles, surp_percs, reg_percs):
+            for p, surp, reg in zip(args.percentile, surp_percs, reg_percs):
                 result['{:g}'.format(p)] = {'surplus': surp, 'regret': reg}
     else:
         mean_dev = '{}: {}'.format(
@@ -114,13 +114,13 @@ def run(scheduler, args):
                             'regret': reg,
                             'response': strats[dev]}
 
-        if args.percentiles or args.standard:
+        if args.percentile or args.standard:
             result = {'mean': result}
 
         for p, surp, reg, role_surps, role_regs in zip(
-                args.percentiles, surp_percs, reg_percs,
-                np.percentile(role_surp_boots, args.percentiles, 0),
-                np.percentile(role_reg_boots, args.percentiles, 0)):
+                args.percentile, surp_percs, reg_percs,
+                np.percentile(role_surp_boots, args.percentile, 0),
+                np.percentile(role_reg_boots, args.percentile, 0)):
             perc = {'total': {'surplus': surp,
                               'regret': reg}}
             for role, surp, reg in zip(game.role_names, role_surps, role_regs):

@@ -157,7 +157,7 @@ def main():
                 jgame = ea.get_game(args.game_id).get_observations()
         else:
             jgame = json.load(args.game_json)
-        game = gamereader.read(jgame)
+        game = gamereader.loadj(jgame)
 
         extra = {}
         if 'configuration' in jgame:

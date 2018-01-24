@@ -27,6 +27,7 @@ def test_basic_profile():
     zipf = 'cdasim/cdasim.zip'
 
     with zipsched.ZipScheduler(game, conf, zipf) as sched:
+        assert rsgame.emptygame_copy(sched.game()) == game
         proms = [sched.schedule(p) for p in profs]
         pays = np.stack([p.get() for p in proms])
     assert pays.shape == profs.shape

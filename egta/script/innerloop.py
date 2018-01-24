@@ -7,7 +7,6 @@ from gameanalysis import regret
 
 from egta import innerloop
 from egta import sparsesched
-from egta import utils
 
 
 _log = logging.getLogger(__name__)
@@ -16,10 +15,11 @@ _log = logging.getLogger(__name__)
 def add_parser(subparsers):
     parser = subparsers.add_parser(
         'quiesce', help="""Compute equilibria using the quiesce procedure""",
-        description="""Samples profiles from small subgames, expanding subgame
-        support by best responses to candidate subgame equilibria. For games
-        with a large number of players, a reduction should be specified. The
-        result is a list where each element specifies an "equilibrium".""")
+        description="""Samples profiles from small restricted strategy sets,
+        expanding set support by best responses to candidate restricted game
+        equilibria. For games with a large number of players, a reduction
+        should be specified. The result is a list where each element specifies
+        an "equilibrium".""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -30,12 +30,12 @@ def add_parser(subparsers):
         (default: %(default)g)""")
     parser.add_argument(
         '--max-resamples', metavar='<resamples>', type=int, default=10,
-        help="""Number of times to resample all profiles in a subgame when
-        equilibrium is not identified.  (default: %(default)d)""")
+        help="""Number of times to resample all profiles in a restricted game
+        when equilibrium is not identified.  (default: %(default)d)""")
     parser.add_argument(
-        '--max-subgame-size', metavar='<support>', type=int, default=3,
-        help="""Support size threshold, beyond which subgames are not required
-        to be explored.  (default: %(default)d)""")
+        '--max-restrict-size', metavar='<support>', type=int, default=3,
+        help="""Support size threshold, beyond which restricted games are not
+        required to be explored.  (default: %(default)d)""")
     parser.add_argument(
         '--num-equilibria', metavar='<num>', type=int, default=1,
         help="""Number of equilibria requested to be found. This is mainly
@@ -44,23 +44,23 @@ def add_parser(subparsers):
         %(default)d)""")
     parser.add_argument(
         '--num-backups', metavar='<num>', type=int, default=1, help="""Number
-        of backup subgames to pop at a time, when no equilibria are confirmed
-        in initial required set.  When games get to this point they can quiesce
-        slowly because this by default pops one at a time. Increasing this
-        number can get games like tis to quiesce more quickly, but naturally,
-        also schedules more, potentially unnecessary, simulations. (default:
-        %(default)d)""")
+        of backup restricted strategy set to pop at a time, when no equilibria
+        are confirmed in initial required set.  When games get to this point
+        they can quiesce slowly because this by default pops one at a time.
+        Increasing this number can get games like tis to quiesce more quickly,
+        but naturally, also schedules more, potentially unnecessary,
+        simulations. (default: %(default)d)""")
     parser.add_argument(
         '--dev-by-role', action='store_true', help="""Explore deviations in
         role order instead of all at once. By default, when checking for
         beneficial deviations, all role deviations are scheduled at the same
         time. Setting this will check one role at a time. If a beneficial
-        deviation is found, then that subgame is scheduled without exploring
-        deviations from the other roles.""")
+        deviation is found, then that restricted strategy set is scheduled
+        without exploring deviations from the other roles.""")
     parser.add_argument(
         '--one', action='store_true', help="""Guarantee that an equilibrium is
-        found in every subgame. This may take up to exponential time, but a
-        warning will be logged if it takes more than five minutes.""")
+        found in every restricted game. This may take up to exponential time,
+        but a warning will be logged if it takes more than five minutes.""")
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
         '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
@@ -74,10 +74,10 @@ def add_parser(subparsers):
 def run(scheduler, args):
     game = scheduler.game()
     if args.dpr is not None:
-        red_players = utils.parse_reduction(game, args.dpr)
+        red_players = game.role_from_repr(args.dpr, dtype=int)
         red = reduction.deviation_preserving
     elif args.hr is not None:
-        red_players = utils.parse_reduction(game, args.hr)
+        red_players = game.role_from_repr(args.hr, dtype=int)
         red = reduction.hierarchical
     else:
         red = reduction.identity
@@ -86,7 +86,8 @@ def run(scheduler, args):
     sched = sparsesched.SparseScheduler(scheduler, red, red_players)
     eqa = innerloop.inner_loop(
         sched, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
-        max_resamples=args.max_resamples, subgame_size=args.max_subgame_size,
+        max_resamples=args.max_resamples,
+        restricted_game_size=args.max_restrict_size,
         num_equilibria=args.num_equilibria, num_backups=args.num_backups,
         devs_by_role=args.dev_by_role, at_least_one=args.one)
     data = sched.get_data()
@@ -99,7 +100,7 @@ def run(scheduler, args):
                 i, game.mixture_to_repr(eqm), reg)
             for i, (eqm, reg) in enumerate(zip(eqa, regrets), 1)))
 
-    json.dump([{'equilibrium': game.to_mix_json(eqm), 'regret': reg}
+    json.dump([{'equilibrium': game.mixture_to_json(eqm), 'regret': reg}
                for eqm, reg in zip(eqa, regrets)],
               args.output)
     args.output.write('\n')

@@ -8,7 +8,7 @@ import numpy as np
 from gameanalysis import collect
 from gameanalysis import nash
 from gameanalysis import regret
-from gameanalysis import subgame
+from gameanalysis import restrict
 
 
 _log = logging.getLogger(__name__)
@@ -19,59 +19,62 @@ _log = logging.getLogger(__name__)
 
 
 def inner_loop(
-        sched, *, initial_subgames=None, regret_thresh=1e-3, dist_thresh=1e-2,
-        max_resamples=10, subgame_size=3, num_equilibria=1, num_backups=1,
-        devs_by_role=False, at_least_one=False):
+        sched, *, initial_restrictions=None, regret_thresh=1e-3,
+        dist_thresh=1e-2, max_resamples=10, restricted_game_size=3,
+        num_equilibria=1, num_backups=1, devs_by_role=False,
+        at_least_one=False):
     """Inner loop a game using a scheduler
 
     Parameters
     ----------
     sched : SparseScheduler
         The spare scheduler used to generate payoff data for profiles.
-    initial_subgame : [[bool]], optional
-        Initial subgames to start inner loop from. If unspecified, every pure
-        subgame is used.
+    initial_restriction : [[bool]], optional
+        Initial restrictions to start inner loop from. If unspecified, every
+        pure restriction is used.
     regret_thresh : float, optional
         The maximum regret to consider an equilibrium an equilibrium.
     dist_thresh : float, optional
         The minimum norm between two mixed profiles for them to be considered
         distinct.
     max_resamples : int > 0, optional
-        The maximum number of times to resample a subgame when no equilibria
-        can be found before giving up.
-    subgame_size : int > 0, optional
-        The maximum subgame support size with which beneficial deviations must
-        be explored. Subgames with support larger than this are queued and only
-        explored in the event that no equilibrium can be found in beneficial
-        deviations smaller than this.
+        The maximum number of times to resample a restricted game when no
+        equilibria can be found before giving up.
+    restricted_game_size : int > 0, optional
+        The maximum restricted game support size with which beneficial
+        deviations must be explored. Restricted games with support larger than
+        this are queued and only explored in the event that no equilibrium can
+        be found in beneficial deviations smaller than this.
     num_equilibria : int > 0, optional
         The number of equilibria to attempt to find. Only one is guaranteed,
         but this might be beneifical if the game has a known degenerate
         equilibria, but one which is still helpful as a deviating strategy.
     num_backups : int > 0, optional
         In the event that no equilibrium can be found in beneficial deviations
-        to small subgames, other subgames will be explored. This parameter
-        indicates how many subgames for each role should be explored.
+        to small restricted games, other restrictions will be explored. This
+        parameter indicates how many restricted games for each role should be
+        explored.
     devs_by_role : boolean, optional
         If specified, deviations will only be explored for each role in order,
         proceeding to the next role only when no beneficial deviations are
         found. This can reduce the number of profiles sampled, but may also
         fail to find certain equilibria due to the different path through
-        subgames.
+        restricted games.
     at_least_one : boolean, optional
-        If specified, at least one equilibria will be found in each subgame.
-        This has the potential to run for a very long time as it may take
-        exponential time. If your regret threshold is not set too log for your
-        game, this is relatively reasonable though.
+        If specified, at least one equilibria will be found in each restricted
+        game.  This has the potential to run for a very long time as it may
+        take exponential time. If your regret threshold is not set too log for
+        your game, this is relatively reasonable though.
     """
     game = sched.game()
-    initial_subgames = (game.pure_subgames() if initial_subgames is None
-                        else np.asarray(initial_subgames, bool))
+    initial_restrictions = (
+        game.pure_restrictions() if initial_restrictions is None
+        else np.asarray(initial_restrictions, bool))
     init_role_dev = 0 if devs_by_role else None
 
     threads = queue.Queue()
-    exp_subgames = collect.BitSet()
-    exp_subgames_lock = threading.Lock()
+    exp_restrictions = collect.BitSet()
+    exp_restrictions_lock = threading.Lock()
     exp_mix = collect.MixtureSet(dist_thresh)
     exp_mix_lock = threading.Lock()
     backups = [queue.PriorityQueue() for _ in range(game.num_roles)]
@@ -79,23 +82,23 @@ def inner_loop(
     nash_lock = threading.Lock()  # nash is not thread safe
     exceptions = []
 
-    def add_subgame(sub_mask, count):
+    def add_restriction(rest, count):
         if count > max_resamples:  # pragma: no cover
-            _log.error("couldn't find equilibrium in subgame %s",
-                       game.subgame_to_repr(sub_mask))
+            _log.error("couldn't find equilibrium in restricted game %s",
+                       game.restriction_to_repr(rest))
             return
-        with exp_subgames_lock:
-            schedule = count > 1 or exp_subgames.add(sub_mask)
+        with exp_restrictions_lock:
+            schedule = count > 1 or exp_restrictions.add(rest)
         if schedule and not exceptions:
             thread = threading.Thread(
-                target=lambda: run_subgame(sub_mask, count),
+                target=lambda: run_restriction(rest, count),
                 daemon=True)
             thread.start()
             threads.put(thread)
 
-    def run_subgame(sub_mask, count):
+    def run_restriction(rest, count):
         try:
-            data = sched.get_subgame(sub_mask, count).subgame(sub_mask)
+            data = sched.get_restricted_game(rest, count).restrict(rest)
             with nash_lock:
                 with warnings.catch_warnings():
                     # XXX For some reason, line-search in optimize throws a
@@ -105,23 +108,23 @@ def inner_loop(
                     warnings.simplefilter('ignore', RuntimeWarning)
                     start = time.time()
                     # FIXME Trim mixture support
-                    eqa = subgame.translate(
+                    eqa = restrict.translate(
                         nash.mixed_nash(
                             data, regret_thresh=regret_thresh,
                             dist_thresh=dist_thresh,
                             at_least_one=at_least_one),
-                        sub_mask)
+                        rest)
                     duration = time.time() - start
                     if duration > 600:  # pragma: no cover
                         _log.warning(
-                            'equilibrium finding took %.0f seconds  in '
-                            'subgame %s', duration,
-                            game.subgame_to_repr(sub_mask))
+                            'equilibrium finding took %.0f seconds in '
+                            'restricted game %s', duration,
+                            game.restriction_to_repr(rest))
             if eqa.size:
                 for eqm in eqa:
                     add_deviations(eqm, init_role_dev)
             else:
-                add_subgame(sub_mask, count + 1)  # pragma: no cover
+                add_restriction(rest, count + 1)  # pragma: no cover
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
@@ -149,7 +152,7 @@ def inner_loop(
                 else:
                     for ri, rgains in enumerate(np.split(
                             gains, game.role_starts[1:])):
-                        queue_subgames(support, rgains, ri)
+                        queue_restrictions(support, rgains, ri)
 
             else:  # Set role index
                 rgains = np.split(gains, game.role_starts[1:])[role_index]
@@ -163,21 +166,21 @@ def inner_loop(
                                      gains.max())
                         equilibria.append(mix)  # atomic
                 else:
-                    queue_subgames(support, rgains, role_index)
+                    queue_restrictions(support, rgains, role_index)
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
-    def queue_subgames(support, role_gains, role_index):
+    def queue_restrictions(support, role_gains, role_index):
         rs = game.role_starts[role_index]
         back = backups[role_index]
 
         # Handle best response
         br = np.argmax(role_gains)
         if (role_gains[br] > regret_thresh
-                and support.sum() < subgame_size):
+                and support.sum() < restricted_game_size):
             br_sub = support.copy()
             br_sub[rs + br] = True
-            add_subgame(br_sub, 1)
+            add_restriction(br_sub, 1)
         else:
             br = None  # Add best response to backup
 
@@ -199,14 +202,14 @@ def inner_loop(
 
     try:
         # Quiesce first time
-        for sub in initial_subgames:
+        for sub in initial_restrictions:
             if np.all(np.add.reduceat(sub, game.role_starts) == 1):
-                # Pure subgame, so we can skip right to deviations
+                # Pure restriction, so we can skip right to deviations
                 add_deviations(sub.astype(float), init_role_dev)
             else:
-                # Not pure, so equilibria are not obvious, schedule subgame
+                # Not pure, so equilibria are not obvious, schedule restriction
                 # instead
-                add_subgame(sub, 1)
+                add_restriction(sub, 1)
         join_threads()
 
         # Repeat with backups until found all
@@ -216,7 +219,7 @@ def inner_loop(
                 for _ in range(num_backups):
                     if back.empty():
                         break  # pragma: no cover
-                    add_subgame(back.get()[2], 1)
+                    add_restriction(back.get()[2], 1)
             join_threads()
 
         # Return equilibria

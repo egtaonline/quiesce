@@ -6,10 +6,9 @@ import numpy as np
 from gameanalysis import nash
 from gameanalysis import reduction
 from gameanalysis import regret
-from gameanalysis import subgame
+from gameanalysis import restrict
 
 from egta import sparsesched
-from egta import utils
 
 
 _log = logging.getLogger(__name__)
@@ -32,16 +31,16 @@ def add_parser(subparsers):
         help="""Norm threshold for two mixtures to be considered distinct.
         (default: %(default)g)""")
     parser.add_argument(
-        '--subgame', '-s', metavar='<subgame-file>',
-        type=argparse.FileType('r'), help="""Specify an optional subgame to
-        sample instead of the whole game. Only deviations from the subgame will
-        be scheduled.""")
+        '--restrict', '-r', metavar='<restriction-file>',
+        type=argparse.FileType('r'), help="""Specify an optional restricted
+        game to sample instead of the whole game. Only deviations from the
+        restricted strategy set will be scheduled.""")
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
+        '--dpr', metavar='<role:count;role:count,...>', help="""Specify a
         deviation preserving reduction.""")
     reductions.add_argument(
-        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
+        '--hr', metavar='<role:count;role:count,...>', help="""Specify a
         hierarchical reduction.""")
     return parser
 
@@ -49,22 +48,22 @@ def add_parser(subparsers):
 def run(scheduler, args):
     game = scheduler.game()
     if args.dpr is not None:
-        red_players = utils.parse_reduction(game, args.dpr)
+        red_players = game.role_from_repr(args.dpr, dtype=int)
         red = reduction.deviation_preserving
     elif args.hr is not None:
-        red_players = utils.parse_reduction(game, args.hr)
+        red_players = game.role_from_repr(args.hr, dtype=int)
         red = reduction.hierarchical
     else:
         red = reduction.identity
         red_players = None
 
-    sub = (np.ones(game.num_strats, bool) if args.subgame is None
-           else game.from_subgame_json(json.load(args.subgame)))
+    rest = (np.ones(game.num_strats, bool) if args.restrict is None
+            else game.restriction_from_json(json.load(args.restrict)))
     sched = sparsesched.SparseScheduler(scheduler, red, red_players)
-    data = sched.get_deviations(sub, 1)
-    eqa = subgame.translate(nash.mixed_nash(
-        data.subgame(sub), regret_thresh=args.regret_thresh,
-        dist_thresh=args.dist_thresh), sub)
+    data = sched.get_deviations(rest, 1)
+    eqa = restrict.translate(nash.mixed_nash(
+        data.restrict(rest), regret_thresh=args.regret_thresh,
+        dist_thresh=args.dist_thresh), rest)
     reg_info = []
     for eqm in eqa:
         gains = regret.mixture_deviation_gains(data, eqm)
@@ -79,7 +78,7 @@ def run(scheduler, args):
             for i, (eqm, (reg, role, strat))
             in enumerate(zip(eqa, reg_info), 1)))
 
-    json.dump([{'equilibrium': game.to_mix_json(eqm),
+    json.dump([{'equilibrium': game.mixture_to_json(eqm),
                 'regret': reg,
                 'best_response': {'role': role, 'strat': strat}}
                for eqm, (reg, role, strat)
