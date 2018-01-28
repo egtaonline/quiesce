@@ -1,0 +1,167 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.sparsesched module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="egta.utils module" href="egta.utils.html" />
+    <link rel="prev" title="egta.simsched module" href="egta.simsched.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.utils.html" title="egta.utils module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="egta.simsched.html" title="egta.simsched module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-egta.sparsesched">
+<span id="egta-sparsesched-module"></span><h1>egta.sparsesched module<a class="headerlink" href="#module-egta.sparsesched" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="egta.sparsesched.SparseScheduler">
+<em class="property">class </em><code class="descclassname">egta.sparsesched.</code><code class="descname">SparseScheduler</code><span class="sig-paren">(</span><em>sched</em>, <em>red=&lt;class 'gameanalysis.reduction.identity'&gt;</em>, <em>red_players=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/sparsesched.html#SparseScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.sparsesched.SparseScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Construct games with sparse payoff data</p>
+<p>This abstraction supports scheduling deviations and restricted games as
+primitives, so that profile data can be reused between different restricted
+games.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prof_sched</strong> (<em>ProfileScheduler</em>) – The underlying profile scheduler that can be used to gather more data
+when necessary.</li>
+<li><strong>game</strong> (<em>RsGame</em>) – The game to get profile data from.</li>
+<li><strong>red</strong> (<em>reduction</em><em>, </em><em>optional</em>) – The reduction style to use.</li>
+<li><strong>red_players</strong> (<em>int</em><em> or </em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – The number of reduced players per role.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="egta.sparsesched.SparseScheduler.game">
+<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/sparsesched.html#SparseScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.sparsesched.SparseScheduler.game" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="egta.sparsesched.SparseScheduler.get_data">
+<code class="descname">get_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/sparsesched.html#SparseScheduler.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.sparsesched.SparseScheduler.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all current payoff data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="egta.sparsesched.SparseScheduler.get_deviations">
+<code class="descname">get_deviations</code><span class="sig-paren">(</span><em>rest</em>, <em>count</em>, <em>role_index=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/sparsesched.html#SparseScheduler.get_deviations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.sparsesched.SparseScheduler.get_deviations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get game with all payoff data and deviations</p>
+<p>The returned game has complete payoff data and deviation data for the
+restricted game specified.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="egta.sparsesched.SparseScheduler.get_restricted_game">
+<code class="descname">get_restricted_game</code><span class="sig-paren">(</span><em>rest</em>, <em>count</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/sparsesched.html#SparseScheduler.get_restricted_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.sparsesched.SparseScheduler.get_restricted_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get game with all payoff data</p>
+<p>The returned game is complete for the restriction specified.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="egta.simsched.html"
+                        title="previous chapter">egta.simsched module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="egta.utils.html"
+                        title="next chapter">egta.utils module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/egta.sparsesched.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.utils.html" title="egta.utils module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="egta.simsched.html" title="egta.simsched module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

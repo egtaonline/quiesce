@@ -1,0 +1,223 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.gamesched &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for egta.gamesched</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">utils</span>
+
+<span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">profsched</span>
+
+
+<span class="c1"># TODO Add common random seed for deterministic runs.</span>
+
+
+<div class="viewcode-block" id="RsGameScheduler"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.RsGameScheduler">[docs]</a><span class="k">class</span> <span class="nc">RsGameScheduler</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">Scheduler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schedule profiles by adding noise to a game</span>
+
+<span class="sd">    This scheduler will generate random parameters to assign to each profile.</span>
+<span class="sd">    To generate a sample payoff, the scheduler will add noise to the payoff for</span>
+<span class="sd">    that profile, generated as a function of the parameter. In order to work</span>
+<span class="sd">    for compact game representations this will only sample a number of profiles</span>
+<span class="sd">    logarithmic in the number of profiles in the complete game.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    game : Game</span>
+<span class="sd">        The game with payoff data to use. An exception will be thrown if a</span>
+<span class="sd">        profile doesn&#39;t have any data in the game.</span>
+<span class="sd">    noise_dist : (\*params) -&gt; ndarray, optional</span>
+<span class="sd">        A distribution which takes the parameters for the profile and generates</span>
+<span class="sd">        random additive payoff noise for each strategy. Strategies that aren&#39;t</span>
+<span class="sd">        played will be zeroed out. This allows using different distributions</span>
+<span class="sd">        for different roles.</span>
+<span class="sd">    param_dist () -&gt; \*params, optional</span>
+<span class="sd">        A function for generating the parameters for each profile that govern</span>
+<span class="sd">        how payoff noise is distributed. By default there are no parameters,</span>
+<span class="sd">        e.g. all noise comes from the same distribution.</span>
+<span class="sd">    size_ratio : int, optional</span>
+<span class="sd">        This won&#39;t generate unique parameters for more than a logarithmic</span>
+<span class="sd">        number of profiles. This this the constant to be multiplied by the log</span>
+<span class="sd">        of the game size.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">noise_dist</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">param_dist</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">(),</span>
+                 <span class="n">size_ratio</span><span class="o">=</span><span class="mi">200</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_noise_dist</span> <span class="o">=</span> <span class="n">noise_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_dist</span> <span class="o">=</span> <span class="n">param_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_all_profiles</span><span class="p">)</span> <span class="o">*</span> <span class="n">size_ratio</span><span class="p">),</span>
+                             <span class="n">game</span><span class="o">.</span><span class="n">num_profiles</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">=</span> <span class="n">game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RsGameScheduler.schedule"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.RsGameScheduler.schedule">[docs]</a>    <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">hash</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_size</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_dist</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="n">payoff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">get_payoffs</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_noise_dist</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">payoff</span><span class="p">[</span><span class="n">profile</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">payoff</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_GamePromise</span><span class="p">(</span><span class="n">payoff</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RsGameScheduler.game"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.RsGameScheduler.game">[docs]</a>    <span class="k">def</span> <span class="nf">game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span></div>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="SampleGameScheduler"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.SampleGameScheduler">[docs]</a><span class="k">class</span> <span class="nc">SampleGameScheduler</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">Scheduler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schedule profiles by adding noise to a sample game</span>
+
+<span class="sd">    This scheduler will generate random parameters to assign to each profile.</span>
+<span class="sd">    To generate a sample payoff, the scheduler will sample a random payoff</span>
+<span class="sd">    associated with the profile, and then add noise generated as a function of</span>
+<span class="sd">    the parameter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sgame : SampleGame</span>
+<span class="sd">        A sample game with potentially several payoffs for each profile. An</span>
+<span class="sd">        exception will be thrown if a profile doesn&#39;t have any data in the</span>
+<span class="sd">        game.</span>
+<span class="sd">    noise_dist : \*params -&gt; ndarray, optional</span>
+<span class="sd">        A distribution which takes the parameters for the profile and generates</span>
+<span class="sd">        random additive payoff noise for each strategy. Strategies that aren&#39;t</span>
+<span class="sd">        played will be zeroed out. This allows using different distributions</span>
+<span class="sd">        for different roles.</span>
+<span class="sd">    param_dist () -&gt; \*params, optional</span>
+<span class="sd">        A function for generating the parameters for each profile that govern</span>
+<span class="sd">        how payoff noise is distributed. By default there are no parameters,</span>
+<span class="sd">        e.g. all noise comes from the same distribution.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sgame</span><span class="p">,</span> <span class="n">noise_dist</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">param_dist</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">()):</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sgame</span><span class="p">,</span> <span class="s1">&#39;get_sample_payoffs&#39;</span><span class="p">),</span> <span class="s2">&quot;sgame not a sample game&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_noise_dist</span> <span class="o">=</span> <span class="n">noise_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_dist</span> <span class="o">=</span> <span class="n">param_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sgame</span> <span class="o">=</span> <span class="n">sgame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_paymap</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SampleGameScheduler.schedule"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.SampleGameScheduler.schedule">[docs]</a>    <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+        <span class="n">hprof</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">pays</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_paymap</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">pays</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_dist</span><span class="p">()</span>
+                <span class="n">pays</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sgame</span><span class="o">.</span><span class="n">get_sample_payoffs</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_paymap</span><span class="p">[</span><span class="n">hprof</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">pays</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+        <span class="n">pay</span> <span class="o">=</span> <span class="n">pays</span><span class="p">[</span><span class="n">random</span><span class="o">.</span><span class="n">randrange</span><span class="p">(</span><span class="n">pays</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+        <span class="n">payoff</span> <span class="o">=</span> <span class="n">pay</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_noise_dist</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">payoff</span><span class="p">[</span><span class="n">profile</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">_GamePromise</span><span class="p">(</span><span class="n">payoff</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SampleGameScheduler.game"><a class="viewcode-back" href="../../egta.gamesched.html#egta.gamesched.SampleGameScheduler.game">[docs]</a>    <span class="k">def</span> <span class="nf">game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sgame</span></div>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<span class="k">class</span> <span class="nc">_GamePromise</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">Promise</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payoff</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_payoff</span> <span class="o">=</span> <span class="n">payoff</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_payoff</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

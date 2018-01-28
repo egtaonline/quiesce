@@ -1,0 +1,7 @@
+egta\.sparsesched module
+========================
+
+.. automodule:: egta.sparsesched
+    :members:
+    :undoc-members:
+    :show-inheritance:

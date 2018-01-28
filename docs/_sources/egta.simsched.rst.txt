@@ -1,0 +1,7 @@
+egta\.simsched module
+=====================
+
+.. automodule:: egta.simsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

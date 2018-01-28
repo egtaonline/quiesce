@@ -24,12 +24,12 @@ class RsGameScheduler(profsched.Scheduler):
     game : Game
         The game with payoff data to use. An exception will be thrown if a
         profile doesn't have any data in the game.
-    noise_dist : (*params) -> ndarray, optional
+    noise_dist : (\*params) -> ndarray, optional
         A distribution which takes the parameters for the profile and generates
         random additive payoff noise for each strategy. Strategies that aren't
         played will be zeroed out. This allows using different distributions
         for different roles.
-    param_dist () -> *params, optional
+    param_dist () -> \*params, optional
         A function for generating the parameters for each profile that govern
         how payoff noise is distributed. By default there are no parameters,
         e.g. all noise comes from the same distribution.
@@ -85,12 +85,12 @@ class SampleGameScheduler(profsched.Scheduler):
         A sample game with potentially several payoffs for each profile. An
         exception will be thrown if a profile doesn't have any data in the
         game.
-    noise_dist : *params -> ndarray, optional
+    noise_dist : \*params -> ndarray, optional
         A distribution which takes the parameters for the profile and generates
         random additive payoff noise for each strategy. Strategies that aren't
         played will be zeroed out. This allows using different distributions
         for different roles.
-    param_dist () -> *params, optional
+    param_dist () -> \*params, optional
         A function for generating the parameters for each profile that govern
         how payoff noise is distributed. By default there are no parameters,
         e.g. all noise comes from the same distribution.

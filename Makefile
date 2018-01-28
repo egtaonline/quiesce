@@ -13,6 +13,7 @@ help:
 	@echo "test     - run fast tests with coverage"
 	@echo "test-all - run all tests with coverage"
 	@echo "publish  - publish package to pypi"
+	@echo "docs     - build documentation"
 	@echo "clean    - remove build artifacts"
 	@echo "travis   - run travis test script"
 
@@ -43,10 +44,13 @@ publish:
 	bin/python setup.py sdist bdist_wheel
 	bin/twine upload -u strategic.reasoning.group dist/*
 
+docs:
+	bin/python setup.py build_sphinx -b html
+
 clean:
 	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
 
 travis: PYTEST_ARGS += -v -n2
 travis: check test
 
-.PHONY: setup test-all test ubuntu-reqs todo check format publish clean travis
+.PHONY: setup test-all test ubuntu-reqs todo check format publish clean travis docs

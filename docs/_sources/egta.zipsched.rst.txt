@@ -1,0 +1,7 @@
+egta\.zipsched module
+=====================
+
+.. automodule:: egta.zipsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

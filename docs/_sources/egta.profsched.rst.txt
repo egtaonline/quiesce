@@ -1,0 +1,7 @@
+egta\.profsched module
+======================
+
+.. automodule:: egta.profsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

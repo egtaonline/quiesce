@@ -1,0 +1,7 @@
+egta\.gamesched module
+======================
+
+.. automodule:: egta.gamesched
+    :members:
+    :undoc-members:
+    :show-inheritance:

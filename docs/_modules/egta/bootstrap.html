@@ -1,0 +1,163 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.bootstrap &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for egta.bootstrap</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
+
+
+<div class="viewcode-block" id="deviation_payoffs"><a class="viewcode-back" href="../../egta.bootstrap.html#egta.bootstrap.deviation_payoffs">[docs]</a><span class="k">def</span> <span class="nf">deviation_payoffs</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">boots</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bootstrap deviation payoffs</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    prof_sched : Scheduler</span>
+<span class="sd">        The scheduler to sample profiles from.</span>
+<span class="sd">    game : RsGame</span>
+<span class="sd">        The game defining what&#39;s sampled.</span>
+<span class="sd">    mix : ndarray</span>
+<span class="sd">        The mixture to calculate the regret of.</span>
+<span class="sd">    num : int</span>
+<span class="sd">        The number of samples to gather. Must be positive.</span>
+<span class="sd">    boots : int, optional</span>
+<span class="sd">        The number of bootstrap samples to take. The accuracy of bootstrap is</span>
+<span class="sd">        independent of this number, but more will reduce the variance of the</span>
+<span class="sd">        underlying confidence bounds. The default will compute no bootstrap</span>
+<span class="sd">        gains.</span>
+<span class="sd">    chunk_size : int, optional</span>
+<span class="sd">        An implementation detail specifying how frequently profiles are</span>
+<span class="sd">        scheduled since this algorithm inherently operates in a streaming</span>
+<span class="sd">        manner. Ideally this number should be set such that the time to</span>
+<span class="sd">        schedule and process chunk_size roughly equals the time for one</span>
+<span class="sd">        simulation. It also controls how much memory this uses. By default this</span>
+<span class="sd">        is set to ten times the number of bootstraps, or 1000 if no bootstraps</span>
+<span class="sd">        are requested.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This uses memory on the order of `boots + chunk_size`. It is inefficient if</span>
+<span class="sd">    `num` is less than boots.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mean_gains : ndarray (num_strats,)</span>
+<span class="sd">        The mean deviation payoffs from the mixture.</span>
+<span class="sd">    boot_gains : ndarray (boots, num_strats)</span>
+<span class="sd">        The deviation payoffs for each bootstrap sample.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;can&#39;t schedule zero samples&quot;</span>
+    <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="ow">or</span> <span class="n">boots</span> <span class="o">*</span> <span class="mi">10</span> <span class="ow">or</span> <span class="mi">1000</span>
+    <span class="n">game</span> <span class="o">=</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+    <span class="n">profiles</span> <span class="o">=</span> <span class="n">_chunk_profiles</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">)</span>
+    <span class="n">devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">)</span>
+    <span class="n">mean_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">)</span>
+    <span class="n">boot_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">boots</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span>
+    <span class="n">remaining</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="n">remaining</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">):</span>
+            <span class="n">devs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">profiles</span><span class="p">)[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">mean_devs</span> <span class="o">+=</span> <span class="p">(</span><span class="n">devs</span> <span class="o">-</span> <span class="n">mean_devs</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">samps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="n">remaining</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="n">i</span><span class="p">))</span>
+        <span class="n">remaining</span> <span class="o">-=</span> <span class="n">samps</span>
+        <span class="n">boot_devs</span> <span class="o">+=</span> <span class="n">samps</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">devs</span> <span class="o">/</span> <span class="n">num</span>
+
+    <span class="k">return</span> <span class="n">mean_devs</span><span class="p">,</span> <span class="n">boot_devs</span></div>
+
+
+<span class="k">def</span> <span class="nf">_chunk_profiles</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return a generator over payoffs that schedules somewhat efficiently&quot;&quot;&quot;</span>
+    <span class="n">proms</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">num</span><span class="p">:</span>
+        <span class="n">new_profs</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">random_deviation_profiles</span><span class="p">(</span>
+            <span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">mix</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span>
+        <span class="n">num</span> <span class="o">-=</span> <span class="n">chunk_size</span>
+        <span class="n">new_proms</span> <span class="o">=</span> <span class="p">[</span><span class="n">sched</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">prof</span><span class="p">)</span> <span class="k">for</span> <span class="n">prof</span> <span class="ow">in</span> <span class="n">new_profs</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">prom</span> <span class="ow">in</span> <span class="n">proms</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">prom</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">proms</span> <span class="o">=</span> <span class="n">new_proms</span>
+    <span class="k">for</span> <span class="n">prom</span> <span class="ow">in</span> <span class="n">proms</span><span class="p">:</span>  <span class="c1"># pragma: no branch</span>
+        <span class="k">yield</span> <span class="n">prom</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

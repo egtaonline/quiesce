@@ -1,0 +1,160 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="egta.profsched module" href="egta.profsched.html" />
+    <link rel="prev" title="egta.gamesched module" href="egta.gamesched.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.profsched.html" title="egta.profsched module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="egta.gamesched.html" title="egta.gamesched module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-egta.innerloop">
+<span id="egta-innerloop-module"></span><h1>egta.innerloop module<a class="headerlink" href="#module-egta.innerloop" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="egta.innerloop.inner_loop">
+<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>sched</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.01</em>, <em>max_resamples=10</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inner loop a game using a scheduler</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sched</strong> (<a class="reference internal" href="egta.sparsesched.html#egta.sparsesched.SparseScheduler" title="egta.sparsesched.SparseScheduler"><em>SparseScheduler</em></a>) – The spare scheduler used to generate payoff data for profiles.</li>
+<li><strong>initial_restriction</strong> (<em>[</em><em>[</em><em>bool</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – Initial restrictions to start inner loop from. If unspecified, every
+pure restriction is used.</li>
+<li><strong>regret_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The maximum regret to consider an equilibrium an equilibrium.</li>
+<li><strong>dist_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The minimum norm between two mixed profiles for them to be considered
+distinct.</li>
+<li><strong>max_resamples</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The maximum number of times to resample a restricted game when no
+equilibria can be found before giving up.</li>
+<li><strong>restricted_game_size</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The maximum restricted game support size with which beneficial
+deviations must be explored. Restricted games with support larger than
+this are queued and only explored in the event that no equilibrium can
+be found in beneficial deviations smaller than this.</li>
+<li><strong>num_equilibria</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The number of equilibria to attempt to find. Only one is guaranteed,
+but this might be beneifical if the game has a known degenerate
+equilibria, but one which is still helpful as a deviating strategy.</li>
+<li><strong>num_backups</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – In the event that no equilibrium can be found in beneficial deviations
+to small restricted games, other restrictions will be explored. This
+parameter indicates how many restricted games for each role should be
+explored.</li>
+<li><strong>devs_by_role</strong> (<em>boolean</em><em>, </em><em>optional</em>) – If specified, deviations will only be explored for each role in order,
+proceeding to the next role only when no beneficial deviations are
+found. This can reduce the number of profiles sampled, but may also
+fail to find certain equilibria due to the different path through
+restricted games.</li>
+<li><strong>at_least_one</strong> (<em>boolean</em><em>, </em><em>optional</em>) – If specified, at least one equilibria will be found in each restricted
+game.  This has the potential to run for a very long time as it may
+take exponential time. If your regret threshold is not set too log for
+your game, this is relatively reasonable though.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="egta.gamesched.html"
+                        title="previous chapter">egta.gamesched module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="egta.profsched.html"
+                        title="next chapter">egta.profsched module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/egta.innerloop.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.profsched.html" title="egta.profsched module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="egta.gamesched.html" title="egta.gamesched module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

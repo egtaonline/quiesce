@@ -1,0 +1,7 @@
+egta\.countsched module
+=======================
+
+.. automodule:: egta.countsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

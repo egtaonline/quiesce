@@ -1,0 +1,162 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.bootstrap module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="egta.countsched module" href="egta.countsched.html" />
+    <link rel="prev" title="egta package" href="egta.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.countsched.html" title="egta.countsched module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="egta.html" title="egta package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-egta.bootstrap">
+<span id="egta-bootstrap-module"></span><h1>egta.bootstrap module<a class="headerlink" href="#module-egta.bootstrap" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="egta.bootstrap.deviation_payoffs">
+<code class="descclassname">egta.bootstrap.</code><code class="descname">deviation_payoffs</code><span class="sig-paren">(</span><em>prof_sched</em>, <em>game</em>, <em>mix</em>, <em>num</em>, <em>*</em>, <em>boots=0</em>, <em>chunk_size=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/bootstrap.html#deviation_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.bootstrap.deviation_payoffs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bootstrap deviation payoffs</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prof_sched</strong> (<a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><em>Scheduler</em></a>) – The scheduler to sample profiles from.</li>
+<li><strong>game</strong> (<em>RsGame</em>) – The game defining what’s sampled.</li>
+<li><strong>mix</strong> (<em>ndarray</em>) – The mixture to calculate the regret of.</li>
+<li><strong>num</strong> (<em>int</em>) – The number of samples to gather. Must be positive.</li>
+<li><strong>boots</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of bootstrap samples to take. The accuracy of bootstrap is
+independent of this number, but more will reduce the variance of the
+underlying confidence bounds. The default will compute no bootstrap
+gains.</li>
+<li><strong>chunk_size</strong> (<em>int</em><em>, </em><em>optional</em>) – An implementation detail specifying how frequently profiles are
+scheduled since this algorithm inherently operates in a streaming
+manner. Ideally this number should be set such that the time to
+schedule and process chunk_size roughly equals the time for one
+simulation. It also controls how much memory this uses. By default this
+is set to ten times the number of bootstraps, or 1000 if no bootstraps
+are requested.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This uses memory on the order of <cite>boots + chunk_size</cite>. It is inefficient if
+<cite>num</cite> is less than boots.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>mean_gains</strong> (<em>ndarray (num_strats,)</em>) – The mean deviation payoffs from the mixture.</li>
+<li><strong>boot_gains</strong> (<em>ndarray (boots, num_strats)</em>) – The deviation payoffs for each bootstrap sample.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="egta.html"
+                        title="previous chapter">egta package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="egta.countsched.html"
+                        title="next chapter">egta.countsched module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/egta.bootstrap.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.countsched.html" title="egta.countsched module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="egta.html" title="egta package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

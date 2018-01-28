@@ -1,0 +1,27 @@
+egta package
+============
+
+Submodules
+----------
+
+.. toctree::
+
+   egta.bootstrap
+   egta.countsched
+   egta.eosched
+   egta.gamesched
+   egta.innerloop
+   egta.profsched
+   egta.savesched
+   egta.simsched
+   egta.sparsesched
+   egta.utils
+   egta.zipsched
+
+Module contents
+---------------
+
+.. automodule:: egta
+    :members:
+    :undoc-members:
+    :show-inheritance:

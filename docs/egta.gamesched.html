@@ -1,0 +1,201 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.gamesched module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.23',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="egta.innerloop module" href="egta.innerloop.html" />
+    <link rel="prev" title="egta.eosched module" href="egta.eosched.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.innerloop.html" title="egta.innerloop module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="egta.eosched.html" title="egta.eosched module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-egta.gamesched">
+<span id="egta-gamesched-module"></span><h1>egta.gamesched module<a class="headerlink" href="#module-egta.gamesched" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="egta.gamesched.RsGameScheduler">
+<em class="property">class </em><code class="descclassname">egta.gamesched.</code><code class="descname">RsGameScheduler</code><span class="sig-paren">(</span><em>game</em>, <em>noise_dist=&lt;function RsGameScheduler.&lt;lambda&gt;&gt;</em>, <em>param_dist=&lt;function RsGameScheduler.&lt;lambda&gt;&gt;</em>, <em>size_ratio=200</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><code class="xref py py-class docutils literal"><span class="pre">egta.profsched.Scheduler</span></code></a></p>
+<p>Schedule profiles by adding noise to a game</p>
+<p>This scheduler will generate random parameters to assign to each profile.
+To generate a sample payoff, the scheduler will add noise to the payoff for
+that profile, generated as a function of the parameter. In order to work
+for compact game representations this will only sample a number of profiles
+logarithmic in the number of profiles in the complete game.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>game</strong> (<em>Game</em>) – The game with payoff data to use. An exception will be thrown if a
+profile doesn’t have any data in the game.</li>
+<li><strong>noise_dist</strong> (<em>(</em><em>*params</em><em>) </em><em>-&gt; ndarray</em><em>, </em><em>optional</em>) – A distribution which takes the parameters for the profile and generates
+random additive payoff noise for each strategy. Strategies that aren’t
+played will be zeroed out. This allows using different distributions
+for different roles.</li>
+<li><strong>(</strong><strong>) </strong><strong>-&gt; *params</strong><strong>, </strong><strong>optional</strong> (<em>param_dist</em>) – A function for generating the parameters for each profile that govern
+how payoff noise is distributed. By default there are no parameters,
+e.g. all noise comes from the same distribution.</li>
+<li><strong>size_ratio</strong> (<em>int</em><em>, </em><em>optional</em>) – This won’t generate unique parameters for more than a logarithmic
+number of profiles. This this the constant to be multiplied by the log
+of the game size.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="egta.gamesched.RsGameScheduler.game">
+<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler.game" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="egta.gamesched.RsGameScheduler.schedule">
+<code class="descname">schedule</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler.schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler.schedule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="egta.gamesched.SampleGameScheduler">
+<em class="property">class </em><code class="descclassname">egta.gamesched.</code><code class="descname">SampleGameScheduler</code><span class="sig-paren">(</span><em>sgame</em>, <em>noise_dist=&lt;function SampleGameScheduler.&lt;lambda&gt;&gt;</em>, <em>param_dist=&lt;function SampleGameScheduler.&lt;lambda&gt;&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><code class="xref py py-class docutils literal"><span class="pre">egta.profsched.Scheduler</span></code></a></p>
+<p>Schedule profiles by adding noise to a sample game</p>
+<p>This scheduler will generate random parameters to assign to each profile.
+To generate a sample payoff, the scheduler will sample a random payoff
+associated with the profile, and then add noise generated as a function of
+the parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sgame</strong> (<em>SampleGame</em>) – A sample game with potentially several payoffs for each profile. An
+exception will be thrown if a profile doesn’t have any data in the
+game.</li>
+<li><strong>noise_dist</strong> (<em>*params -&gt; ndarray</em><em>, </em><em>optional</em>) – A distribution which takes the parameters for the profile and generates
+random additive payoff noise for each strategy. Strategies that aren’t
+played will be zeroed out. This allows using different distributions
+for different roles.</li>
+<li><strong>(</strong><strong>) </strong><strong>-&gt; *params</strong><strong>, </strong><strong>optional</strong> (<em>param_dist</em>) – A function for generating the parameters for each profile that govern
+how payoff noise is distributed. By default there are no parameters,
+e.g. all noise comes from the same distribution.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="egta.gamesched.SampleGameScheduler.game">
+<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler.game" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="egta.gamesched.SampleGameScheduler.schedule">
+<code class="descname">schedule</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler.schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler.schedule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="egta.eosched.html"
+                        title="previous chapter">egta.eosched module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="egta.innerloop.html"
+                        title="next chapter">egta.innerloop module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/egta.gamesched.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.innerloop.html" title="egta.innerloop module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="egta.eosched.html" title="egta.eosched module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>
