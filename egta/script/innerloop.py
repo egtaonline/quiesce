@@ -29,10 +29,6 @@ def add_parser(subparsers):
         help="""Norm threshold for two mixtures to be considered distinct.
         (default: %(default)g)""")
     parser.add_argument(
-        '--max-resamples', metavar='<resamples>', type=int, default=10,
-        help="""Number of times to resample all profiles in a restricted game
-        when equilibrium is not identified.  (default: %(default)d)""")
-    parser.add_argument(
         '--max-restrict-size', metavar='<support>', type=int, default=3,
         help="""Support size threshold, beyond which restricted games are not
         required to be explored.  (default: %(default)d)""")
@@ -86,7 +82,6 @@ def run(scheduler, args):
     sched = sparsesched.SparseScheduler(scheduler, red, red_players)
     eqa = innerloop.inner_loop(
         sched, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
-        max_resamples=args.max_resamples,
         restricted_game_size=args.max_restrict_size,
         num_equilibria=args.num_equilibria, num_backups=args.num_backups,
         devs_by_role=args.dev_by_role, at_least_one=args.one)

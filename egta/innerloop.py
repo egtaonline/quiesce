@@ -20,9 +20,8 @@ _log = logging.getLogger(__name__)
 
 def inner_loop(
         sched, *, initial_restrictions=None, regret_thresh=1e-3,
-        dist_thresh=1e-2, max_resamples=10, restricted_game_size=3,
-        num_equilibria=1, num_backups=1, devs_by_role=False,
-        at_least_one=False):
+        dist_thresh=1e-2, restricted_game_size=3, num_equilibria=1,
+        num_backups=1, devs_by_role=False, at_least_one=False):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -37,9 +36,6 @@ def inner_loop(
     dist_thresh : float, optional
         The minimum norm between two mixed profiles for them to be considered
         distinct.
-    max_resamples : int > 0, optional
-        The maximum number of times to resample a restricted game when no
-        equilibria can be found before giving up.
     restricted_game_size : int > 0, optional
         The maximum restricted game support size with which beneficial
         deviations must be explored. Restricted games with support larger than
@@ -82,23 +78,19 @@ def inner_loop(
     nash_lock = threading.Lock()  # nash is not thread safe
     exceptions = []
 
-    def add_restriction(rest, count):
-        if count > max_resamples:  # pragma: no cover
-            _log.error("couldn't find equilibrium in restricted game %s",
-                       game.restriction_to_repr(rest))
-            return
+    def add_restriction(rest):
         with exp_restrictions_lock:
-            schedule = count > 1 or exp_restrictions.add(rest)
+            schedule = exp_restrictions.add(rest)
         if schedule and not exceptions:
             thread = threading.Thread(
-                target=lambda: run_restriction(rest, count),
+                target=lambda: run_restriction(rest),
                 daemon=True)
             thread.start()
             threads.put(thread)
 
-    def run_restriction(rest, count):
+    def run_restriction(rest):
         try:
-            data = sched.get_restricted_game(rest, count).restrict(rest)
+            data = sched.get_restricted_game(rest, 1).restrict(rest)
             with nash_lock:
                 with warnings.catch_warnings():
                     # XXX For some reason, line-search in optimize throws a
@@ -107,7 +99,6 @@ def inner_loop(
                     # gradients, but it's not reproducible, so we ignore it.
                     warnings.simplefilter('ignore', RuntimeWarning)
                     start = time.time()
-                    # FIXME Trim mixture support
                     eqa = restrict.translate(
                         nash.mixed_nash(
                             data, regret_thresh=regret_thresh,
@@ -124,7 +115,13 @@ def inner_loop(
                 for eqm in eqa:
                     add_deviations(eqm, init_role_dev)
             else:
-                add_restriction(rest, count + 1)  # pragma: no cover
+                _log.warning(
+                    "couldn't find equilibria in restricted game %s. This is "
+                    "likely due to high variance in payoffs which means "
+                    "quiesce should be re-run with more samples per profile. "
+                    "This could also be fixed by performing a more expensive "
+                    "equilibria search to always return one.",
+                    game.restriction_to_repr(rest))
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
@@ -180,7 +177,7 @@ def inner_loop(
                 and support.sum() < restricted_game_size):
             br_sub = support.copy()
             br_sub[rs + br] = True
-            add_restriction(br_sub, 1)
+            add_restriction(br_sub)
         else:
             br = None  # Add best response to backup
 
@@ -209,7 +206,7 @@ def inner_loop(
             else:
                 # Not pure, so equilibria are not obvious, schedule restriction
                 # instead
-                add_restriction(sub, 1)
+                add_restriction(sub)
         join_threads()
 
         # Repeat with backups until found all
@@ -219,7 +216,7 @@ def inner_loop(
                 for _ in range(num_backups):
                     if back.empty():
                         break  # pragma: no cover
-                    add_restriction(back.get()[2], 1)
+                    add_restriction(back.get()[2])
             join_threads()
 
         # Return equilibria
