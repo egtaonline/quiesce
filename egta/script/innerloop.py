@@ -6,7 +6,7 @@ from gameanalysis import reduction
 from gameanalysis import regret
 
 from egta import innerloop
-from egta import sparsesched
+from egta import schedgame
 
 
 _log = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def add_parser(subparsers):
         help="""Regret threshold for a mixture to be considered an equilibrium.
         (default: %(default)g)""")
     parser.add_argument(
-        '--dist-thresh', metavar='<norm>', type=float, default=1e-3,
+        '--dist-thresh', metavar='<norm>', type=float, default=0.1,
         help="""Norm threshold for two mixtures to be considered distinct.
         (default: %(default)g)""")
     parser.add_argument(
@@ -79,14 +79,13 @@ def run(scheduler, args):
         red = reduction.identity
         red_players = None
 
-    sched = sparsesched.SparseScheduler(scheduler, red, red_players)
+    game = schedgame.schedgame(scheduler, red, red_players)
     eqa = innerloop.inner_loop(
-        sched, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
+        game, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
         restricted_game_size=args.max_restrict_size,
         num_equilibria=args.num_equilibria, num_backups=args.num_backups,
         devs_by_role=args.dev_by_role, at_least_one=args.one)
-    data = sched.get_data()
-    regrets = [float(regret.mixture_regret(data, eqm)) for eqm in eqa]
+    regrets = [float(regret.mixture_regret(game, eqm)) for eqm in eqa]
 
     _log.error(
         "quiesce finished finding %d equilibria:\n%s",

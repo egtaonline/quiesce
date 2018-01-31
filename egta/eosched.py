@@ -25,9 +25,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         The id of the egtaonline simulator to use.
     game : RsGame
         The gameanalysis basegame representing the game to schedule.
-    simultanious_obs : int
-        The number of simultanious observations to schedule at a time.
-        Egtaonline will use this when scheduling.
+    simultaneous_obs : int
+        The number of simultaneous observations to schedule at a time. EGTA
+        Online will use this when scheduling.
     configuration : {key: value}
         Dictionary of configuration to use with the scheduler. Any fields that
         are omitted will be filled in by the defaults specified in the
@@ -51,7 +51,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         initial profile data.
     """
 
-    def __init__(self, game, api, sim_id, simultanious_obs, configuration,
+    def __init__(self, game, api, sim_id, simultaneous_obs, configuration,
                  sleep_time, max_scheduled, obs_memory, obs_time,
                  game_id=None):
         self._api = api
@@ -68,13 +68,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._pending_profiles = queue.Queue()
 
         self._sleep_time = sleep_time
-        self._max_running = max_scheduled - 1
+        self._max_running = (max_scheduled * simultaneous_obs) - 1
         self._sim_id = sim_id
         self._game_id = game_id
         self._configuration = configuration
         self._obs_memory = obs_memory
         self._obs_time = obs_time
-        self._simult_obs = simultanious_obs
+        self._simult_obs = simultaneous_obs
 
         self._sched = None
         self._thread_timeout_lock = threading.Lock()

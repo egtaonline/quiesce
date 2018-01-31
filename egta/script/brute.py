@@ -4,11 +4,12 @@ import logging
 
 import numpy as np
 from gameanalysis import nash
+from gameanalysis import paygame
 from gameanalysis import reduction
 from gameanalysis import regret
 from gameanalysis import restrict
 
-from egta import sparsesched
+from egta import schedgame
 
 
 _log = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def add_parser(subparsers):
         help="""Regret threshold for a mixture to be considered an equilibrium.
         (default: %(default)g)""")
     parser.add_argument(
-        '--dist-thresh', metavar='<norm>', type=float, default=1e-3,
+        '--dist-thresh', metavar='<norm>', type=float, default=0.1,
         help="""Norm threshold for two mixtures to be considered distinct.
         (default: %(default)g)""")
     parser.add_argument(
@@ -59,14 +60,14 @@ def run(scheduler, args):
 
     rest = (np.ones(game.num_strats, bool) if args.restrict is None
             else game.restriction_from_json(json.load(args.restrict)))
-    sched = sparsesched.SparseScheduler(scheduler, red, red_players)
-    data = sched.get_deviations(rest, 1)
+    game = schedgame.schedgame(scheduler, red, red_players)
+    data = paygame.game_copy(game.restrict(rest))
     eqa = restrict.translate(nash.mixed_nash(
-        data.restrict(rest), regret_thresh=args.regret_thresh,
+        data, regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh), rest)
     reg_info = []
     for eqm in eqa:
-        gains = regret.mixture_deviation_gains(data, eqm)
+        gains = regret.mixture_deviation_gains(game, eqm)
         bri = np.argmax(gains)
         reg_info.append((gains[bri],) + game.role_strat_names[bri])
 

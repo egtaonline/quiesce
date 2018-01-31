@@ -1,3 +1,4 @@
+import inspect
 import logging
 import queue
 import threading
@@ -7,7 +8,7 @@ import warnings
 import numpy as np
 from gameanalysis import collect
 from gameanalysis import nash
-from gameanalysis import regret
+from gameanalysis import paygame
 from gameanalysis import restrict
 
 
@@ -19,15 +20,16 @@ _log = logging.getLogger(__name__)
 
 
 def inner_loop(
-        sched, *, initial_restrictions=None, regret_thresh=1e-3,
-        dist_thresh=1e-2, restricted_game_size=3, num_equilibria=1,
+        game, *, initial_restrictions=None, regret_thresh=1e-3,
+        dist_thresh=0.1, restricted_game_size=3, num_equilibria=1,
         num_backups=1, devs_by_role=False, at_least_one=False):
     """Inner loop a game using a scheduler
 
     Parameters
     ----------
-    sched : SparseScheduler
-        The spare scheduler used to generate payoff data for profiles.
+    game : RsGame
+        The game to find equilibria in. This function is most useful when game
+        is a SchedulerGame, but any complete RsGame will work.
     initial_restriction : [[bool]], optional
         Initial restrictions to start inner loop from. If unspecified, every
         pure restriction is used.
@@ -62,7 +64,6 @@ def inner_loop(
         take exponential time. If your regret threshold is not set too log for
         your game, this is relatively reasonable though.
     """
-    game = sched.game()
     initial_restrictions = (
         game.pure_restrictions() if initial_restrictions is None
         else np.asarray(initial_restrictions, bool))
@@ -78,6 +79,14 @@ def inner_loop(
     nash_lock = threading.Lock()  # nash is not thread safe
     exceptions = []
 
+    # Handle case where game might not have role_index key word
+    if 'role_index' in inspect.signature(game.deviation_payoffs).parameters:
+        def deviation_payoffs(mix, role_index):
+            return game.deviation_payoffs(mix, role_index=role_index)
+    else:
+        def deviation_payoffs(mix, role_index):
+            return game.deviation_payoffs(mix)
+
     def add_restriction(rest):
         with exp_restrictions_lock:
             schedule = exp_restrictions.add(rest)
@@ -90,7 +99,7 @@ def inner_loop(
 
     def run_restriction(rest):
         try:
-            data = sched.get_restricted_game(rest, 1).restrict(rest)
+            data = paygame.game_copy(game.restrict(rest))
             with nash_lock:
                 with warnings.catch_warnings():
                     # XXX For some reason, line-search in optimize throws a
@@ -138,8 +147,9 @@ def inner_loop(
     def run_deviations(mix, role_index):
         try:
             support = mix > 0
-            data = sched.get_deviations(support, 1, role_index)
-            gains = regret.mixture_deviation_gains(data, mix)
+            devs = deviation_payoffs(mix, role_index)
+            exp = np.add.reduceat(devs * mix, game.role_starts)
+            gains = devs - exp.repeat(game.num_role_strats)
             if role_index is None:
                 if np.all(gains <= regret_thresh):  # Found equilibrium
                     _log.warning('found equilibrium %s with regret %f',
