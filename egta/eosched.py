@@ -77,7 +77,6 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._simult_obs = simultanious_obs
 
         self._sched = None
-        self._running = False
         self._thread_timeout_lock = threading.Lock()
         self._exception = None
 
@@ -153,8 +152,18 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # This can also be thrown on keyboard interrupt
         with self._prof_lock:
             for _, que, _ in self._profiles.values():
-                while que.empty():
+
+                keep_going = [True]
+
+                def thread_func():
+                    que.get()
+                    keep_going[0] = False
+                    que.task_done()
+
+                threading.Thread(target=thread_func, daemon=True).start()
+                while keep_going[0]:
                     que.put(None)
+                    que.join()
 
     def _update_counts(self):
         """Thread the constantly pings EGTA Online for updates
@@ -165,11 +174,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         couldn't be scheduled before because we were at max running."""
         self._thread_timeout_lock.acquire()
         try:
-            while self._running:
+            while not self._thread_timeout_lock.acquire(
+                    True, self._sleep_time):
                 # First update requirements and mark completed
                 _log.info("query scheduler %d", self._sched['id'])
-                reqs = self._sched.get_requirements(
-                )['scheduling_requirements']
+                info = self._sched.get_requirements()
+                assert info['active'], "scheduler was deactivated"
+                reqs = info['scheduling_requirements']
                 _log.debug("got reqs %s", reqs)
                 for req in reqs:
                     prof_id = req['id']
@@ -218,12 +229,6 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     hprof, val = self._pending_profiles.get()
                     self._schedule(hprof, val)
 
-                # Now wait some time. By doing this with a lock, we allow this
-                # thread to be interrupted in the case of exception.
-                if self._thread_timeout_lock.acquire(True, self._sleep_time):
-                    assert not self._running, \
-                        "this should only be reached if we're not running"
-
         except Exception as ex:  # pragma: no cover
             self._exception = ex
             self._drain_queues()
@@ -234,6 +239,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             except RuntimeError:  # pragma: no cover
                 pass  # Don't care
 
+    # TODO Make this an open method, and make sure it cleans up after itself
     def __enter__(self):
         # Create game to get initial profile data
         if self._game_id is not None:
@@ -296,13 +302,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                                self._game.num_role_players):
             self._sched.add_role(role, count)
 
-        self._running = True
-        thread = threading.Thread(target=self._update_counts)
-        thread.start()
+        threading.Thread(target=self._update_counts, daemon=True).start()
         return self
 
     def __exit__(self, *args):
-        self._running = False
         if self._thread_timeout_lock.locked():
             self._thread_timeout_lock.release()
         self._sched.deactivate()
@@ -329,6 +332,7 @@ class _EgtaOnlinePromise(profsched.Promise):
     def get(self):
         if self._val is None:
             self._val = self._queue.get()
+            self._queue.task_done()
         if self._sched._exception is not None:
             raise self._sched._exception
         return self._val

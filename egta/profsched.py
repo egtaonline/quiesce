@@ -14,7 +14,6 @@ class Scheduler(abc.ABC):  # pragma: no cover
         Return a promise for the payoff data"""
         pass
 
-    # FIXME Add game to each scheduler
     @abc.abstractmethod
     def game(self):
         """Get the game that this scheduler returns information about"""

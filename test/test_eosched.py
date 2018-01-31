@@ -28,7 +28,7 @@ def test_basic_profile():
             game, egta, sim['id'], 1, {}, 1, 10, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays = np.concatenate([p.get()[None] for p in proms])
+            pays = np.stack([p.get() for p in proms])
         assert np.allclose(pays[profs == 0], 0)
         assert sched._num_running_profiles == 0
 
@@ -37,7 +37,7 @@ def test_basic_profile():
             game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays = np.concatenate([p.get()[None] for p in proms])
+            pays = np.stack([p.get() for p in proms])
         assert np.allclose(pays[profs == 0], 0)
         assert sched._num_running_profiles == 0
 
@@ -47,7 +47,7 @@ def test_basic_profile():
         sched = countsched.CountScheduler(base_sched, 2)
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays = np.concatenate([p.get()[None] for p in proms])
+            pays = np.stack([p.get() for p in proms])
         assert np.allclose(pays[profs == 0], 0)
         assert base_sched._num_running_profiles == 0
 
@@ -57,7 +57,7 @@ def test_basic_profile():
         sched = countsched.CountScheduler(base_sched, 2)
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays = np.concatenate([p.get()[None] for p in proms])
+            pays = np.stack([p.get() for p in proms])
         assert np.allclose(pays[profs == 0], 0)
         assert base_sched._num_running_profiles == 0
 
@@ -79,10 +79,10 @@ def test_extra_samples():
             game, egta, sim['id'], 1, {}, 1, 25, 0, 0)
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays1 = np.concatenate([p.get()[None] for p in proms])
+            pays1 = np.stack([p.get() for p in proms])
             proms = [sched.schedule(p) for p in profs]
-            pays2 = np.concatenate([p.get()[None] for p in proms])
-            pays3 = np.concatenate([p.get()[None] for p in proms])
+            pays2 = np.stack([p.get() for p in proms])
+            pays3 = np.stack([p.get() for p in proms])
         assert np.allclose(pays1[profs == 0], 0)
         assert np.allclose(pays2[profs == 0], 0)
         assert np.allclose(pays2, pays3)
@@ -112,9 +112,9 @@ def test_existing_game():
             game, egta, sim['id'], 1, {}, 1, 25, 0, 0, game_id=eogame['id'])
         with sched:
             proms = [sched.schedule(p) for p in profs]
-            pays1 = np.concatenate([p.get()[None] for p in proms])
+            pays1 = np.stack([p.get() for p in proms])
             proms = [sched.schedule(p) for p in profs]
-            pays2 = np.concatenate([p.get()[None] for p in proms])
+            pays2 = np.stack([p.get() for p in proms])
         assert np.allclose(pays1[profs == 0], 0)
         assert np.allclose(pays2[profs == 0], 0)
         assert np.allclose(pays1, pays2)
@@ -159,3 +159,24 @@ def test_exception_in_schedule():
             time.sleep(1)
             with pytest.raises(TimeoutError):
                 sched.schedule(prof)
+
+
+def test_scheduler_deactivate():
+    game = rsgame.emptygame([4, 4], [11, 11])
+
+    with mockserver.Server() as server, api.EgtaOnlineApi() as egta:
+        # Setup egta
+        sim = egta.get_simulator(server.create_simulator('sim', '1'))
+        sim.add_dict({role: strats for role, strats
+                      in zip(game.role_names, game.strat_names)})
+
+        # Schedule all new profiles and verify it works
+        # This first time should have to wait to schedule more
+        with eosched.EgtaOnlineScheduler(
+                game, egta, sim['id'], 1, {}, 1, 10, 0, 0) as sched:
+            # Deactivate scheduler
+            next(egta.get_generic_schedulers()).deactivate()
+            # Wait to check that it's deactivate
+            time.sleep(1)
+            with pytest.raises(AssertionError):
+                sched.schedule(game.random_profile())
