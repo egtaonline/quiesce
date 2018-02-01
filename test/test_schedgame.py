@@ -57,7 +57,8 @@ def test_random_complete_dev(players, strats, _):
         supp = mix > 0
         devs, jac = sgame.deviation_payoffs(mix, jacobian=True)
         assert not np.isnan(devs).any()
-        assert not np.isnan(jac).any()
+        assert not np.isnan(jac[supp]).any()
+        assert np.isnan(jac[~supp]).all()
         for r in range(sgame.num_roles):
             mask = r == sgame.role_indices
             rdevs = sgame.deviation_payoffs(mix, role_index=r)

@@ -1,5 +1,5 @@
-import mock
 import threading
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -20,16 +20,18 @@ games = [
     ([1, 2], [2, 1]),
     ([2, 2], [2, 2]),
     ([3, 2], [2, 3]),
+    ([1, 1, 1], [2, 2, 2]),
 ]
 
 
-def verify_dist_thresh(eqa, thresh=1e-3):
+def verify_dist_thresh(eqa, thresh=0.1):
     for i, eqm in enumerate(eqa[:-1], 1):
         assert np.all(thresh ** 2 <= np.sum((eqm - eqa[i:]) ** 2, 1))
 
 
 @pytest.mark.parametrize('players,strats', games)
-def test_innerloop_simple(players, strats):
+@pytest.mark.parametrize('_', range(1))
+def test_innerloop_simple(players, strats, _):
     sgame = gamegen.samplegame(players, strats)
     with gamesched.SampleGameScheduler(sgame) as sched:
         eqa = innerloop.inner_loop(schedgame.schedgame(sched))
@@ -43,7 +45,7 @@ def test_innerloop_game(players, strats):
         eqas = innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqas)
     eqag = innerloop.inner_loop(game)
-    equality = np.isclose(eqas, eqag[:, None]).all(2)
+    equality = np.isclose(eqas, eqag[:, None], atol=1e-3).all(2)
     assert equality.any(1).all() and equality.any(0).all()
 
 
@@ -167,6 +169,15 @@ def test_nash_failure():
     with gamesched.RsGameScheduler(game) as sched:
         eqa = innerloop.inner_loop(schedgame.schedgame(sched), regret_thresh=0)
     assert not eqa.size
+
+
+@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('_', range(5))
+def test_at_least_one(players, strats, _):
+    """inner loop should always find one equilibrium with at_least one"""
+    game = gamegen.game(players, strats)
+    eqa = innerloop.inner_loop(game, at_least_one=True)
+    assert eqa.size
 
 
 class SchedulerException(Exception):

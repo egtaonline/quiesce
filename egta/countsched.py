@@ -1,3 +1,5 @@
+import threading
+
 import numpy as np
 
 from egta import profsched
@@ -41,11 +43,13 @@ class _CountPromise(profsched.Promise):
         self._proms = proms
         self._value = val
         self._unset = True
+        self._lock = threading.Lock()
 
     def get(self):
-        if self._unset:
-            for i, prom in enumerate(self._proms, 1):
-                self._value += (prom.get() - self._value) / i
-            self._value.setflags(write=False)
-            self._unset = False
+        with self._lock:
+            if self._unset:
+                for i, prom in enumerate(self._proms, 1):
+                    self._value += (prom.get() - self._value) / i
+                self._value.setflags(write=False)
+                self._unset = False
         return self._value

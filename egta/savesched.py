@@ -1,4 +1,5 @@
 import itertools
+import threading
 
 import numpy as np
 from gameanalysis import paygame
@@ -54,12 +55,14 @@ class _SavePromise(profsched.Promise):
         self._profile = profile
         self._promise = promise
         self._saved = False
+        self._lock = threading.Lock()
 
     def get(self):
         payoff = self._promise.get()
-        if not self._saved:
-            payoffs = self._data.setdefault(
-                utils.hash_array(self._profile), [])
-            payoffs.append(payoff)
-            self._saved = True
+        with self._lock:
+            if not self._saved:
+                payoffs = self._data.setdefault(
+                    utils.hash_array(self._profile), [])
+                payoffs.append(payoff)
+                self._saved = True
         return payoff

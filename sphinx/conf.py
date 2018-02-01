@@ -17,10 +17,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import datetime
-import mock
 import sys
 from os import path
 from setuptools import config
+from unittest import mock
 
 from sphinx import apidoc
 

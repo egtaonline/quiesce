@@ -13,7 +13,11 @@ _log = logging.getLogger(__name__)
 
 
 class SchedulerGame(rsgame.CompleteGame):
-    """FIXME"""
+    """A game with profiles backed lazily by a scheduler
+
+    This only samples a profile once for each payoff data. To gather more
+    profiles back this with a count scheduler.
+    """
 
     def __init__(self, role_names, strat_names, role_players, sched, rest,
                  scale, offset):
@@ -24,13 +28,13 @@ class SchedulerGame(rsgame.CompleteGame):
         self._offset = offset
 
     def deviation_payoffs(self, mix, *, jacobian=False, role_index=None):
+        game = self._sched.get_deviations(
+            self._rest, mix > 0, role_index)
         if jacobian:
-            # If we want jacobian information, we need the whole game
-            game = paygame.game_copy(self)
-            return game.deviation_payoffs(mix, jacobian=True)
+            dev, jac = game.deviation_payoffs(mix, jacobian=True)
+            return (self._offset + self._scale * dev,
+                    self._scale[:, None] * jac)
         else:
-            game = self._sched.get_deviations(
-                self._rest, mix > 0, role_index)
             return self._offset + self._scale * game.deviation_payoffs(mix)
 
     def get_payoffs(self, profs):
@@ -89,7 +93,11 @@ def schedgame(sched, red=idr, red_players=None):
 
 
 class _Scheduler(object):
-    """FIXME"""
+    """The underlying scheduler object
+
+    This maintains a mapping of profiles to payoffs such that they're easily
+    queried and returned as games.
+    """
 
     def __init__(self, sched, red=idr, red_players=None):
         self.sched = sched

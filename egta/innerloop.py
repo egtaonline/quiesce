@@ -3,12 +3,12 @@ import logging
 import queue
 import threading
 import time
-import warnings
 
 import numpy as np
 from gameanalysis import collect
 from gameanalysis import nash
 from gameanalysis import paygame
+from gameanalysis import regret
 from gameanalysis import restrict
 
 
@@ -72,11 +72,10 @@ def inner_loop(
     threads = queue.Queue()
     exp_restrictions = collect.BitSet()
     exp_restrictions_lock = threading.Lock()
-    exp_mix = collect.MixtureSet(dist_thresh)
-    exp_mix_lock = threading.Lock()
     backups = [queue.PriorityQueue() for _ in range(game.num_roles)]
-    equilibria = []
-    nash_lock = threading.Lock()  # nash is not thread safe
+    equilibria_lock = threading.Lock()
+    equilibria = collect.WeightedSimilaritySet(
+        lambda a, b: np.linalg.norm(a - b) < dist_thresh)
     exceptions = []
 
     # Handle case where game might not have role_index key word
@@ -99,27 +98,25 @@ def inner_loop(
 
     def run_restriction(rest):
         try:
+            _log.info(
+                "scheduling profiles from restricted strategies %s",
+                game.restriction_to_repr(rest))
+            # TODO For anything but a SchedulerGame, this is a waste, but it
+            # also potentially speeds up nash computation for Scheduler game.
             data = paygame.game_copy(game.restrict(rest))
-            with nash_lock:
-                with warnings.catch_warnings():
-                    # XXX For some reason, line-search in optimize throws a
-                    # run-time warning when things get very small negative.
-                    # This is potentially a error with the way we compute
-                    # gradients, but it's not reproducible, so we ignore it.
-                    warnings.simplefilter('ignore', RuntimeWarning)
-                    start = time.time()
-                    eqa = restrict.translate(
-                        nash.mixed_nash(
-                            data, regret_thresh=regret_thresh,
-                            dist_thresh=dist_thresh,
-                            at_least_one=at_least_one),
-                        rest)
-                    duration = time.time() - start
-                    if duration > 600:  # pragma: no cover
-                        _log.warning(
-                            'equilibrium finding took %.0f seconds in '
-                            'restricted game %s', duration,
-                            game.restriction_to_repr(rest))
+            start = time.time()
+            eqa = restrict.translate(
+                nash.mixed_nash(
+                    data, regret_thresh=regret_thresh,
+                    dist_thresh=dist_thresh,
+                    at_least_one=at_least_one),
+                rest)
+            duration = time.time() - start
+            if duration > 600:  # pragma: no cover
+                _log.warning(
+                    "equilibrium finding took %.0f seconds in "
+                    "restricted game %s", duration,
+                    game.restriction_to_repr(rest))
             if eqa.size:
                 for eqm in eqa:
                     add_deviations(eqm, init_role_dev)
@@ -135,10 +132,7 @@ def inner_loop(
             exceptions.append(ex)
 
     def add_deviations(mix, role_index):
-        with exp_mix_lock:
-            unseen = ((role_index is not None and role_index > 0)
-                      or exp_mix.add(mix))
-        if unseen and not exceptions:
+        if not exceptions:
             thread = threading.Thread(
                 target=lambda: run_deviations(mix, role_index))
             thread.start()
@@ -147,16 +141,24 @@ def inner_loop(
     def run_deviations(mix, role_index):
         try:
             support = mix > 0
+            _log.info(
+                "scheduling deviations from mixture %s%s",
+                game.mixture_to_repr(mix),
+                "" if role_index is None
+                else " to role {}" + game.role_names[role_index])
             devs = deviation_payoffs(mix, role_index)
             exp = np.add.reduceat(devs * mix, game.role_starts)
             gains = devs - exp.repeat(game.num_role_strats)
             if role_index is None:
                 if np.all(gains <= regret_thresh):  # Found equilibrium
-                    _log.warning('found equilibrium %s with regret %f',
-                                 game.mixture_to_repr(mix),
-                                 gains.max())
-                    equilibria.append(mix)  # atomic
+                    reg = gains.max()
+                    with equilibria_lock:
+                        added = equilibria.add(mix, reg)
+                    if added:
+                        _log.warning('found equilibrium %s with regret %f',
+                                     game.mixture_to_repr(mix), reg)
                 else:
+                    gains[support] = np.nan
                     for ri, rgains in enumerate(np.split(
                             gains, game.role_starts[1:])):
                         queue_restrictions(support, rgains, ri)
@@ -168,21 +170,27 @@ def inner_loop(
                     if role_index < game.num_roles:  # Explore next deviation
                         add_deviations(mix, role_index)
                     else:  # found equilibrium
+                        # This should not require scheduling as to get here all
+                        # deviations have to be scheduled
+                        reg = regret.mixture_regret(game, mix)
                         _log.warning('found equilibrium %s with regret %f',
-                                     game.mixture_to_repr(mix),
-                                     gains.max())
-                        equilibria.append(mix)  # atomic
+                                     game.mixture_to_repr(mix), reg)
+                        with equilibria_lock:
+                            equilibria.add(mix, reg)
                 else:
+                    gains[support] = np.nan
                     queue_restrictions(support, rgains, role_index)
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
     def queue_restrictions(support, role_gains, role_index):
+        if np.split(support, game.role_starts[1:])[role_index].all():
+            return  # Can't deviate
+
         rs = game.role_starts[role_index]
         back = backups[role_index]
 
-        # Handle best response
-        br = np.argmax(role_gains)
+        br = np.nanargmax(role_gains)
         if (role_gains[br] > regret_thresh
                 and support.sum() < restricted_game_size):
             br_sub = support.copy()
@@ -192,46 +200,67 @@ def inner_loop(
             br = None  # Add best response to backup
 
         for si, gain in enumerate(role_gains):
-            if si == br:
+            if si == br or np.isnan(gain) or gain <= 0:
                 continue
             sub = support.copy()
             sub[rs + si] = True
             back.put((-gain, id(sub), sub))  # id for tie-breaking
 
     def join_threads():
-        try:
-            while True:
-                threads.get_nowait().join()
-                if exceptions:
-                    raise exceptions[0]
-        except queue.Empty:
-            pass
+        while not threads.empty():
+            threads.get().join()
+            if exceptions:
+                raise exceptions[0]
 
     try:
         # Quiesce first time
-        for sub in initial_restrictions:
-            if np.all(np.add.reduceat(sub, game.role_starts) == 1):
+        for rest in initial_restrictions:
+            if np.all(np.add.reduceat(rest, game.role_starts) == 1):
                 # Pure restriction, so we can skip right to deviations
-                add_deviations(sub.astype(float), init_role_dev)
+                add_deviations(rest.astype(float), init_role_dev)
             else:
                 # Not pure, so equilibria are not obvious, schedule restriction
                 # instead
-                add_restriction(sub)
+                add_restriction(rest)
         join_threads()
 
         # Repeat with backups until found all
         while (len(equilibria) < num_equilibria
-               and not all(q.empty() for q in backups)):
-            for back in backups:
+               and (not all(q.empty() for q in backups) or
+                    not next(iter(exp_restrictions)).all())):
+            _log.warning(
+                "scheduling backup restrictions. This only happens when "
+                "quiesce criteria could not be met with current maximum "
+                "restriction size (%d). This probably means that wither the "
+                "maximum restriction size should be increased. If this is "
+                "happening frequently, increasing the number of backups taken "
+                "at a time might be desired (currently %s).",
+                restricted_game_size, num_backups)
+            for r, back in enumerate(backups):
                 for _ in range(num_backups):
-                    if back.empty():
-                        break  # pragma: no cover
-                    add_restriction(back.get()[2])
+                    # First try from backups
+                    if not back.empty():
+                        add_restriction(back.get()[-1])
+                        continue
+                    # Else pick unexplored subgames
+                    rest = None
+                    with exp_restrictions_lock:
+                        for mask in exp_restrictions:
+                            rmask = np.split(mask, game.role_starts[1:])[r]
+                            if not rmask.all():
+                                rest = mask.copy()
+                                break
+                    if rest is not None:
+                        # TODO might be ideal if this is random, but it might
+                        # make games not quiesce reliably
+                        s = np.split(rest, game.role_starts[1:])[r].argmin()
+                        rest[game.role_starts[r] + s] = True
+                        add_restriction(rest)
             join_threads()
 
         # Return equilibria
         if equilibria:
-            return np.stack(equilibria)
+            return np.stack([eqm for eqm, _ in equilibria])
         else:
             return np.empty((0, game.num_strats))  # pragma: no cover
 

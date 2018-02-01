@@ -19,12 +19,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
     Parameters
     ----------
+    game : RsGame
+        The gameanalysis basegame representing the game to schedule.
     api : EgtaOnlineApi
         The api object to be uased to query EGTA Online.
     sim_id : int
         The id of the egtaonline simulator to use.
-    game : RsGame
-        The gameanalysis basegame representing the game to schedule.
     simultaneous_obs : int
         The number of simultaneous observations to schedule at a time. EGTA
         Online will use this when scheduling.
@@ -176,6 +176,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         try:
             while not self._thread_timeout_lock.acquire(
                     True, self._sleep_time):
+                with self._runprof_lock:
+                    if self._num_running_profiles == 0:
+                        _log.info("nothing left to schedule")
+                        continue
                 # First update requirements and mark completed
                 _log.info("query scheduler %d", self._sched['id'])
                 info = self._sched.get_requirements()
@@ -328,11 +332,13 @@ class _EgtaOnlinePromise(profsched.Promise):
         self._val = None
         self._queue = que
         self._sched = sched
+        self._lock = threading.Lock()
 
     def get(self):
-        if self._val is None:
-            self._val = self._queue.get()
-            self._queue.task_done()
+        with self._lock:
+            if self._val is None:
+                self._val = self._queue.get()
+                self._queue.task_done()
         if self._sched._exception is not None:
             raise self._sched._exception
         return self._val

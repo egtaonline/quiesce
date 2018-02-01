@@ -16,13 +16,13 @@ def add_parser(subparsers):
         'eo', help="""Schedule simulations through egta online""",
         description="""Sample profiles from egta online.""")
     parser.add_argument(
-        'sim_memory', metavar='sim-memory-mb', type=int, help="""Maximum memory
+        'sim_memory', metavar='<sim-memory-mb>', type=int, help="""Maximum memory
         needed to run simulation. Standard limit per core is 4096, but if your
         simulation needs less, you should request less. Note, that if you set
         it too low you'll get biased samples for simulations that require less
         memory to run which could be very bad.""")
     parser.add_argument(
-        'sim_time', metavar='sim-time-sec', type=int, help="""Maximum amount of
+        'sim_time', metavar='<sim-time-sec>', type=int, help="""Maximum amount of
         time needed to run a single simulation.  Longer times will result in
         simulations taking longer to schedule, but shorter times could result
         in jobs being canceled from going over time which will bias payoff
@@ -37,11 +37,11 @@ def add_parser(subparsers):
         simulator to use. If a game id was specified the simulator id will be
         looked up, but it will take a bit longer.""")
     parser.add_argument(
-        '--sleep', '-s', metavar='<sleep-seconds>', default=600, type=int,
+        '--sleep', '-s', metavar='<sleep-seconds>', default=600, type=float,
         help="""Amount of time to sleep in seconds while waiting for output
         from the simulator. Too long and the script will be paused waiting for
         a response from the simulator, too short and a lof of cpu cycles will
-        be wasted checking an empty buffer. (default: %(default)d)""")
+        be wasted checking an empty buffer. (default: %(default)g)""")
     parser.add_argument(
         '--max-schedule', metavar='<observations>', default=100, type=int,
         help="""The maximum number of observations to schedule simultaneously.
@@ -51,18 +51,16 @@ def add_parser(subparsers):
 
 
 def create_scheduler(game, args, configuration=None, simname=None, **_):
-    assert configuration is not None or args.conf is not None, \
-        "`conf` must be specified or supplied in the game"
+    assert (configuration is not None) == (args.conf is None), \
+        "`conf` must be specified or supplied in the game, but not both"
     assert simname is not None or args.sim_id is not None, \
         "`sim-id` must be specified or supplied in the game"
     if args.conf is not None:
         configuration = json.load(args.conf)
 
     if args.sim_id is None:
-        with api.EgtaOnlineApi(auth_token=args.auth_string) as ea:
-            args.sim_id = next((
-                s['id'] for s in ea.get_simulators()
-                if '{}-{}'.format(s['name'], s['version']) == simname), None)
+        with api.EgtaOnlineApi(auth_token=args.auth_string) as egta:
+            args.sim_id = egta.get_simulator(*simname.split('-', 1))['id']
     if args.sim_id is None:  # pragma: no cover
         _log.critical("couldn't find simulator with name \"{}\"".format(
             simname))
@@ -75,14 +73,14 @@ def create_scheduler(game, args, configuration=None, simname=None, **_):
 
 
 class ApiWrapper(eosched.EgtaOnlineScheduler):
-    def __init__(self, api, *args, **kwargs):
-        super().__init__(api, *args, **kwargs)
-        self._enter_api = api
+    def __init__(self, game, api, *args, **kwargs):
+        super().__init__(game, api, *args, **kwargs)
+        self.api = api
 
     def __enter__(self):
-        self._enter_api.__enter__()
+        self.api.__enter__()
         return super().__enter__()
 
     def __exit__(self, *args, **kwargs):
         super().__exit__(*args, **kwargs)
-        self._enter_api.__exit__(*args, **kwargs)
+        self.api.__exit__(*args, **kwargs)

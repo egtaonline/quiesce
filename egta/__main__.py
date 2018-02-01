@@ -18,6 +18,7 @@ from egta.script import eosched
 from egta.script import gamesched
 from egta.script import innerloop
 from egta.script import simsched
+from egta.script import trace
 from egta.script import zipsched
 
 
@@ -28,7 +29,7 @@ _log = logging.getLogger(__name__)
 # egta online, potentially using spark
 # TODO Add more efficient regret / deviation gains scheduler
 
-def main():
+def main(*argv):
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
         method and a profile scheduler must be specified. Each element
@@ -94,7 +95,7 @@ def main():
     eq_methods = parser.add_subparsers(
         title='operations', dest='method', metavar='<operation>', help="""The
         operation to run on the game. Available commands are:""")
-    for module in [innerloop, brute, bootstrap]:
+    for module in [innerloop, brute, bootstrap, trace]:
         method = module.add_parser(eq_methods)
         method.run = module.run
 
@@ -108,7 +109,7 @@ def main():
             sched.create_scheduler = module.create_scheduler
 
     # Parse args and process
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     method = eq_methods.choices[args.method]
     sched = method.sched.choices[args.scheduler]
 
@@ -187,4 +188,6 @@ def main():
             exc_type, exc_value, exc_traceback)))
         raise ex
 
-# Empty line to stop vim from interpreting last except as a modeline
+
+def main_entry_point():
+    return main(*sys.argv[1:])  # pragma: no cover

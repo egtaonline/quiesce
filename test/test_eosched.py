@@ -173,10 +173,13 @@ def test_scheduler_deactivate():
         # Schedule all new profiles and verify it works
         # This first time should have to wait to schedule more
         with eosched.EgtaOnlineScheduler(
-                game, egta, sim['id'], 1, {}, 1, 10, 0, 0) as sched:
+                game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
             # Deactivate scheduler
-            next(egta.get_generic_schedulers()).deactivate()
+            for esched in egta.get_generic_schedulers():
+                esched.deactivate()
+            # Schedule a profile so that requirements are checked
+            sched.schedule(game.random_profile())
             # Wait to check that it's deactivate
-            time.sleep(1)
+            time.sleep(.5)
             with pytest.raises(AssertionError):
                 sched.schedule(game.random_profile())

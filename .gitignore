@@ -20,5 +20,6 @@
 # Python #
 ##########
 /pip-selfcheck.json
-__pycache__
 /dist
+/.pytest_cache
+__pycache__
