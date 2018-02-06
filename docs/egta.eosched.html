@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.eosched module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <title>egta.eosched module &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.0.23',
+        VERSION:     '0.0.24',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -42,7 +42,7 @@
         <li class="right" >
           <a href="egta.countsched.html" title="egta.countsched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -56,7 +56,7 @@
 <span id="egta-eosched-module"></span><h1>egta.eosched module<a class="headerlink" href="#module-egta.eosched" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="egta.eosched.EgtaOnlineScheduler">
-<em class="property">class </em><code class="descclassname">egta.eosched.</code><code class="descname">EgtaOnlineScheduler</code><span class="sig-paren">(</span><em>game</em>, <em>api</em>, <em>sim_id</em>, <em>simultanious_obs</em>, <em>configuration</em>, <em>sleep_time</em>, <em>max_scheduled</em>, <em>obs_memory</em>, <em>obs_time</em>, <em>game_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/eosched.html#EgtaOnlineScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.eosched.EgtaOnlineScheduler" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">egta.eosched.</code><code class="descname">EgtaOnlineScheduler</code><span class="sig-paren">(</span><em>game</em>, <em>api</em>, <em>sim_id</em>, <em>simultaneous_obs</em>, <em>configuration</em>, <em>sleep_time</em>, <em>max_scheduled</em>, <em>obs_memory</em>, <em>obs_time</em>, <em>game_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/eosched.html#EgtaOnlineScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.eosched.EgtaOnlineScheduler" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><code class="xref py py-class docutils literal"><span class="pre">egta.profsched.Scheduler</span></code></a></p>
 <p>A profile scheduler that schedules through egta online</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -64,11 +64,11 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>game</strong> (<em>RsGame</em>) – The gameanalysis basegame representing the game to schedule.</li>
 <li><strong>api</strong> (<em>EgtaOnlineApi</em>) – The api object to be uased to query EGTA Online.</li>
 <li><strong>sim_id</strong> (<em>int</em>) – The id of the egtaonline simulator to use.</li>
-<li><strong>game</strong> (<em>RsGame</em>) – The gameanalysis basegame representing the game to schedule.</li>
-<li><strong>simultanious_obs</strong> (<em>int</em>) – The number of simultanious observations to schedule at a time.
-Egtaonline will use this when scheduling.</li>
+<li><strong>simultaneous_obs</strong> (<em>int</em>) – The number of simultaneous observations to schedule at a time. EGTA
+Online will use this when scheduling.</li>
 <li><strong>configuration</strong> (<em>{key: value}</em>) – Dictionary of configuration to use with the scheduler. Any fields that
 are omitted will be filled in by the defaults specified in the
 simulator.</li>
@@ -151,7 +151,7 @@ initial profile data.</li>
         <li class="right" >
           <a href="egta.countsched.html" title="egta.countsched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>

@@ -1,0 +1,188 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.trace &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.24',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for egta.trace</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">queue</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">merge</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
+
+<span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">innerloop</span>
+
+
+<span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="c1"># TODO Expose max step, make regret_thresh an argument and append it to</span>
+<span class="c1"># innerloop_args</span>
+<div class="viewcode-block" id="trace_equilibria"><a class="viewcode-back" href="../../egta.trace.html#egta.trace.trace_equilibria">[docs]</a><span class="k">def</span> <span class="nf">trace_equilibria</span><span class="p">(</span><span class="n">game1</span><span class="p">,</span> <span class="n">game2</span><span class="p">,</span> <span class="o">**</span><span class="n">innerloop_args</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">game1</span><span class="p">)</span> <span class="o">==</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">game1</span><span class="p">)</span>
+    <span class="n">trace_args</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;regret_thresh&#39;</span><span class="p">:</span> <span class="n">innerloop_args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;regret_thresh&#39;</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">}</span>
+
+    <span class="n">threads</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">trace_eqm</span><span class="p">(</span><span class="n">eqm</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Trace an equilibrium in both directions&quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+            <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;tracing equilibrium </span><span class="si">%s</span><span class="s2"> from ratio </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span>
+                      <span class="n">game1</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">eqm</span><span class="p">),</span> <span class="n">t</span><span class="p">)</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">merge</span><span class="o">.</span><span class="n">trace_equilibria</span><span class="p">(</span>
+                <span class="n">game1</span><span class="p">,</span> <span class="n">game2</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">eqm</span><span class="p">,</span> <span class="o">**</span><span class="n">trace_args</span><span class="p">))</span>
+
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">run</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">thread</span>
+
+    <span class="c1"># First find initial equilibria in each game</span>
+    <span class="k">def</span> <span class="nf">init_eqa</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find the initial equilibria&quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+            <span class="n">eqa</span> <span class="o">=</span> <span class="n">innerloop</span><span class="o">.</span><span class="n">inner_loop</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="o">**</span><span class="n">innerloop_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">eqa</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;found no equilibria for t: </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">eqm</span> <span class="ow">in</span> <span class="n">eqa</span><span class="p">:</span>
+                <span class="n">threads</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">trace_eqm</span><span class="p">(</span><span class="n">eqm</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">res</span><span class="p">))</span>
+
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">run</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">threads</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
+
+    <span class="n">traces1</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">traces2</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">init_eqa</span><span class="p">(</span><span class="n">game1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">traces1</span><span class="p">)</span>
+    <span class="n">init_eqa</span><span class="p">(</span><span class="n">game2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">traces2</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">threads</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+        <span class="n">threads</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="c1"># Now take the mid region and continue to trace outward from the midpoint</span>
+    <span class="c1"># of an unknown region, and then continue tracing if there are unexplored</span>
+    <span class="c1"># regions.</span>
+    <span class="n">traces</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">traces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">traces1</span><span class="p">)</span>
+    <span class="n">traces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">traces2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">init_mid</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">upper</span> <span class="o">&lt;</span> <span class="n">lower</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">lower</span> <span class="o">+</span> <span class="n">upper</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+            <span class="n">eqa</span> <span class="o">=</span> <span class="n">innerloop</span><span class="o">.</span><span class="n">inner_loop</span><span class="p">(</span>
+                <span class="n">merge</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">game1</span><span class="p">,</span> <span class="n">game2</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="o">**</span><span class="n">innerloop_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">eqa</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;found no equilibria for t: </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                <span class="k">return</span>
+
+            <span class="n">trs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">thrds</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">eqm</span> <span class="ow">in</span> <span class="n">eqa</span><span class="p">:</span>
+                <span class="n">thrds</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">trace_eqm</span><span class="p">(</span><span class="n">eqm</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">trs</span><span class="p">))</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">thrds</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="n">thrds</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="n">traces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">trs</span><span class="p">)</span>
+
+            <span class="n">lupper</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">trs</span><span class="p">)</span>
+            <span class="n">ulower</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">trs</span><span class="p">)</span>
+            <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;traced </span><span class="si">%g</span><span class="s2"> out to </span><span class="si">%g</span><span class="s2"> - </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">lupper</span><span class="p">,</span> <span class="n">ulower</span><span class="p">)</span>
+
+            <span class="n">init_mid</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">lupper</span><span class="p">)</span>
+            <span class="n">init_mid</span><span class="p">(</span><span class="n">ulower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">run</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">threads</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
+
+    <span class="n">init_mid</span><span class="p">(</span><span class="nb">max</span><span class="p">((</span><span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">traces1</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+             <span class="nb">min</span><span class="p">((</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">traces2</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">threads</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+        <span class="n">threads</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tr</span><span class="p">:</span> <span class="p">(</span><span class="n">tr</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">tr</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+    </div>
+  </body>
+</html>

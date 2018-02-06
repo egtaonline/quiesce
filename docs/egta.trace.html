@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.countsched module &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
+    <title>egta.trace module &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -23,8 +23,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="egta.eosched module" href="egta.eosched.html" />
-    <link rel="prev" title="egta.bootstrap module" href="egta.bootstrap.html" /> 
+    <link rel="next" title="egta.utils module" href="egta.utils.html" />
+    <link rel="prev" title="egta.simsched module" href="egta.simsched.html" /> 
   </head>
   <body>
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,10 +37,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="egta.eosched.html" title="egta.eosched module"
+          <a href="egta.utils.html" title="egta.utils module"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="egta.bootstrap.html" title="egta.bootstrap module"
+          <a href="egta.simsched.html" title="egta.simsched module"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
@@ -52,37 +52,12 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-egta.countsched">
-<span id="egta-countsched-module"></span><h1>egta.countsched module<a class="headerlink" href="#module-egta.countsched" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="egta.countsched.CountScheduler">
-<em class="property">class </em><code class="descclassname">egta.countsched.</code><code class="descname">CountScheduler</code><span class="sig-paren">(</span><em>sched</em>, <em>count</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/countsched.html#CountScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.countsched.CountScheduler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><code class="xref py py-class docutils literal"><span class="pre">egta.profsched.Scheduler</span></code></a></p>
-<p>A scheduler that wraps each profile in the mean of n profiles</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>sched</strong> (<a class="reference internal" href="egta.profsched.html#egta.profsched.Scheduler" title="egta.profsched.Scheduler"><em>Scheduler</em></a>) – The base scheduler that generates payoffs.</li>
-<li><strong>count</strong> (<em>int &gt; 0</em>) – The number of times a scheduler in the base scheduler should be sampled
-for each payoff returned by this scheduler.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="egta.countsched.CountScheduler.game">
-<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/countsched.html#CountScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.countsched.CountScheduler.game" title="Permalink to this definition">¶</a></dt>
+  <div class="section" id="module-egta.trace">
+<span id="egta-trace-module"></span><h1>egta.trace module<a class="headerlink" href="#module-egta.trace" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="egta.trace.trace_equilibria">
+<code class="descclassname">egta.trace.</code><code class="descname">trace_equilibria</code><span class="sig-paren">(</span><em>game1</em>, <em>game2</em>, <em>**innerloop_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/trace.html#trace_equilibria"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.trace.trace_equilibria" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="method">
-<dt id="egta.countsched.CountScheduler.schedule">
-<code class="descname">schedule</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/countsched.html#CountScheduler.schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.countsched.CountScheduler.schedule" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
 
 </div>
 
@@ -93,15 +68,15 @@ for each payoff returned by this scheduler.</li>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="egta.bootstrap.html"
-                        title="previous chapter">egta.bootstrap module</a></p>
+  <p class="topless"><a href="egta.simsched.html"
+                        title="previous chapter">egta.simsched module</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="egta.eosched.html"
-                        title="next chapter">egta.eosched module</a></p>
+  <p class="topless"><a href="egta.utils.html"
+                        title="next chapter">egta.utils module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/egta.countsched.rst.txt"
+      <li><a href="_sources/egta.trace.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -129,10 +104,10 @@ for each payoff returned by this scheduler.</li>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="egta.eosched.html" title="egta.eosched module"
+          <a href="egta.utils.html" title="egta.utils module"
              >next</a> |</li>
         <li class="right" >
-          <a href="egta.bootstrap.html" title="egta.bootstrap module"
+          <a href="egta.simsched.html" title="egta.simsched module"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 

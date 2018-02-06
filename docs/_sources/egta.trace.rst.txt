@@ -1,0 +1,7 @@
+egta\.trace module
+==================
+
+.. automodule:: egta.trace
+    :members:
+    :undoc-members:
+    :show-inheritance:

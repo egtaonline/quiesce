@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.0.23 documentation</title>
+    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.0.23',
+        VERSION:     '0.0.24',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="egta.profsched module" href="egta.profsched.html" />
+    <link rel="next" title="egta.normsched module" href="egta.normsched.html" />
     <link rel="prev" title="egta.gamesched module" href="egta.gamesched.html" /> 
   </head>
   <body>
@@ -37,12 +37,12 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="egta.profsched.html" title="egta.profsched module"
+          <a href="egta.normsched.html" title="egta.normsched module"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -56,21 +56,20 @@
 <span id="egta-innerloop-module"></span><h1>egta.innerloop module<a class="headerlink" href="#module-egta.innerloop" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
 <dt id="egta.innerloop.inner_loop">
-<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>sched</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.01</em>, <em>max_resamples=10</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>game</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.1</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inner loop a game using a scheduler</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>sched</strong> (<a class="reference internal" href="egta.sparsesched.html#egta.sparsesched.SparseScheduler" title="egta.sparsesched.SparseScheduler"><em>SparseScheduler</em></a>) – The spare scheduler used to generate payoff data for profiles.</li>
+<li><strong>game</strong> (<em>RsGame</em>) – The game to find equilibria in. This function is most useful when game
+is a SchedulerGame, but any complete RsGame will work.</li>
 <li><strong>initial_restriction</strong> (<em>[</em><em>[</em><em>bool</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – Initial restrictions to start inner loop from. If unspecified, every
 pure restriction is used.</li>
 <li><strong>regret_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The maximum regret to consider an equilibrium an equilibrium.</li>
 <li><strong>dist_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The minimum norm between two mixed profiles for them to be considered
 distinct.</li>
-<li><strong>max_resamples</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The maximum number of times to resample a restricted game when no
-equilibria can be found before giving up.</li>
 <li><strong>restricted_game_size</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The maximum restricted game support size with which beneficial
 deviations must be explored. Restricted games with support larger than
 this are queued and only explored in the event that no equilibrium can
@@ -110,8 +109,8 @@ your game, this is relatively reasonable though.</li>
   <p class="topless"><a href="egta.gamesched.html"
                         title="previous chapter">egta.gamesched module</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="egta.profsched.html"
-                        title="next chapter">egta.profsched module</a></p>
+  <p class="topless"><a href="egta.normsched.html"
+                        title="next chapter">egta.normsched module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -143,12 +142,12 @@ your game, this is relatively reasonable though.</li>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="egta.profsched.html" title="egta.profsched module"
+          <a href="egta.normsched.html" title="egta.normsched module"
              >next</a> |</li>
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.23 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>

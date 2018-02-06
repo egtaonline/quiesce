@@ -1,0 +1,7 @@
+egta\.normsched module
+======================
+
+.. automodule:: egta.normsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

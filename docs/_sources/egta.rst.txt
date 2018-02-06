@@ -11,10 +11,12 @@ Submodules
    egta.eosched
    egta.gamesched
    egta.innerloop
+   egta.normsched
    egta.profsched
    egta.savesched
+   egta.schedgame
    egta.simsched
-   egta.sparsesched
+   egta.trace
    egta.utils
    egta.zipsched
 

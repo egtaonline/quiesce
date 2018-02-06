@@ -1,0 +1,7 @@
+egta\.schedgame module
+======================
+
+.. automodule:: egta.schedgame
+    :members:
+    :undoc-members:
+    :show-inheritance:
