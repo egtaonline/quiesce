@@ -59,10 +59,10 @@ def add_parser(subparsers):
         but a warning will be logged if it takes more than five minutes.""")
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
+        '--dpr', metavar='<role:count;role:count,...>', help="""Specify a
         deviation preserving reduction.""")
     reductions.add_argument(
-        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
+        '--hr', metavar='<role:count;role:count,...>', help="""Specify a
         hierarchical reduction.""")
     return parser
 
