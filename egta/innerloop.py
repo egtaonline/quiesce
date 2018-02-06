@@ -231,7 +231,7 @@ def inner_loop(
             _log.warning(
                 "scheduling backup restrictions. This only happens when "
                 "quiesce criteria could not be met with current maximum "
-                "restriction size (%d). This probably means that wither the "
+                "restriction size (%d). This probably means that either the "
                 "maximum restriction size should be increased. If this is "
                 "happening frequently, increasing the number of backups taken "
                 "at a time might be desired (currently %s).",

@@ -84,7 +84,7 @@ def trace_equilibria(game1, game2, **innerloop_args):
 
             lupper = min(t[0] for t, _ in trs)
             ulower = max(t[-1] for t, _ in trs)
-            _log.info("traced %g out to %g - %g", t, lupper, ulower)
+            _log.warning("traced %g out to %g - %g", t, lupper, ulower)
 
             init_mid(lower, lupper)
             init_mid(ulower, upper)
