@@ -11,12 +11,11 @@ from egta import innerloop
 _log = logging.getLogger(__name__)
 
 
-# TODO Expose max step, make regret_thresh an argument and append it to
-# innerloop_args
-def trace_equilibria(game1, game2, **innerloop_args):
+# TODO Expose max step
+def trace_equilibria(game1, game2, regret_thresh=1e-3, **innerloop_args):
     assert rsgame.emptygame_copy(game1) == rsgame.emptygame_copy(game1)
-    trace_args = {
-        'regret_thresh': innerloop_args.get('regret_thresh', 1e-3) / 10}
+    trace_args = dict(regret_thresh=regret_thresh)
+    innerloop_args.update(trace_args)
 
     threads = queue.Queue()
 
@@ -32,38 +31,10 @@ def trace_equilibria(game1, game2, **innerloop_args):
         thread.start()
         return thread
 
-    # First find initial equilibria in each game
-    def init_eqa(game, t, res):
-        """Find the initial equilibria"""
-        def run():
-            eqa = innerloop.inner_loop(game, **innerloop_args)
-            if not eqa.size:  # pragma: no cover
-                _log.warning("found no equilibria for t: %g", t)
-            for eqm in eqa:
-                threads.put(trace_eqm(eqm, t, res))
-
-        thread = threading.Thread(target=run, daemon=True)
-        thread.start()
-        threads.put(thread)
-
-    traces1 = []
-    traces2 = []
-
-    init_eqa(game1, 0, traces1)
-    init_eqa(game2, 1, traces2)
-
-    while not threads.empty():
-        threads.get().join()
-
-    # Now take the mid region and continue to trace outward from the midpoint
-    # of an unknown region, and then continue tracing if there are unexplored
-    # regions.
     traces = []
-    traces.extend(traces1)
-    traces.extend(traces2)
 
     def init_mid(lower, upper):
-        if upper < lower:
+        if upper <= lower:
             return
         t = (lower + upper) / 2
 
@@ -93,8 +64,7 @@ def trace_equilibria(game1, game2, **innerloop_args):
         thread.start()
         threads.put(thread)
 
-    init_mid(max((t[-1] for t, _ in traces1), default=0),
-             min((t[0] for t, _ in traces2), default=1))
+    init_mid(0.0, 1.0)
     while not threads.empty():
         threads.get().join()
 
