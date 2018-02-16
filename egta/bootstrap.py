@@ -1,16 +1,13 @@
 import numpy as np
-from gameanalysis import rsgame
 
 
-def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
+def deviation_payoffs(prof_sched, mix, num, *, boots=0, chunk_size=None):
     """Bootstrap deviation payoffs
 
     Parameters
     ----------
     prof_sched : Scheduler
         The scheduler to sample profiles from.
-    game : RsGame
-        The game defining what's sampled.
     mix : ndarray
         The mixture to calculate the regret of.
     num : int
@@ -42,16 +39,16 @@ def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
         The deviation payoffs for each bootstrap sample.
     """
     assert num > 0, "can't schedule zero samples"
+    mix = np.asarray(mix, float)
     chunk_size = chunk_size or boots * 10 or 1000
-    game = rsgame.emptygame_copy(game)
-    profiles = _chunk_profiles(prof_sched, game, mix, num, chunk_size)
-    devs = np.empty(game.num_strats)
-    mean_devs = np.zeros(game.num_strats)
-    boot_devs = np.zeros((boots, game.num_strats))
+    profiles = _chunk_profiles(prof_sched, mix, num, chunk_size)
+    devs = np.empty(mix.size)
+    mean_devs = np.zeros(mix.size)
+    boot_devs = np.zeros((boots, mix.size))
     remaining = np.empty(boots, int)
     remaining.fill(num)
     for i in range(num):
-        for j in range(game.num_strats):
+        for j in range(mix.size):
             devs[j] = next(profiles)[j]
         mean_devs += (devs - mean_devs) / (i + 1)
         samps = np.random.binomial(remaining, 1 / (num - i))
@@ -61,12 +58,12 @@ def deviation_payoffs(prof_sched, game, mix, num, *, boots=0, chunk_size=None):
     return mean_devs, boot_devs
 
 
-def _chunk_profiles(sched, game, mix, num, chunk_size):
+def _chunk_profiles(sched, mix, num, chunk_size):
     """Return a generator over payoffs that schedules somewhat efficiently"""
     proms = []
     while 0 < num:
-        new_profs = game.random_deviation_profiles(
-            min(num, chunk_size), mix).reshape((-1, game.num_strats))
+        new_profs = sched.game().random_deviation_profiles(
+            min(num, chunk_size), mix).reshape((-1, mix.size))
         num -= chunk_size
         new_proms = [sched.schedule(prof) for prof in new_profs]
         for prom in proms:

@@ -57,8 +57,7 @@ def run(scheduler, args):
         args.boots = 0
     mix = game.mixture_from_json(json.load(args.mixture))
     means, boots = bootstrap.deviation_payoffs(
-        scheduler, game, mix, args.num, boots=args.boots,
-        chunk_size=args.chunk_size)
+        scheduler, mix, args.num, boots=args.boots, chunk_size=args.chunk_size)
 
     exp_means = np.add.reduceat(means * mix, game.role_starts)
     exp_boots = np.add.reduceat(boots * mix, game.role_starts, 1)

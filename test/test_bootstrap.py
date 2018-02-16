@@ -19,7 +19,7 @@ def test_random_mean_reg(players, strats):
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
     with gamesched.RsGameScheduler(game) as sched:
-        mean, boot = bootstrap.deviation_payoffs(sched, game, mix, 20)
+        mean, boot = bootstrap.deviation_payoffs(sched, mix, 20)
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (0, game.num_strats)
 
@@ -31,7 +31,7 @@ def test_random_boot_reg(players, strats):
     devs = game.deviation_payoffs(mix)
     with gamesched.RsGameScheduler(game) as sched:
         mean, boot = bootstrap.deviation_payoffs(
-            sched, game, mix, 20, boots=101, chunk_size=5)
+            sched, mix, 20, boots=101, chunk_size=5)
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (101, game.num_strats)
     # These aren't guaranteed to be false, but it's incredibly unlikely
@@ -46,7 +46,7 @@ def test_random_pure_boot_reg(players, strats):
         for mix in game.pure_mixtures():
             devs = game.deviation_payoffs(mix)
             mean, boot = bootstrap.deviation_payoffs(
-                sched, game, mix, 20, boots=101)
+                sched, mix, 20, boots=101)
             assert np.allclose(devs, mean)
             assert np.allclose(devs, boot)
             assert mean.shape == (game.num_strats,)
