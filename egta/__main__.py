@@ -179,8 +179,9 @@ def main(*argv):
             with open(args.profile_data, 'w') as f:
                 json.dump(gamej, f)
 
-    except KeyboardInterrupt:  # pragma: no cover
+    except KeyboardInterrupt as ex:  # pragma: no cover
         _log.critical('execution interrupted by user')
+        raise ex
 
     except Exception as ex:  # pragma: no cover
         exc_type, exc_value, exc_traceback = sys.exc_info()
