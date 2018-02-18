@@ -36,7 +36,7 @@ def verify_complete_traces(traces):
 # These sometimes take a really long time because of at_least_one and many
 # innerloops. If it takes more than a minute, just give up.
 @utils.warnings_filter(RuntimeWarning)
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(20)
 @pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
 @pytest.mark.parametrize('players,strats', games)
 @pytest.mark.parametrize('_', range(5))
@@ -50,7 +50,7 @@ def test_random_trace_game(players, strats, _):
 # These sometimes take a really long time because of at_least_one and many
 # innerloops. If it takes more than a minute, just give up.
 @utils.warnings_filter(RuntimeWarning)
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(20)
 @pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
 @pytest.mark.parametrize('players,strats', games)
 @pytest.mark.parametrize('_', range(5))
