@@ -95,6 +95,7 @@ def inner_loop(
                 daemon=True)
             thread.start()
             threads.put(thread)
+        return schedule
 
     def run_restriction(rest):
         try:
@@ -231,16 +232,18 @@ def inner_loop(
             _log.warning(
                 "scheduling backup restrictions. This only happens when "
                 "quiesce criteria could not be met with current maximum "
-                "restriction size (%d). This probably means that either the "
+                "restriction size (%d). This probably means that the "
                 "maximum restriction size should be increased. If this is "
                 "happening frequently, increasing the number of backups taken "
                 "at a time might be desired (currently %s).",
                 restricted_game_size, num_backups)
             for r, back in enumerate(backups):
-                for _ in range(num_backups):
+                to_schedule = num_backups
+                while to_schedule > 0:
                     # First try from backups
                     if not back.empty():
-                        add_restriction(back.get()[-1])
+                        # This won't count if restriction already explored
+                        to_schedule -= add_restriction(back.get()[-1])
                         continue
                     # Else pick unexplored subgames
                     rest = None
@@ -256,6 +259,9 @@ def inner_loop(
                         s = np.split(rest, game.role_starts[1:])[r].argmin()
                         rest[game.role_starts[r] + s] = True
                         add_restriction(rest)
+                        to_schedule -= 1
+                    else:
+                        to_schedule = 0
             join_threads()
 
         # Return equilibria
