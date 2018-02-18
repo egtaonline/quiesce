@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.bootstrap &#8212; Empirical Game-Theoretic Analysis 0.0.24 documentation</title>
+    <title>egta.bootstrap &#8212; Empirical Game-Theoretic Analysis 0.0.25 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.0.24',
+        VERSION:     '0.0.25',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -34,7 +34,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -46,18 +46,15 @@
             
   <h1>Source code for egta.bootstrap</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
 
 
-<div class="viewcode-block" id="deviation_payoffs"><a class="viewcode-back" href="../../egta.bootstrap.html#egta.bootstrap.deviation_payoffs">[docs]</a><span class="k">def</span> <span class="nf">deviation_payoffs</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">boots</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="deviation_payoffs"><a class="viewcode-back" href="../../egta.bootstrap.html#egta.bootstrap.deviation_payoffs">[docs]</a><span class="k">def</span> <span class="nf">deviation_payoffs</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">boots</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Bootstrap deviation payoffs</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    prof_sched : Scheduler</span>
 <span class="sd">        The scheduler to sample profiles from.</span>
-<span class="sd">    game : RsGame</span>
-<span class="sd">        The game defining what&#39;s sampled.</span>
 <span class="sd">    mix : ndarray</span>
 <span class="sd">        The mixture to calculate the regret of.</span>
 <span class="sd">    num : int</span>
@@ -89,16 +86,16 @@
 <span class="sd">        The deviation payoffs for each bootstrap sample.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">assert</span> <span class="n">num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;can&#39;t schedule zero samples&quot;</span>
+    <span class="n">mix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
     <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="ow">or</span> <span class="n">boots</span> <span class="o">*</span> <span class="mi">10</span> <span class="ow">or</span> <span class="mi">1000</span>
-    <span class="n">game</span> <span class="o">=</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
-    <span class="n">profiles</span> <span class="o">=</span> <span class="n">_chunk_profiles</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">)</span>
-    <span class="n">devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">)</span>
-    <span class="n">mean_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">)</span>
-    <span class="n">boot_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">boots</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span>
+    <span class="n">profiles</span> <span class="o">=</span> <span class="n">_chunk_profiles</span><span class="p">(</span><span class="n">prof_sched</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">)</span>
+    <span class="n">devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">mix</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">mean_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">mix</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">boot_devs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">boots</span><span class="p">,</span> <span class="n">mix</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
     <span class="n">remaining</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
     <span class="n">remaining</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mix</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
             <span class="n">devs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">profiles</span><span class="p">)[</span><span class="n">j</span><span class="p">]</span>
         <span class="n">mean_devs</span> <span class="o">+=</span> <span class="p">(</span><span class="n">devs</span> <span class="o">-</span> <span class="n">mean_devs</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">samps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="n">remaining</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="n">i</span><span class="p">))</span>
@@ -108,12 +105,12 @@
     <span class="k">return</span> <span class="n">mean_devs</span><span class="p">,</span> <span class="n">boot_devs</span></div>
 
 
-<span class="k">def</span> <span class="nf">_chunk_profiles</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_chunk_profiles</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a generator over payoffs that schedules somewhat efficiently&quot;&quot;&quot;</span>
     <span class="n">proms</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">num</span><span class="p">:</span>
-        <span class="n">new_profs</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">random_deviation_profiles</span><span class="p">(</span>
-            <span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">mix</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span>
+        <span class="n">new_profs</span> <span class="o">=</span> <span class="n">sched</span><span class="o">.</span><span class="n">game</span><span class="p">()</span><span class="o">.</span><span class="n">random_deviation_profiles</span><span class="p">(</span>
+            <span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">mix</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mix</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
         <span class="n">num</span> <span class="o">-=</span> <span class="n">chunk_size</span>
         <span class="n">new_proms</span> <span class="o">=</span> <span class="p">[</span><span class="n">sched</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">prof</span><span class="p">)</span> <span class="k">for</span> <span class="n">prof</span> <span class="ow">in</span> <span class="n">new_profs</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">prom</span> <span class="ow">in</span> <span class="n">proms</span><span class="p">:</span>
@@ -151,7 +148,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.24 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
