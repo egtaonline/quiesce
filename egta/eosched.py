@@ -341,4 +341,7 @@ class _EgtaOnlinePromise(profsched.Promise):
                 self._queue.task_done()
         if self._sched._exception is not None:
             raise self._sched._exception
-        return self._val
+        elif self._val is None:
+            raise ValueError("No value returned, likely due to an exception")
+        else:
+            return self._val

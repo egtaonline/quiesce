@@ -192,8 +192,11 @@ class _SimPromise(profsched.Promise):
 
     def get(self):
         self._event.wait()
-        if self._sched._exception is not None:
-            raise self._sched._exception
         assert self._sched._running, \
             "can't get promise when scheduler is not running"
-        return self._value
+        if self._sched._exception is not None:
+            raise self._sched._exception
+        elif self._prof is None:
+            raise ValueError("profile was None, likely due to an exception")
+        else:
+            return self._value
