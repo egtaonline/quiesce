@@ -2,7 +2,7 @@
 import json
 import logging
 
-from gameanalysis import merge
+from gameanalysis import mergegame
 from gameanalysis import reduction
 from gameanalysis import regret
 from gameanalysis import rsgame
@@ -130,7 +130,7 @@ def run(sched, args):
         game1 = schedgame.schedgame(sched1, red, red_players)
         game2 = schedgame.schedgame(sched2, red, red_players)
 
-        traces = trace.trace_equilibria(
+        traces = trace.trace_all_equilibria(
             game1, game2, regret_thresh=args.regret_thresh,
             dist_thresh=args.dist_thresh,
             restricted_game_size=args.max_restrict_size,
@@ -152,7 +152,8 @@ def run(sched, args):
             # serialize trace
             jtrace = []
             for t, eqm in zip(ts, teqa):
-                reg = regret.mixture_regret(merge.merge(game1, game2, t), eqm)
+                reg = regret.mixture_regret(
+                    mergegame.merge(game1, game2, t), eqm)
                 max_reg = max(max_reg, reg)
                 jtrace.append({
                     't': float(t),

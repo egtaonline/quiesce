@@ -2,8 +2,9 @@ import logging
 import queue
 import threading
 
-from gameanalysis import merge
+from gameanalysis import mergegame
 from gameanalysis import rsgame
+from gameanalysis import trace
 
 from egta import innerloop
 
@@ -12,7 +13,7 @@ _log = logging.getLogger(__name__)
 
 
 # TODO Expose max step
-def trace_equilibria(game1, game2, regret_thresh=1e-3, **innerloop_args):
+def trace_all_equilibria(game1, game2, regret_thresh=1e-3, **innerloop_args):
     assert rsgame.emptygame_copy(game1) == rsgame.emptygame_copy(game1)
     trace_args = dict(regret_thresh=regret_thresh)
     innerloop_args.update(trace_args)
@@ -24,7 +25,7 @@ def trace_equilibria(game1, game2, regret_thresh=1e-3, **innerloop_args):
         def run():
             _log.info("tracing equilibrium %s from ratio %g",
                       game1.mixture_to_repr(eqm), t)
-            res.append(merge.trace_equilibria(
+            res.append(trace.trace_equilibria(
                 game1, game2, t, eqm, **trace_args))
 
         thread = threading.Thread(target=run, daemon=True)
@@ -40,7 +41,7 @@ def trace_equilibria(game1, game2, regret_thresh=1e-3, **innerloop_args):
 
         def run():
             eqa = innerloop.inner_loop(
-                merge.merge(game1, game2, t), **innerloop_args)
+                mergegame.merge(game1, game2, t), **innerloop_args)
             if not eqa.size:  # pragma: no cover
                 _log.warning("found no equilibria for t: %g", t)
                 return

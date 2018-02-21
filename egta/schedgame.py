@@ -27,9 +27,30 @@ class SchedulerGame(rsgame.CompleteGame):
         self._scale = scale
         self._offset = offset
 
-    def deviation_payoffs(self, mix, *, jacobian=False, role_index=None):
-        game = self._sched.get_deviations(
-            self._rest, mix > 0, role_index)
+    def deviation_payoffs(self, mix, *, jacobian=False, full_jacobian=False,
+                          role_index=None, **_):
+        """Get deviation payoffs
+
+        Parameters
+        ----------
+        mix : [float]
+            The mixture to get deviations from.
+        jacobian : bool, optional
+            Compute the jacobian with respect to the mixture.
+        full_jacobian : bool
+            By default, the jacobian will only have values where the mixture
+            has support. Enabling this with `jacobian` schedules the full game
+            so that there is full jacobian information.
+        role_index : int or None, optional
+            If specified and a valid role index, this will only get deviation
+            payoffs for that role.
+        """
+        if full_jacobian and jacobian:
+            game = paygame.game_copy(self)
+        else:
+            game = self._sched.get_deviations(
+                self._rest, mix > 0, role_index)
+
         if jacobian:
             dev, jac = game.deviation_payoffs(mix, jacobian=True)
             return (self._offset + self._scale * dev,

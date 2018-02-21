@@ -43,7 +43,7 @@ def verify_complete_traces(traces):
 def test_random_trace_game(players, strats, _):
     game1 = gamegen.game(players, strats)
     game2 = gamegen.game(players, strats)
-    traces = trace.trace_equilibria(game1, game2, at_least_one=True)
+    traces = trace.trace_all_equilibria(game1, game2, at_least_one=True)
     verify_complete_traces(traces)
 
 
@@ -59,7 +59,7 @@ def test_random_trace_sched(players, strats, _):
     game2 = gamegen.game(players, strats)
     with gamesched.RsGameScheduler(game1) as sched1, \
             gamesched.RsGameScheduler(game2) as sched2:
-        traces = trace.trace_equilibria(
+        traces = trace.trace_all_equilibria(
             schedgame.schedgame(sched1), schedgame.schedgame(sched2),
             at_least_one=True)
     verify_complete_traces(traces)
@@ -85,7 +85,7 @@ def test_sparse_trace():
         assert save1.get_samplegame().num_profiles == 11
         assert save2.get_samplegame().num_profiles == 11
 
-        ((s1, *_, e1), _), ((s2, *_, e2), _) = trace.trace_equilibria(
+        ((s1, *_, e1), _), ((s2, *_, e2), _) = trace.trace_all_equilibria(
             sgame1, sgame2)
 
     # Assert that trace found the expected equilibria
