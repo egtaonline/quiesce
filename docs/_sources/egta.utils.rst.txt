@@ -1,5 +1,5 @@
-egta\.utils module
-==================
+egta.utils module
+=================
 
 .. automodule:: egta.utils
     :members:

@@ -1,5 +1,5 @@
-egta\.innerloop module
-======================
+egta.innerloop module
+=====================
 
 .. automodule:: egta.innerloop
     :members:

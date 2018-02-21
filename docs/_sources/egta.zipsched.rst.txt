@@ -1,5 +1,5 @@
-egta\.zipsched module
-=====================
+egta.zipsched module
+====================
 
 .. automodule:: egta.zipsched
     :members:

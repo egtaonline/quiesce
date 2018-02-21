@@ -1,5 +1,5 @@
-egta\.gamesched module
-======================
+egta.gamesched module
+=====================
 
 .. automodule:: egta.gamesched
     :members:

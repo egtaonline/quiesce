@@ -1,5 +1,5 @@
-egta\.countsched module
-=======================
+egta.countsched module
+======================
 
 .. automodule:: egta.countsched
     :members:

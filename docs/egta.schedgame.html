@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.schedgame module &#8212; Empirical Game-Theoretic Analysis 0.0.25 documentation</title>
+    <title>egta.schedgame module &#8212; Empirical Game-Theoretic Analysis 0.0.26 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.0.25',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -25,8 +17,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="egta.simsched module" href="egta.simsched.html" />
     <link rel="prev" title="egta.savesched module" href="egta.savesched.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -42,7 +33,7 @@
         <li class="right" >
           <a href="egta.savesched.html" title="egta.savesched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -57,39 +48,62 @@
 <dl class="class">
 <dt id="egta.schedgame.SchedulerGame">
 <em class="property">class </em><code class="descclassname">egta.schedgame.</code><code class="descname">SchedulerGame</code><span class="sig-paren">(</span><em>role_names</em>, <em>strat_names</em>, <em>role_players</em>, <em>sched</em>, <em>rest</em>, <em>scale</em>, <em>offset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">gameanalysis.rsgame.CompleteGame</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gameanalysis.rsgame.CompleteGame</span></code></p>
 <p>A game with profiles backed lazily by a scheduler</p>
 <p>This only samples a profile once for each payoff data. To gather more
 profiles back this with a count scheduler.</p>
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.deviation_payoffs">
-<code class="descname">deviation_payoffs</code><span class="sig-paren">(</span><em>mix</em>, <em>*</em>, <em>jacobian=False</em>, <em>role_index=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.deviation_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.deviation_payoffs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">deviation_payoffs</code><span class="sig-paren">(</span><em>mix</em>, <em>*</em>, <em>jacobian=False</em>, <em>full_jacobian=False</em>, <em>role_index=None</em>, <em>**_</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.deviation_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.deviation_payoffs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get deviation payoffs</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mix</strong> (<em>[</em><em>float</em><em>]</em>) – The mixture to get deviations from.</li>
+<li><strong>jacobian</strong> (<em>bool</em><em>, </em><em>optional</em>) – Compute the jacobian with respect to the mixture.</li>
+<li><strong>full_jacobian</strong> (<em>bool</em>) – By default, the jacobian will only have values where the mixture
+has support. Enabling this with <cite>jacobian</cite> schedules the full game
+so that there is full jacobian information.</li>
+<li><strong>role_index</strong> (<em>int</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If specified and a valid role index, this will only get deviation
+payoffs for that role.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.get_payoffs">
 <code class="descname">get_payoffs</code><span class="sig-paren">(</span><em>profs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.get_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.get_payoffs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The payoffs for all profiles</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.max_strat_payoffs">
 <code class="descname">max_strat_payoffs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.max_strat_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.max_strat_payoffs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>An upper bound on the payoff for each strategy</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.min_strat_payoffs">
 <code class="descname">min_strat_payoffs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.min_strat_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.min_strat_payoffs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>A lower bound on the payoff for each strategy</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.normalize">
 <code class="descname">normalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.normalize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.normalize" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Return a new game where the max payoff is 1 and min payoff is 0</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="egta.schedgame.SchedulerGame.restrict">
 <code class="descname">restrict</code><span class="sig-paren">(</span><em>rest</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/schedgame.html#SchedulerGame.restrict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.schedgame.SchedulerGame.restrict" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Restrict viable strategies</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -121,12 +135,14 @@ profiles back this with a count scheduler.</p>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -148,13 +164,13 @@ profiles back this with a count scheduler.</p>
         <li class="right" >
           <a href="egta.savesched.html" title="egta.savesched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.0.
     </div>
   </body>
 </html>

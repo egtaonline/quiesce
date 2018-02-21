@@ -1,5 +1,5 @@
-egta\.bootstrap module
-======================
+egta.bootstrap module
+=====================
 
 .. automodule:: egta.bootstrap
     :members:

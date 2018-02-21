@@ -1,5 +1,5 @@
-egta\.schedgame module
-======================
+egta.schedgame module
+=====================
 
 .. automodule:: egta.schedgame
     :members:

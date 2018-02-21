@@ -1,5 +1,5 @@
-egta\.simsched module
-=====================
+egta.simsched module
+====================
 
 .. automodule:: egta.simsched
     :members:

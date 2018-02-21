@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.0.25 documentation</title>
+    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.0.26 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.0.25',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -25,8 +17,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="egta.normsched module" href="egta.normsched.html" />
     <link rel="prev" title="egta.gamesched module" href="egta.gamesched.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -42,7 +33,7 @@
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -56,7 +47,7 @@
 <span id="egta-innerloop-module"></span><h1>egta.innerloop module<a class="headerlink" href="#module-egta.innerloop" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
 <dt id="egta.innerloop.inner_loop">
-<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>game</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.1</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>game</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.1</em>, <em>support_thresh=0.0001</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inner loop a game using a scheduler</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -67,9 +58,14 @@
 is a SchedulerGame, but any complete RsGame will work.</li>
 <li><strong>initial_restriction</strong> (<em>[</em><em>[</em><em>bool</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – Initial restrictions to start inner loop from. If unspecified, every
 pure restriction is used.</li>
-<li><strong>regret_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The maximum regret to consider an equilibrium an equilibrium.</li>
-<li><strong>dist_thresh</strong> (<em>float</em><em>, </em><em>optional</em>) – The minimum norm between two mixed profiles for them to be considered
+<li><strong>regret_thresh</strong> (<em>float &gt; 0</em><em>, </em><em>optional</em>) – The maximum regret to consider an equilibrium an equilibrium.</li>
+<li><strong>dist_thresh</strong> (<em>float &gt; 0</em><em>, </em><em>optional</em>) – The minimum norm between two mixed profiles for them to be considered
 distinct.</li>
+<li><strong>support_thresh</strong> (<em>float &gt; 0</em><em>, </em><em>optional</em>) – Candidate equilibria strategies with probability lower than this will
+be truncated. This is useful because often Nash finding returns
+strategies with very low support, which now mean extra deviating
+strategies need to be sampled. Trimming saves these samples, but may
+increase regret above the threshold.</li>
 <li><strong>restricted_game_size</strong> (<em>int &gt; 0</em><em>, </em><em>optional</em>) – The maximum restricted game support size with which beneficial
 deviations must be explored. Restricted games with support larger than
 this are queued and only explored in the event that no equilibrium can
@@ -120,12 +116,14 @@ your game, this is relatively reasonable though.</li>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -147,13 +145,13 @@ your game, this is relatively reasonable though.</li>
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.0.
     </div>
   </body>
 </html>

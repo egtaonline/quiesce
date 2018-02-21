@@ -1,5 +1,5 @@
-egta\.profsched module
-======================
+egta.profsched module
+=====================
 
 .. automodule:: egta.profsched
     :members:

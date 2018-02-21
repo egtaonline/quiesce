@@ -1,5 +1,5 @@
-egta\.eosched module
-====================
+egta.eosched module
+===================
 
 .. automodule:: egta.eosched
     :members:

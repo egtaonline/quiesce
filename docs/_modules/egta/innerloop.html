@@ -4,27 +4,18 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.innerloop &#8212; Empirical Game-Theoretic Analysis 0.0.25 documentation</title>
+    <title>egta.innerloop &#8212; Empirical Game-Theoretic Analysis 0.0.26 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../../',
-        VERSION:     '0.0.25',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -34,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -68,8 +59,9 @@
 
 <div class="viewcode-block" id="inner_loop"><a class="viewcode-back" href="../../egta.innerloop.html#egta.innerloop.inner_loop">[docs]</a><span class="k">def</span> <span class="nf">inner_loop</span><span class="p">(</span>
         <span class="n">game</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">initial_restrictions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">regret_thresh</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
-        <span class="n">dist_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">restricted_game_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">num_equilibria</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">num_backups</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">devs_by_role</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">at_least_one</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">dist_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">support_thresh</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">restricted_game_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">num_equilibria</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_backups</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">devs_by_role</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">at_least_one</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Inner loop a game using a scheduler</span>
 
 <span class="sd">    Parameters</span>
@@ -80,11 +72,17 @@
 <span class="sd">    initial_restriction : [[bool]], optional</span>
 <span class="sd">        Initial restrictions to start inner loop from. If unspecified, every</span>
 <span class="sd">        pure restriction is used.</span>
-<span class="sd">    regret_thresh : float, optional</span>
+<span class="sd">    regret_thresh : float &gt; 0, optional</span>
 <span class="sd">        The maximum regret to consider an equilibrium an equilibrium.</span>
-<span class="sd">    dist_thresh : float, optional</span>
+<span class="sd">    dist_thresh : float &gt; 0, optional</span>
 <span class="sd">        The minimum norm between two mixed profiles for them to be considered</span>
 <span class="sd">        distinct.</span>
+<span class="sd">    support_thresh : float &gt; 0, optional</span>
+<span class="sd">        Candidate equilibria strategies with probability lower than this will</span>
+<span class="sd">        be truncated. This is useful because often Nash finding returns</span>
+<span class="sd">        strategies with very low support, which now mean extra deviating</span>
+<span class="sd">        strategies need to be sampled. Trimming saves these samples, but may</span>
+<span class="sd">        increase regret above the threshold.</span>
 <span class="sd">    restricted_game_size : int &gt; 0, optional</span>
 <span class="sd">        The maximum restricted game support size with which beneficial</span>
 <span class="sd">        deviations must be explored. Restricted games with support larger than</span>
@@ -138,8 +136,7 @@
             <span class="n">schedule</span> <span class="o">=</span> <span class="n">exp_restrictions</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">schedule</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">exceptions</span><span class="p">:</span>
             <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
-                <span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">run_restriction</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span>
-                <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">run_restriction</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">rest</span><span class="p">,),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
             <span class="n">threads</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">schedule</span>
@@ -151,14 +148,17 @@
                 <span class="n">game</span><span class="o">.</span><span class="n">restriction_to_repr</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
             <span class="c1"># TODO For anything but a SchedulerGame, this is a waste, but it</span>
             <span class="c1"># also potentially speeds up nash computation for Scheduler game.</span>
+            <span class="c1"># The issue comes with computing the jacobian for noncomplete</span>
+            <span class="c1"># mixtures. Scheduler games will return nan jacobians outside of</span>
+            <span class="c1"># support for mixtures to save with sampling deviations.</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">paygame</span><span class="o">.</span><span class="n">game_copy</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
             <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">eqa</span> <span class="o">=</span> <span class="n">restrict</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span>
+            <span class="n">eqa</span> <span class="o">=</span> <span class="n">restrict</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">trim_mixture_support</span><span class="p">(</span>
                 <span class="n">nash</span><span class="o">.</span><span class="n">mixed_nash</span><span class="p">(</span>
                     <span class="n">data</span><span class="p">,</span> <span class="n">regret_thresh</span><span class="o">=</span><span class="n">regret_thresh</span><span class="p">,</span>
                     <span class="n">dist_thresh</span><span class="o">=</span><span class="n">dist_thresh</span><span class="p">,</span>
                     <span class="n">at_least_one</span><span class="o">=</span><span class="n">at_least_one</span><span class="p">),</span>
-                <span class="n">rest</span><span class="p">)</span>
+                <span class="n">thresh</span><span class="o">=</span><span class="n">support_thresh</span><span class="p">),</span> <span class="n">rest</span><span class="p">)</span>
             <span class="n">duration</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
             <span class="k">if</span> <span class="n">duration</span> <span class="o">&gt;</span> <span class="mi">600</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
@@ -167,7 +167,7 @@
                     <span class="n">game</span><span class="o">.</span><span class="n">restriction_to_repr</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">eqa</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">eqm</span> <span class="ow">in</span> <span class="n">eqa</span><span class="p">:</span>
-                    <span class="n">add_deviations</span><span class="p">(</span><span class="n">eqm</span><span class="p">,</span> <span class="n">init_role_dev</span><span class="p">)</span>
+                    <span class="n">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">eqm</span><span class="p">,</span> <span class="n">init_role_dev</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                     <span class="s2">&quot;couldn&#39;t find equilibria in restricted game </span><span class="si">%s</span><span class="s2">. This is &quot;</span>
@@ -179,16 +179,19 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="n">exceptions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">add_deviations</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">exceptions</span><span class="p">:</span>
             <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
-                <span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">run_deviations</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">))</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">run_deviations</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">),</span>
+                <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
             <span class="n">threads</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">run_deviations</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">run_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">):</span>
+        <span class="c1"># We need the restriction here, since trimming support may increase</span>
+        <span class="c1"># regret of strategies in the initial restriction</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">support</span> <span class="o">=</span> <span class="n">mix</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="n">support_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mix</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
                 <span class="s2">&quot;scheduling deviations from mixture </span><span class="si">%s%s</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="n">game</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span>
@@ -198,7 +201,8 @@
             <span class="n">exp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduceat</span><span class="p">(</span><span class="n">devs</span> <span class="o">*</span> <span class="n">mix</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">)</span>
             <span class="n">gains</span> <span class="o">=</span> <span class="n">devs</span> <span class="o">-</span> <span class="n">exp</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">num_role_strats</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">role_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">gains</span> <span class="o">&lt;=</span> <span class="n">regret_thresh</span><span class="p">):</span>  <span class="c1"># Found equilibrium</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">((</span><span class="n">gains</span> <span class="o">&lt;=</span> <span class="n">regret_thresh</span><span class="p">)</span> <span class="o">|</span> <span class="n">rest</span><span class="p">):</span>
+                    <span class="c1"># Found equilibrium</span>
                     <span class="n">reg</span> <span class="o">=</span> <span class="n">gains</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
                     <span class="k">with</span> <span class="n">equilibria_lock</span><span class="p">:</span>
                         <span class="n">added</span> <span class="o">=</span> <span class="n">equilibria</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">reg</span><span class="p">)</span>
@@ -206,17 +210,17 @@
                         <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;found equilibrium </span><span class="si">%s</span><span class="s1"> with regret </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span>
                                      <span class="n">game</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span> <span class="n">reg</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">gains</span><span class="p">[</span><span class="n">support</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
                     <span class="k">for</span> <span class="n">ri</span><span class="p">,</span> <span class="n">rgains</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
                             <span class="n">gains</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
-                        <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">support</span><span class="p">,</span> <span class="n">rgains</span><span class="p">,</span> <span class="n">ri</span><span class="p">)</span>
+                        <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">rgains</span><span class="p">,</span> <span class="n">ri</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">support_size</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># Set role index</span>
                 <span class="n">rgains</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">gains</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">role_index</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">rgains</span> <span class="o">&lt;=</span> <span class="n">regret_thresh</span><span class="p">):</span>  <span class="c1"># No deviations</span>
+                <span class="n">rrest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">role_index</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">((</span><span class="n">rgains</span> <span class="o">&lt;=</span> <span class="n">regret_thresh</span><span class="p">)</span> <span class="o">|</span> <span class="n">rrest</span><span class="p">):</span>  <span class="c1"># No deviations</span>
                     <span class="n">role_index</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="k">if</span> <span class="n">role_index</span> <span class="o">&lt;</span> <span class="n">game</span><span class="o">.</span><span class="n">num_roles</span><span class="p">:</span>  <span class="c1"># Explore next deviation</span>
-                        <span class="n">add_deviations</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">)</span>
+                        <span class="n">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">role_index</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>  <span class="c1"># found equilibrium</span>
                         <span class="c1"># This should not require scheduling as to get here all</span>
                         <span class="c1"># deviations have to be scheduled</span>
@@ -226,32 +230,33 @@
                         <span class="k">with</span> <span class="n">equilibria_lock</span><span class="p">:</span>
                             <span class="n">equilibria</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">reg</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">gains</span><span class="p">[</span><span class="n">support</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-                    <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">support</span><span class="p">,</span> <span class="n">rgains</span><span class="p">,</span> <span class="n">role_index</span><span class="p">)</span>
+                    <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">rgains</span><span class="p">,</span> <span class="n">role_index</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">support_size</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="n">exceptions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">queue_restrictions</span><span class="p">(</span><span class="n">support</span><span class="p">,</span> <span class="n">role_gains</span><span class="p">,</span> <span class="n">role_index</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">support</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">role_index</span><span class="p">]</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">queue_restrictions</span><span class="p">(</span><span class="n">role_gains</span><span class="p">,</span> <span class="n">role_index</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">support_size</span><span class="p">):</span>
+        <span class="n">role_rest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">role_index</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">role_rest</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
             <span class="k">return</span>  <span class="c1"># Can&#39;t deviate</span>
 
         <span class="n">rs</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="n">role_index</span><span class="p">]</span>
-        <span class="n">back</span> <span class="o">=</span> <span class="n">backups</span><span class="p">[</span><span class="n">role_index</span><span class="p">]</span>
 
-        <span class="n">br</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanargmax</span><span class="p">(</span><span class="n">role_gains</span><span class="p">)</span>
+        <span class="n">br</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanargmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">role_rest</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">role_gains</span><span class="p">))</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">role_gains</span><span class="p">[</span><span class="n">br</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">regret_thresh</span>
-                <span class="ow">and</span> <span class="n">support</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">restricted_game_size</span><span class="p">):</span>
-            <span class="n">br_sub</span> <span class="o">=</span> <span class="n">support</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="ow">and</span> <span class="n">support_size</span> <span class="o">&lt;</span> <span class="n">restricted_game_size</span><span class="p">):</span>
+            <span class="n">br_sub</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="n">br_sub</span><span class="p">[</span><span class="n">rs</span> <span class="o">+</span> <span class="n">br</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="n">add_restriction</span><span class="p">(</span><span class="n">br_sub</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">br</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Add best response to backup</span>
 
-        <span class="k">for</span> <span class="n">si</span><span class="p">,</span> <span class="n">gain</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">role_gains</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">si</span> <span class="o">==</span> <span class="n">br</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">gain</span><span class="p">)</span> <span class="ow">or</span> <span class="n">gain</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">back</span> <span class="o">=</span> <span class="n">backups</span><span class="p">[</span><span class="n">role_index</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">si</span><span class="p">,</span> <span class="p">(</span><span class="n">gain</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">role_gains</span><span class="p">,</span> <span class="n">role_rest</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">si</span> <span class="o">==</span> <span class="n">br</span> <span class="ow">or</span> <span class="n">r</span> <span class="ow">or</span> <span class="n">gain</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">continue</span>
-            <span class="n">sub</span> <span class="o">=</span> <span class="n">support</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="n">sub</span><span class="p">[</span><span class="n">rs</span> <span class="o">+</span> <span class="n">si</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># XXX Tie id to deterministic random source</span>
             <span class="n">back</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="o">-</span><span class="n">gain</span><span class="p">,</span> <span class="nb">id</span><span class="p">(</span><span class="n">sub</span><span class="p">),</span> <span class="n">sub</span><span class="p">))</span>  <span class="c1"># id for tie-breaking</span>
 
     <span class="k">def</span> <span class="nf">join_threads</span><span class="p">():</span>
@@ -265,7 +270,7 @@
         <span class="k">for</span> <span class="n">rest</span> <span class="ow">in</span> <span class="n">initial_restrictions</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduceat</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">role_starts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="c1"># Pure restriction, so we can skip right to deviations</span>
-                <span class="n">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">init_role_dev</span><span class="p">)</span>
+                <span class="n">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">rest</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">init_role_dev</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Not pure, so equilibria are not obvious, schedule restriction</span>
                 <span class="c1"># instead</span>
@@ -330,12 +335,14 @@
         <div class="sphinxsidebarwrapper">
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -351,13 +358,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.25 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.26 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.0.
     </div>
   </body>
 </html>

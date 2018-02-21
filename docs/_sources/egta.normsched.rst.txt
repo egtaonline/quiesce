@@ -1,5 +1,5 @@
-egta\.normsched module
-======================
+egta.normsched module
+=====================
 
 .. automodule:: egta.normsched
     :members:
