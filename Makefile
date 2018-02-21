@@ -41,6 +41,7 @@ format:
 	bin/autopep8 -ri $(FILES)
 
 publish:
+	rm -rf dist
 	bin/python setup.py sdist bdist_wheel
 	bin/twine upload -u strategic.reasoning.group dist/*
 
