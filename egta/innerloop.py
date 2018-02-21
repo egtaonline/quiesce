@@ -21,8 +21,9 @@ _log = logging.getLogger(__name__)
 
 def inner_loop(
         game, *, initial_restrictions=None, regret_thresh=1e-3,
-        dist_thresh=0.1, restricted_game_size=3, num_equilibria=1,
-        num_backups=1, devs_by_role=False, at_least_one=False):
+        dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
+        num_equilibria=1, num_backups=1, devs_by_role=False,
+        at_least_one=False):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -33,11 +34,17 @@ def inner_loop(
     initial_restriction : [[bool]], optional
         Initial restrictions to start inner loop from. If unspecified, every
         pure restriction is used.
-    regret_thresh : float, optional
+    regret_thresh : float > 0, optional
         The maximum regret to consider an equilibrium an equilibrium.
-    dist_thresh : float, optional
+    dist_thresh : float > 0, optional
         The minimum norm between two mixed profiles for them to be considered
         distinct.
+    support_thresh : float > 0, optional
+        Candidate equilibria strategies with probability lower than this will
+        be truncated. This is useful because often Nash finding returns
+        strategies with very low support, which now mean extra deviating
+        strategies need to be sampled. Trimming saves these samples, but may
+        increase regret above the threshold.
     restricted_game_size : int > 0, optional
         The maximum restricted game support size with which beneficial
         deviations must be explored. Restricted games with support larger than
@@ -91,8 +98,7 @@ def inner_loop(
             schedule = exp_restrictions.add(rest)
         if schedule and not exceptions:
             thread = threading.Thread(
-                target=lambda: run_restriction(rest),
-                daemon=True)
+                target=run_restriction, args=(rest,), daemon=True)
             thread.start()
             threads.put(thread)
         return schedule
@@ -104,14 +110,17 @@ def inner_loop(
                 game.restriction_to_repr(rest))
             # TODO For anything but a SchedulerGame, this is a waste, but it
             # also potentially speeds up nash computation for Scheduler game.
+            # The issue comes with computing the jacobian for noncomplete
+            # mixtures. Scheduler games will return nan jacobians outside of
+            # support for mixtures to save with sampling deviations.
             data = paygame.game_copy(game.restrict(rest))
             start = time.time()
-            eqa = restrict.translate(
+            eqa = restrict.translate(data.trim_mixture_support(
                 nash.mixed_nash(
                     data, regret_thresh=regret_thresh,
                     dist_thresh=dist_thresh,
                     at_least_one=at_least_one),
-                rest)
+                thresh=support_thresh), rest)
             duration = time.time() - start
             if duration > 600:  # pragma: no cover
                 _log.warning(
@@ -120,7 +129,7 @@ def inner_loop(
                     game.restriction_to_repr(rest))
             if eqa.size:
                 for eqm in eqa:
-                    add_deviations(eqm, init_role_dev)
+                    add_deviations(rest, eqm, init_role_dev)
             else:
                 _log.warning(
                     "couldn't find equilibria in restricted game %s. This is "
@@ -132,16 +141,19 @@ def inner_loop(
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
-    def add_deviations(mix, role_index):
+    def add_deviations(rest, mix, role_index):
         if not exceptions:
             thread = threading.Thread(
-                target=lambda: run_deviations(mix, role_index))
+                target=run_deviations, args=(rest, mix, role_index),
+                daemon=True)
             thread.start()
             threads.put(thread)
 
-    def run_deviations(mix, role_index):
+    def run_deviations(rest, mix, role_index):
+        # We need the restriction here, since trimming support may increase
+        # regret of strategies in the initial restriction
         try:
-            support = mix > 0
+            support_size = np.sum(mix > 0)
             _log.info(
                 "scheduling deviations from mixture %s%s",
                 game.mixture_to_repr(mix),
@@ -151,7 +163,8 @@ def inner_loop(
             exp = np.add.reduceat(devs * mix, game.role_starts)
             gains = devs - exp.repeat(game.num_role_strats)
             if role_index is None:
-                if np.all(gains <= regret_thresh):  # Found equilibrium
+                if np.all((gains <= regret_thresh) | rest):
+                    # Found equilibrium
                     reg = gains.max()
                     with equilibria_lock:
                         added = equilibria.add(mix, reg)
@@ -159,17 +172,17 @@ def inner_loop(
                         _log.warning('found equilibrium %s with regret %f',
                                      game.mixture_to_repr(mix), reg)
                 else:
-                    gains[support] = np.nan
                     for ri, rgains in enumerate(np.split(
                             gains, game.role_starts[1:])):
-                        queue_restrictions(support, rgains, ri)
+                        queue_restrictions(rgains, ri, rest, support_size)
 
             else:  # Set role index
                 rgains = np.split(gains, game.role_starts[1:])[role_index]
-                if np.all(rgains <= regret_thresh):  # No deviations
+                rrest = np.split(rest, game.role_starts[1:])[role_index]
+                if np.all((rgains <= regret_thresh) | rrest):  # No deviations
                     role_index += 1
                     if role_index < game.num_roles:  # Explore next deviation
-                        add_deviations(mix, role_index)
+                        add_deviations(rest, mix, role_index)
                     else:  # found equilibrium
                         # This should not require scheduling as to get here all
                         # deviations have to be scheduled
@@ -179,32 +192,33 @@ def inner_loop(
                         with equilibria_lock:
                             equilibria.add(mix, reg)
                 else:
-                    gains[support] = np.nan
-                    queue_restrictions(support, rgains, role_index)
+                    queue_restrictions(rgains, role_index, rest, support_size)
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
-    def queue_restrictions(support, role_gains, role_index):
-        if np.split(support, game.role_starts[1:])[role_index].all():
+    def queue_restrictions(role_gains, role_index, rest, support_size):
+        role_rest = np.split(rest, game.role_starts[1:])[role_index]
+        if role_rest.all():
             return  # Can't deviate
 
         rs = game.role_starts[role_index]
-        back = backups[role_index]
 
-        br = np.nanargmax(role_gains)
+        br = np.nanargmax(np.where(role_rest, np.nan, role_gains))
         if (role_gains[br] > regret_thresh
-                and support.sum() < restricted_game_size):
-            br_sub = support.copy()
+                and support_size < restricted_game_size):
+            br_sub = rest.copy()
             br_sub[rs + br] = True
             add_restriction(br_sub)
         else:
             br = None  # Add best response to backup
 
-        for si, gain in enumerate(role_gains):
-            if si == br or np.isnan(gain) or gain <= 0:
+        back = backups[role_index]
+        for si, (gain, r) in enumerate(zip(role_gains, role_rest)):
+            if si == br or r or gain <= 0:
                 continue
-            sub = support.copy()
+            sub = rest.copy()
             sub[rs + si] = True
+            # XXX Tie id to deterministic random source
             back.put((-gain, id(sub), sub))  # id for tie-breaking
 
     def join_threads():
@@ -218,7 +232,7 @@ def inner_loop(
         for rest in initial_restrictions:
             if np.all(np.add.reduceat(rest, game.role_starts) == 1):
                 # Pure restriction, so we can skip right to deviations
-                add_deviations(rest.astype(float), init_role_dev)
+                add_deviations(rest, rest.astype(float), init_role_dev)
             else:
                 # Not pure, so equilibria are not obvious, schedule restriction
                 # instead

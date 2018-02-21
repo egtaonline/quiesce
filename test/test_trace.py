@@ -71,7 +71,7 @@ def test_sparse_trace():
     game1 = paygame.game_replace(
         base, base.all_profiles(), (base.all_profiles() > 0) * [1, 0, 0])
     game2 = paygame.game_replace(
-        base, base.all_profiles(), (base.all_profiles() > 0) * [-1, 2, 0])
+        base, base.all_profiles(), (base.all_profiles() > 0) * [-0.5, 1.5, 0])
     save1 = savesched.SaveScheduler(gamesched.RsGameScheduler(game1))
     save2 = savesched.SaveScheduler(gamesched.RsGameScheduler(game2))
     with save1, save2:
@@ -90,10 +90,10 @@ def test_sparse_trace():
 
     # Assert that trace found the expected equilibria
     assert np.isclose(s1, 0)
-    assert np.isclose(e1, 0.25, atol=1e-3)
-    assert np.isclose(s2, 0.25, atol=1e-3)
+    assert np.isclose(e1, 1 / 3, atol=1e-3)
+    assert np.isclose(s2, 1 / 3, atol=1e-3)
     assert np.isclose(e2, 1)
 
-    # Assert that trace didn't need any extra profiles
+    # Assert that trace didn't need many extra profiles
     assert save1.get_samplegame().num_profiles == 12
     assert save2.get_samplegame().num_profiles == 12
