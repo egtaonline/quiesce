@@ -81,8 +81,7 @@ def inner_loop(
     exp_restrictions_lock = threading.Lock()
     backups = [queue.PriorityQueue() for _ in range(game.num_roles)]
     equilibria_lock = threading.Lock()
-    equilibria = collect.WeightedSimilaritySet(
-        lambda a, b: np.linalg.norm(a - b) < dist_thresh)
+    equilibria = collect.mcces(dist_thresh)
     exceptions = []
 
     # Handle case where game might not have role_index key word
