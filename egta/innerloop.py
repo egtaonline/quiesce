@@ -158,7 +158,7 @@ def inner_loop(
                 "scheduling deviations from mixture %s%s",
                 game.mixture_to_repr(mix),
                 "" if role_index is None
-                else " to role {}" + game.role_names[role_index])
+                else " to role {}".format(game.role_names[role_index]))
             devs = deviation_payoffs(mix, role_index)
             exp = np.add.reduceat(devs * mix, game.role_starts)
             gains = devs - exp.repeat(game.num_role_strats)
