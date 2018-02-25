@@ -1,4 +1,4 @@
-import threading
+import asyncio
 
 import numpy as np
 
@@ -22,10 +22,13 @@ class CountScheduler(profsched.Scheduler):
         self._sched = sched
         self._count = count
 
-    def schedule(self, profile):
-        return _CountPromise(
-            [self._sched.schedule(profile) for _ in range(self._count)],
-            np.zeros(self.game().num_strats))
+    async def sample_payoffs(self, profile):
+        payoffs = await asyncio.gather(*[
+            self._sched.sample_payoffs(profile) for _ in range(self._count)])
+        payoff = np.zeros(self.game().num_strats)
+        for i, pay in enumerate(payoffs, 1):
+            payoff += (pay - payoff) / i
+        return payoff
 
     def game(self):
         return self._sched.game()
@@ -36,20 +39,3 @@ class CountScheduler(profsched.Scheduler):
 
     def __exit__(self, *args):
         self._sched.__exit__(*args)
-
-
-class _CountPromise(profsched.Promise):
-    def __init__(self, proms, val):
-        self._proms = proms
-        self._value = val
-        self._unset = True
-        self._lock = threading.Lock()
-
-    def get(self):
-        with self._lock:
-            if self._unset:
-                for i, prom in enumerate(self._proms, 1):
-                    self._value += (prom.get() - self._value) / i
-                self._value.setflags(write=False)
-                self._unset = False
-        return self._value

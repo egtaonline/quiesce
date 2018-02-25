@@ -25,9 +25,10 @@ class CanonScheduler(profsched.Scheduler):
             role_mask * sched.game().num_role_strats)[~role_mask]
         self._mask = role_mask.repeat(sched.game().num_role_strats)
 
-    def schedule(self, profile):
+    async def sample_payoffs(self, profile):
         full_prof = np.insert(profile, self._inds, self._players)
-        return _CanonPromise(self._mask, self._sched.schedule(full_prof))
+        full_pay = await self._sched.sample_payoffs(full_prof)
+        return full_pay[self._mask]
 
     def game(self):
         return self._game
@@ -38,12 +39,3 @@ class CanonScheduler(profsched.Scheduler):
 
     def __exit__(self, *args):
         return self._sched.__exit__(*args)
-
-
-class _CanonPromise(profsched.Promise):
-    def __init__(self, mask, prom):
-        self._mask = mask
-        self._prom = prom
-
-    def get(self):
-        return self._prom.get()[self._mask]

@@ -109,7 +109,8 @@ async def test_ignore_terminate_fail(conf, game):
 
 @pytest.mark.asyncio
 async def test_json_decode_fail(conf, game):
-    cmd = ['bash', '-c', 'read line && echo "[" && while read line; do :; done']
+    cmd = ['bash', '-c',
+           'read line && echo "[" && while read line; do :; done']
     prof = game.random_profile()
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
         with pytest.raises(json.decoder.JSONDecodeError):

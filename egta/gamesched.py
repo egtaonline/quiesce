@@ -1,6 +1,5 @@
 import math
 import random
-import threading
 
 from gameanalysis import utils
 
@@ -47,19 +46,17 @@ class RsGameScheduler(profsched.Scheduler):
                              game.num_profiles)
         self._game = game
         self._params = {}
-        self._lock = threading.Lock()
 
-    def schedule(self, profile):
+    async def sample_payoffs(self, profile):
         index = hash(utils.hash_array(profile)) % self._max_size
-        with self._lock:
-            params = self._params.get(index, None)
-            if params is None:
-                params = self._param_dist()
-                self._params[index] = params
+        params = self._params.get(index, None)
+        if params is None:
+            params = self._param_dist()
+            self._params[index] = params
         payoff = self._game.get_payoffs(profile) + self._noise_dist(*params)
         payoff[profile == 0] = 0
         payoff.setflags(write=False)
-        return _GamePromise(payoff)
+        return payoff
 
     def game(self):
         return self._game
@@ -102,21 +99,20 @@ class SampleGameScheduler(profsched.Scheduler):
         self._param_dist = param_dist
         self._sgame = sgame
         self._paymap = {}
-        self._lock = threading.Lock()
 
-    def schedule(self, profile):
+    async def sample_payoffs(self, profile):
         hprof = utils.hash_array(profile)
-        with self._lock:
-            pays, params = self._paymap.get(hprof, (None, None))
-            if pays is None:
-                params = self._param_dist()
-                pays = self._sgame.get_sample_payoffs(profile)
-                self._paymap[hprof] = (pays, params)
+        pays, params = self._paymap.get(hprof, (None, None))
+        if pays is None:
+            params = self._param_dist()
+            pays = self._sgame.get_sample_payoffs(profile)
+            self._paymap[hprof] = (pays, params)
 
         pay = pays[random.randrange(pays.shape[0])]
         payoff = pay + self._noise_dist(*params)
         payoff[profile == 0] = 0
-        return _GamePromise(payoff)
+        payoff.setflags(write=False)
+        return payoff
 
     def game(self):
         return self._sgame
@@ -126,11 +122,3 @@ class SampleGameScheduler(profsched.Scheduler):
 
     def __exit__(self, *args):
         pass
-
-
-class _GamePromise(profsched.Promise):
-    def __init__(self, payoff):
-        self._payoff = payoff
-
-    def get(self):
-        return self._payoff
