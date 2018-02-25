@@ -15,10 +15,11 @@ async def test_basic_profile():
     game = gamegen.game([4, 3], [3, 4])
     profs = game.random_profiles(20)
 
-    with gamesched.RsGameScheduler(game) as sched:
+    async with gamesched.RsGameScheduler(game) as sched:
         assert (rsgame.emptygame_copy(sched.game()) ==
                 rsgame.emptygame_copy(game))
-        paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
+        paylist = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
 
@@ -28,10 +29,11 @@ async def test_basic_profile_sample():
     sgame = gamegen.samplegame([4, 3], [3, 4])
     profs = sgame.random_profiles(20)
 
-    with gamesched.SampleGameScheduler(sgame) as sched:
+    async with gamesched.SampleGameScheduler(sgame) as sched:
         assert (rsgame.emptygame_copy(sched.game()) ==
                 rsgame.emptygame_copy(sgame))
-        paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
+        paylist = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
 

@@ -19,12 +19,10 @@ class Scheduler(abc.ABC):  # pragma: no cover
         """Get the game that this scheduler returns information about"""
         pass
 
-    # FIXME also async enter and exit, / make open close api that enter and exit just call?
-
     @abc.abstractmethod
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
     @abc.abstractmethod
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         pass

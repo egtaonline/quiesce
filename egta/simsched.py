@@ -15,6 +15,12 @@ from egta import profsched
 _log = logging.getLogger(__name__)
 
 
+# XXX There exists a coroutine process object as well that could be used in
+# this circumstance, but there are issues with blocking while reading and
+# writing to the subprocess streams that make threads preferable for the time
+# being.
+
+
 class SimulationScheduler(profsched.Scheduler):
     """Schedule profiles using a command line program
 
@@ -33,18 +39,12 @@ class SimulationScheduler(profsched.Scheduler):
         standard out. After all input lines have been read, this must flush the
         output otherwise this could hang waiting for results that are trapped
         in a buffer.
-    sleep : int, optional
-        Time in seconds to wait before checking programs stdout for results.
-        Too low and a lot of cycles will be wasted querying an empty buffer,
-        too fast and programs may be waiting for results while this is
-        sleeping.
     """
 
-    def __init__(self, game, config, command, sleep=1):
+    def __init__(self, game, config, command):
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self._base = {'configuration': config}
         self.command = command
-        self.sleep = sleep
 
         self._loop = asyncio.get_event_loop()
         self._is_open = False
@@ -71,8 +71,6 @@ class SimulationScheduler(profsched.Scheduler):
 
     def game(self):
         return self._game
-
-    # FIXME check state every timer there's a long operation
 
     def _enqueue(self):
         """Thread used to push lines to stdin"""
@@ -173,7 +171,7 @@ class SimulationScheduler(profsched.Scheduler):
             raise ex
 
     def close(self):
-        self._running = False
+        self._is_open = False
 
         # This tells threads to die
         self._inqueue.put(None)
@@ -187,12 +185,12 @@ class SimulationScheduler(profsched.Scheduler):
             except ProcessLookupError:  # pragma: no cover
                 pass  # race condition, process died
             try:
-                self._proc.wait(self.sleep)
+                self._proc.wait(0.25)
             except subprocess.TimeoutExpired:
                 _log.warning("couldn't terminate simulation, killing it...")
                 self._proc.kill()
             try:
-                self._proc.wait(self.sleep)
+                self._proc.wait(0.25)
                 # XXX If we get here then the streams might not be closed, and
                 # we'll have a thread blocking on stdout, but we're unable to
                 # close it.
@@ -202,20 +200,20 @@ class SimulationScheduler(profsched.Scheduler):
 
         # Threads should be dead at this point, but we close anyways
         if self._inthread is not None and self._inthread.is_alive():  # pragma: no cover # noqa
-            self._inthread.join(self.sleep * 2)
+            self._inthread.join(0.25)
             if self._inthread.is_alive():
                 _log.warning("couldn't kill enqueue thread...")
         self._inthread = None
 
         if self._outthread is not None and self._outthread.is_alive():  # pragma: no cover # noqa
-            self._outthread.join(self.sleep * 2)
+            self._outthread.join(0.25)
             if self._outthread.is_alive():
                 _log.warning("couldn't kill dequeue thread...")
         self._outthread = None
 
-    def __enter__(self):
+    async def __aenter__(self):
         self.open()
         return self
 
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         self.close()

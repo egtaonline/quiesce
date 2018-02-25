@@ -16,8 +16,9 @@ async def test_basic_profile():
     profs = utils.unique_axis(sgame.random_profiles(20))
 
     save = savesched.SaveScheduler(gamesched.SampleGameScheduler(sgame))
-    with countsched.CountScheduler(save, 10) as sched:
-        paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
+    async with countsched.CountScheduler(save, 10) as sched:
+        paylist = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
         pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
 

@@ -43,9 +43,9 @@ class SaveScheduler(profsched.Scheduler):
                 self._game, new_profs, new_pays)
         return self._game
 
-    def __enter__(self):
-        self._sched.__enter__()
+    async def __aenter__(self):
+        await self._sched.__aenter__()
         return self
 
-    def __exit__(self, *args):
-        self._sched.__exit__(*args)
+    async def __aexit__(self, *args):
+        return await self._sched.__aexit__(*args)

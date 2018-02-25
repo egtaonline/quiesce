@@ -33,9 +33,9 @@ class CountScheduler(profsched.Scheduler):
     def game(self):
         return self._sched.game()
 
-    def __enter__(self):
-        self._sched.__enter__()
+    async def __aenter__(self):
+        await self._sched.__aenter__()
         return self
 
-    def __exit__(self, *args):
-        self._sched.__exit__(*args)
+    async def __aexit__(self, *args):
+        return await self._sched.__aexit__(*args)

@@ -61,10 +61,10 @@ class RsGameScheduler(profsched.Scheduler):
     def game(self):
         return self._game
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         pass
 
 
@@ -117,8 +117,8 @@ class SampleGameScheduler(profsched.Scheduler):
     def game(self):
         return self._sgame
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         pass
