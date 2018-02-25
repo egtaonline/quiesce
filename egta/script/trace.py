@@ -8,9 +8,9 @@ from gameanalysis import regret
 from gameanalysis import rsgame
 
 import egta.script.eosched as seosched
+from egta import canonsched
 from egta import countsched
 from egta import eosched
-from egta import normsched
 from egta import savesched
 from egta import schedgame
 from egta import trace
@@ -103,7 +103,7 @@ def run(sched, args):
               else asched)
     assert isinstance(asched, seosched.ApiWrapper), \
         "trace currently only supports eo schedulers"
-    sched1 = normsched.NormScheduler(sched)
+    sched1 = canonsched.CanonScheduler(sched)
 
     game = sched1.game()
     if args.dpr is not None:
@@ -125,7 +125,7 @@ def run(sched, args):
             args.other_memory, args.other_time, args.other_id) as sched2:
         if args.count > 1:
             sched2 = countsched.CountScheduler(sched2, args.count)
-        sched2 = normsched.NormScheduler(sched2)
+        sched2 = canonsched.CanonScheduler(sched2)
 
         game1 = schedgame.schedgame(sched1, red, red_players)
         game2 = schedgame.schedgame(sched2, red, red_players)

@@ -4,7 +4,7 @@ from gameanalysis import rsgame
 from egta import profsched
 
 
-class NormScheduler(profsched.Scheduler):
+class CanonScheduler(profsched.Scheduler):
     """A scheduler that removes single strategy roles
 
     Parameters
@@ -27,7 +27,7 @@ class NormScheduler(profsched.Scheduler):
 
     def schedule(self, profile):
         full_prof = np.insert(profile, self._inds, self._players)
-        return _NormPromise(self._mask, self._sched.schedule(full_prof))
+        return _CanonPromise(self._mask, self._sched.schedule(full_prof))
 
     def game(self):
         return self._game
@@ -40,7 +40,7 @@ class NormScheduler(profsched.Scheduler):
         return self._sched.__exit__(*args)
 
 
-class _NormPromise(profsched.Promise):
+class _CanonPromise(profsched.Promise):
     def __init__(self, mask, prom):
         self._mask = mask
         self._prom = prom
