@@ -152,7 +152,6 @@ def inner_loop(
         # We need the restriction here, since trimming support may increase
         # regret of strategies in the initial restriction
         try:
-            support_size = np.sum(mix > 0)
             _log.info(
                 "scheduling deviations from mixture %s%s",
                 game.mixture_to_repr(mix),
@@ -173,7 +172,7 @@ def inner_loop(
                 else:
                     for ri, rgains in enumerate(np.split(
                             gains, game.role_starts[1:])):
-                        queue_restrictions(rgains, ri, rest, support_size)
+                        queue_restrictions(rgains, ri, rest)
 
             else:  # Set role index
                 rgains = np.split(gains, game.role_starts[1:])[role_index]
@@ -191,20 +190,21 @@ def inner_loop(
                         with equilibria_lock:
                             equilibria.add(mix, reg)
                 else:
-                    queue_restrictions(rgains, role_index, rest, support_size)
+                    queue_restrictions(rgains, role_index, rest)
         except Exception as ex:  # pragma: no cover
             exceptions.append(ex)
 
-    def queue_restrictions(role_gains, role_index, rest, support_size):
+    def queue_restrictions(role_gains, role_index, rest):
         role_rest = np.split(rest, game.role_starts[1:])[role_index]
         if role_rest.all():
             return  # Can't deviate
 
+        rest_size = rest.sum()
         rs = game.role_starts[role_index]
 
         br = np.nanargmax(np.where(role_rest, np.nan, role_gains))
         if (role_gains[br] > regret_thresh
-                and support_size < restricted_game_size):
+                and rest_size < restricted_game_size):
             br_sub = rest.copy()
             br_sub[rs + br] = True
             add_restriction(br_sub)
