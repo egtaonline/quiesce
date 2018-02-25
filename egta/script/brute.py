@@ -4,7 +4,6 @@ import logging
 
 import numpy as np
 from gameanalysis import nash
-from gameanalysis import paygame
 from gameanalysis import reduction
 from gameanalysis import regret
 from gameanalysis import restrict
@@ -38,10 +37,10 @@ def add_parser(subparsers):
         restricted strategy set will be scheduled.""")
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
-        '--dpr', metavar='<role:count;role:count,...>', help="""Specify a
+        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
         deviation preserving reduction.""")
     reductions.add_argument(
-        '--hr', metavar='<role:count;role:count,...>', help="""Specify a
+        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
         hierarchical reduction.""")
     return parser
 
@@ -61,9 +60,14 @@ def run(scheduler, args):
     rest = (np.ones(game.num_strats, bool) if args.restrict is None
             else game.restriction_from_json(json.load(args.restrict)))
     game = schedgame.schedgame(scheduler, red, red_players)
-    data = paygame.game_copy(game.restrict(rest))
+    rgame = game.restrict(rest)
+
+    # schedule all deviations
+    game.deviation_payoffs(restrict.translate(rgame.uniform_mixture(), rest))
+
+    # now find equilibria
     eqa = restrict.translate(nash.mixed_nash(
-        data, regret_thresh=args.regret_thresh,
+        rgame, regret_thresh=args.regret_thresh,
         dist_thresh=args.dist_thresh), rest)
     reg_info = []
     for eqm in eqa:
