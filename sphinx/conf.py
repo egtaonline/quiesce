@@ -22,7 +22,7 @@ from os import path
 from setuptools import config
 from unittest import mock
 
-from sphinx import apidoc
+from sphinx.ext import apidoc
 
 # Mock out c modules so that they're not necessary to build documentation. This
 # will unfortunately need to be updated if new submodules of numpy, scipy, or
