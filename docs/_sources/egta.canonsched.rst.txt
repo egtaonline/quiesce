@@ -1,0 +1,7 @@
+egta.canonsched module
+======================
+
+.. automodule:: egta.canonsched
+    :members:
+    :undoc-members:
+    :show-inheritance:

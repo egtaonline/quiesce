@@ -6,7 +6,7 @@
   <head>
         <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.schedgame &#8212; Empirical Game-Theoretic Analysis 0.0.27 documentation</title>
+    <title>egta.schedgame &#8212; Empirical Game-Theoretic Analysis 0.0.28 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.27 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.28 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -93,21 +93,21 @@
             <span class="n">dev</span><span class="p">,</span> <span class="n">jac</span> <span class="o">=</span> <span class="n">game</span><span class="o">.</span><span class="n">deviation_payoffs</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">jacobian</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">jac</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="n">game</span><span class="o">.</span><span class="n">deviation_payoffs</span><span class="p">(</span><span class="n">mix</span><span class="p">)</span></div>
+        <span class="k">else</span><span class="p">:</span></div>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="n">game</span><span class="o">.</span><span class="n">deviation_payoffs</span><span class="p">(</span><span class="n">mix</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SchedulerGame.get_payoffs"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.get_payoffs">[docs]</a>    <span class="k">def</span> <span class="nf">get_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profs</span><span class="p">):</span>
         <span class="n">profs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">profs</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
         <span class="n">pays</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">get_payoffs</span><span class="p">(</span>
             <span class="n">profs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">)</span>
-        <span class="n">pays</span><span class="p">[</span><span class="n">profs</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">return</span> <span class="n">pays</span></div>
+        <span class="n">pays</span><span class="p">[</span><span class="n">profs</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span></div>
+        <span class="k">return</span> <span class="n">pays</span>
 
-<div class="viewcode-block" id="SchedulerGame.max_strat_payoffs"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.max_strat_payoffs">[docs]</a>    <span class="k">def</span> <span class="nf">max_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">max_payoff</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">]</span></div>
+<div class="viewcode-block" id="SchedulerGame.max_strat_payoffs"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.max_strat_payoffs">[docs]</a>    <span class="k">def</span> <span class="nf">max_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">max_payoff</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">]</span>
 
-<div class="viewcode-block" id="SchedulerGame.min_strat_payoffs"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.min_strat_payoffs">[docs]</a>    <span class="k">def</span> <span class="nf">min_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">min_payoff</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">]</span></div>
+<div class="viewcode-block" id="SchedulerGame.min_strat_payoffs"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.min_strat_payoffs">[docs]</a>    <span class="k">def</span> <span class="nf">min_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">min_payoff</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">]</span>
 
 <div class="viewcode-block" id="SchedulerGame.normalize"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.normalize">[docs]</a>    <span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">payoffs</span><span class="p">()</span>  <span class="c1"># Schedule full game</span>
@@ -117,8 +117,8 @@
         <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_role_payoffs</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_role_strats</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">SchedulerGame</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">/</span> <span class="n">scale</span><span class="p">,</span>
-            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">/</span> <span class="n">scale</span><span class="p">,</span></div>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SchedulerGame.restrict"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.SchedulerGame.restrict">[docs]</a>    <span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
         <span class="n">rest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
@@ -126,8 +126,8 @@
         <span class="n">new_rest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">new_rest</span><span class="p">[</span><span class="n">new_rest</span><span class="p">]</span> <span class="o">=</span> <span class="n">rest</span>
         <span class="k">return</span> <span class="n">SchedulerGame</span><span class="p">(</span>
-            <span class="n">base</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">,</span> <span class="n">new_rest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">[</span><span class="n">rest</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span><span class="p">[</span><span class="n">rest</span><span class="p">])</span></div>
+            <span class="n">base</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">,</span> <span class="n">new_rest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">[</span><span class="n">rest</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span><span class="p">[</span><span class="n">rest</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span>
@@ -138,8 +138,8 @@
 
     <span class="nd">@utils</span><span class="o">.</span><span class="n">memoize</span>
     <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">(),</span> <span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">),</span>
-                     <span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">)))</span></div>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">(),</span> <span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">),</span></div>
+                     <span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rest</span><span class="p">)))</span>
 
 
 <div class="viewcode-block" id="schedgame"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.schedgame">[docs]</a><span class="k">def</span> <span class="nf">schedgame</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="o">=</span><span class="n">idr</span><span class="p">,</span> <span class="n">red_players</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -147,8 +147,8 @@
     <span class="n">base</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">red_game</span>
     <span class="k">return</span> <span class="n">SchedulerGame</span><span class="p">(</span>
         <span class="n">base</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span> <span class="n">scheduler</span><span class="p">,</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">),</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span></div>
+        <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">),</span></div>
+        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">num_strats</span><span class="p">))</span>
 
 
 <span class="k">class</span> <span class="nc">_Scheduler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -247,7 +247,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.27 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.28 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>

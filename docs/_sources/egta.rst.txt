@@ -7,11 +7,11 @@ Submodules
 .. toctree::
 
    egta.bootstrap
+   egta.canonsched
    egta.countsched
    egta.eosched
    egta.gamesched
    egta.innerloop
-   egta.normsched
    egta.profsched
    egta.savesched
    egta.schedgame

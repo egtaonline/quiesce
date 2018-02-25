@@ -6,7 +6,7 @@
   <head>
         <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.eosched &#8212; Empirical Game-Theoretic Analysis 0.0.27 documentation</title>
+    <title>egta.eosched &#8212; Empirical Game-Theoretic Analysis 0.0.28 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.27 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.28 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -132,11 +132,11 @@
                        <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_pending_profiles</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">_EgtaOnlinePromise</span><span class="p">(</span><span class="n">que</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">_EgtaOnlinePromise</span><span class="p">(</span><span class="n">que</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
 
-<div class="viewcode-block" id="EgtaOnlineScheduler.game"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.game">[docs]</a>    <span class="k">def</span> <span class="nf">game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span></div>
+<div class="viewcode-block" id="EgtaOnlineScheduler.game"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.game">[docs]</a>    <span class="k">def</span> <span class="nf">game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span>
 
     <span class="k">def</span> <span class="nf">_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Internal implementation to actually schedule a profile</span>
@@ -351,8 +351,8 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">deactivate</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_drain_queues</span><span class="p">()</span>
-        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;deactivated scheduler </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_drain_queues</span><span class="p">()</span></div>
+        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;deactivated scheduler </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
 
 
 <span class="k">class</span> <span class="nc">_Record</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -415,7 +415,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.27 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.28 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
