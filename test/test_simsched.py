@@ -1,6 +1,6 @@
+import asyncio
 import json
 import pytest
-import time
 
 import numpy as np
 from gameanalysis import rsgame
@@ -8,112 +8,117 @@ from gameanalysis import rsgame
 from egta import simsched
 
 
-def test_basic_profile():
+@pytest.fixture
+def jgame():
     with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+        return json.load(f)
+
+
+@pytest.fixture
+def conf(jgame):
+    return jgame['configuration']
+
+
+@pytest.fixture
+def game(jgame):
+    return rsgame.emptygame_json(jgame)
+
+
+@pytest.mark.asyncio
+async def test_basic_profile(conf, game):
     profs = game.random_profiles(20)
     cmd = ['python3', 'cdasim/sim.py', '--single', '1']
 
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
         assert rsgame.emptygame_copy(sched.game()) == game
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.concatenate([p.get()[None] for p in proms])
+        awaited = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
+        pays = np.stack(awaited)
     assert pays.shape == profs.shape
     assert np.allclose(pays[profs == 0], 0)
     assert np.any(pays != 0)
 
 
-def test_delayed_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_delayed_fail(conf, game):
     prof = game.random_profile()
     cmd = ['bash', '-c', 'sleep 1 && false']
 
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        with pytest.raises(RuntimeError):
-            sched.schedule(prof).get()
+        with pytest.raises(AssertionError):
+            await sched.sample_payoffs(prof)
 
 
-def test_early_exit():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_immediate_fail(conf, game):
+    prof = game.random_profile()
+    cmd = ['bash', '-c', 'false']
+
+    with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        with pytest.raises(BrokenPipeError):
+            await asyncio.gather(sched.sample_payoffs(prof),
+                                 sched.sample_payoffs(prof))
+
+
+@pytest.mark.asyncio
+async def test_early_exit(conf, game):
     profs = game.random_profiles(20)
     cmd = ['bash', '-c', 'while read line; do : ; done']
 
-    finished_scheduling = False
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        # Schedule promises but just exit
-        for p in profs:
-            sched.schedule(p)
-        finished_scheduling = True
-    assert finished_scheduling, \
-        "didn't finish scheduling"
+        # Schedule promises but don't await
+        asyncio.ensure_future(asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs]))
+        await asyncio.sleep(1)
 
 
-def test_read_delay_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_read_delay_fail(conf, game):
     cmd = ['bash', '-c', 'read line && sleep 0.1 && false']
 
-    scheduled = False
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        prom = sched.schedule(game.random_profile())
-        scheduled = True
-        with pytest.raises(RuntimeError):
-            prom.get()
-    assert scheduled
+        future = asyncio.ensure_future(sched.sample_payoffs(
+            game.random_profile()))
+        with pytest.raises(AssertionError):
+            await future
 
 
-def test_read_delay_schedule_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_read_delay_schedule_fail(conf, game):
     cmd = ['bash', '-c', 'read line && sleep 0.2 && false']
 
-    got_here = False
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        sched.schedule(game.random_profile())
-        # XXX For some reason the process hasn't always terminated after 3
-        # seconds, but I can't afford to wait longer.
-        time.sleep(3)  # make sure process is dead
-        got_here = True
-        with pytest.raises(RuntimeError):
-            sched.schedule(game.random_profile())
-    assert got_here, \
-        "didn't get to second schedule"
+        future = asyncio.ensure_future(sched.sample_payoffs(
+            game.random_profile()))
+        await asyncio.sleep(1)  # make sure process is dead
+        with pytest.raises(AssertionError):
+            # Since we're using asyncio, the future actually gets assigned the
+            # error before this one kicks off.
+            asyncio.ensure_future(sched.sample_payoffs(game.random_profile()))
+            await future
 
 
 @pytest.mark.timeout(10)
-def test_ignore_terminate_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_ignore_terminate_fail(conf, game):
     cmd = ['bash', '-c', 'trap "" SIGTERM && sleep 20']
     with simsched.SimulationScheduler(game, conf, cmd):
         # Wait for term to be captured
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 
-def test_json_decode_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
-    cmd = ['bash', '-c', 'echo "[" && while read line; do :; done']
-    opened = False
+@pytest.mark.asyncio
+async def test_json_decode_fail(conf, game):
+    cmd = ['bash', '-c', 'read line && echo "[" && while read line; do :; done']
+    prof = game.random_profile()
     with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        time.sleep(1)
-        opened = True
-        with pytest.raises(RuntimeError):
-            sched.schedule(game.random_profile())
-    assert opened
+        with pytest.raises(json.decoder.JSONDecodeError):
+            await asyncio.gather(sched.sample_payoffs(prof),
+                                 sched.sample_payoffs(prof),
+                                 sched.sample_payoffs(prof))
+
+
+def test_bad_command_exit(conf, game):
+    with pytest.raises(FileNotFoundError):
+        with simsched.SimulationScheduler(game, conf, ['unknown']):
+            pass  # pragma: no cover

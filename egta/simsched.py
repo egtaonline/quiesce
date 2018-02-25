@@ -1,4 +1,5 @@
 """A scheduler that gets payoffs from a local simulation"""
+import asyncio
 import json
 import logging
 import queue
@@ -41,111 +42,137 @@ class SimulationScheduler(profsched.Scheduler):
 
     def __init__(self, game, config, command, sleep=1):
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))
-        self.base = {'configuration': config}
+        self._base = {'configuration': config}
         self.command = command
         self.sleep = sleep
 
-        self._running = False
+        self._loop = asyncio.get_event_loop()
+        self._is_open = False
         self._proc = None
         self._inthread = None
         self._outthread = None
-        self._lock = threading.Lock()
         self._inqueue = queue.Queue()
         self._outqueue = queue.Queue()
 
-        self._exception = None
+        self._exceptions = []
 
-    def schedule(self, profile):
-        assert self._running and self._proc is not None, \
-            "can't call schedule before entering scheduler"
-        if self._exception is not None:
-            raise self._exception
-        promise = _SimPromise(self, profile)
-        self._inqueue.put(promise)
-        return promise
+    async def sample_payoffs(self, profile):
+        assert self._is_open, "not open"
+        if self._exceptions:
+            raise self._exceptions[0]
+        lock = asyncio.Lock()
+        await lock.acquire()
+        qitem = [profile, lock, None]
+        self._inqueue.put(qitem)
+        await lock.acquire()
+        if self._exceptions:
+            raise self._exceptions[0]
+        return qitem[2]
 
     def game(self):
         return self._game
 
+    # FIXME check state every timer there's a long operation
+
     def _enqueue(self):
         """Thread used to push lines to stdin"""
+        lock = None
         try:
-            while self._running:
-                prom = self._inqueue.get()
-                if prom is None:
+            while True:
+                qitem = self._inqueue.get()
+                if qitem is None:
                     return  # told to terminate
-                jprof = self._game.profile_to_json(prom._prof)
-                self.base['assignment'] = jprof
-                json.dump(self.base, self._proc.stdin, separators=(',', ':'))
+                prof, lock, _ = qitem
+                assert self._is_open and not self._exceptions
+                jprof = self._game.profile_to_json(prof)
+                self._base['assignment'] = jprof
+                json.dump(self._base, self._proc.stdin, separators=(',', ':'))
                 self._proc.stdin.write('\n')
                 self._proc.stdin.flush()
-                self._outqueue.put(prom)
+                assert self._is_open and not self._exceptions
+                self._outqueue.put(qitem)
+                lock = None
+                assert self._is_open and not self._exceptions
                 _log.debug("sent profile: %s",
-                           self._game.profile_to_repr(prom._prof))
+                           self._game.profile_to_repr(prof))
         except Exception as ex:  # pragma: no cover
-            self._exception = ex
+            self._exceptions.append(ex)
         finally:
-            while not self._inqueue.empty():
-                prom = self._inqueue.get()
-                prom is None or prom._set(None)
+            if lock is not None:
+                self._loop.call_soon_threadsafe(lock.release)
+            while True:
+                try:
+                    qitem = self._inqueue.get_nowait()
+                    if qitem is None:
+                        continue
+                    _, lock, _ = qitem
+                    self._loop.call_soon_threadsafe(lock.release)
+                except queue.Empty:
+                    break  # expected
 
     def _dequeue(self):
-        """Thread used to get output from simulator
-
-        This thread is constantly polling the simulator process and processing
-        payoff data when its found."""
+        """Thread used to get output from simulator"""
+        lock = None
         try:
-            while self._running:
-                # FIXME If proc is killed, it doesn't close the streams, and as
-                # a result, this call blocks indefinitely. I can't figure out a
-                # way around this, but as it currently stands, this thread
-                # doesn't die in that case.
+            while True:
                 line = self._proc.stdout.readline()
                 if not line and self._outqueue.empty():
                     # Process closed stdout and had nothing else to run
                     return
-                elif not line or self._proc.poll() is not None:
-                    # Process terminated unexpectedly
-                    raise RuntimeError(
-                        "Process died unexpectedly with code {}".format(
-                            self._proc.poll()))
-                else:
-                    try:
-                        jpays = json.loads(line)
-                    except json.JSONDecodeError:
-                        raise RuntimeError(
-                            "Couldn't decode \"{}\" as json".format(line))
-                    payoffs = self._game.payoff_from_json(jpays)
-                    payoffs.setflags(write=False)
-                    promise = self._outqueue.get()
-                    if promise is None:
-                        return  # told to exit
-                    _log.debug("read payoff for profile: %s",
-                               self._game.profile_to_repr(promise._prof))
-                    promise._set(payoffs)
+                assert line and self._proc.poll() is None, \
+                    "Process died unexpectedly with code {}".format(
+                        self._proc.poll())
+                assert self._is_open and not self._exceptions
+                jpays = json.loads(line)
+                payoffs = self._game.payoff_from_json(jpays)
+                payoffs.setflags(write=False)
+                qitem = self._outqueue.get()
+                if qitem is None:
+                    return  # told to exit
+                prof, lock, _ = qitem
+                assert self._is_open and not self._exceptions
+                _log.debug("read payoff for profile: %s",
+                           self._game.profile_to_repr(prof))
+                qitem[2] = payoffs
+                self._loop.call_soon_threadsafe(lock.release)
+                lock = None
+                assert self._is_open and not self._exceptions
         except Exception as ex:  # pragma: no cover
-            self._exception = ex
+            self._exceptions.append(ex)
         finally:
-            while not self._outqueue.empty():
-                prom = self._outqueue.get()
-                prom is None or prom._set(None)
+            if lock is not None:
+                self._loop.call_soon_threadsafe(lock.release)
+            while True:
+                try:
+                    qitem = self._outqueue.get_nowait()
+                    if qitem is None:
+                        continue
+                    _, lock, _ = qitem
+                    self._loop.call_soon_threadsafe(lock.release)
+                except queue.Empty:
+                    break  # expected
 
-    def __enter__(self):
-        self._running = True
+    def open(self):
+        assert not self._is_open, "can't open twice"
+        assert self._inthread is None
+        assert self._outthread is None
+        assert self._proc is None
+        try:
+            self._proc = subprocess.Popen(
+                self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                universal_newlines=True)
+            self._inthread = threading.Thread(
+                target=self._enqueue, daemon=True)
+            self._inthread.start()
+            self._outthread = threading.Thread(
+                target=self._dequeue, daemon=True)
+            self._outthread.start()
+            self._is_open = True
+        except Exception as ex:
+            self.close()
+            raise ex
 
-        self._proc = subprocess.Popen(
-            self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-            universal_newlines=True)
-
-        # We start these as daemons so that if we fail to close them for
-        # whatever reason, python still exits
-        self._inthread = threading.Thread(target=self._enqueue, daemon=True)
-        self._inthread.start()
-        self._outthread = threading.Thread(target=self._dequeue, daemon=True)
-        self._outthread.start()
-        return self
-
-    def __exit__(self, *args):
+    def close(self):
         self._running = False
 
         # This tells threads to die
@@ -166,37 +193,29 @@ class SimulationScheduler(profsched.Scheduler):
                 self._proc.kill()
             try:
                 self._proc.wait(self.sleep)
+                # XXX If we get here then the streams might not be closed, and
+                # we'll have a thread blocking on stdout, but we're unable to
+                # close it.
             except subprocess.TimeoutExpired:  # pragma: no cover
                 _log.error("couldn't kill simulation")
+        self._proc = None
 
         # Threads should be dead at this point, but we close anyways
         if self._inthread is not None and self._inthread.is_alive():  # pragma: no cover # noqa
             self._inthread.join(self.sleep * 2)
             if self._inthread.is_alive():
-                _log.warning("couldn't kill dequeue thread...")
+                _log.warning("couldn't kill enqueue thread...")
+        self._inthread = None
+
         if self._outthread is not None and self._outthread.is_alive():  # pragma: no cover # noqa
             self._outthread.join(self.sleep * 2)
             if self._outthread.is_alive():
                 _log.warning("couldn't kill dequeue thread...")
+        self._outthread = None
 
+    def __enter__(self):
+        self.open()
+        return self
 
-class _SimPromise(profsched.Promise):
-    def __init__(self, sched, prof):
-        self._event = threading.Event()
-        self._sched = sched
-        self._prof = prof
-
-    def _set(self, value):
-        self._value = value
-        self._event.set()
-
-    def get(self):
-        self._event.wait()
-        assert self._sched._running, \
-            "can't get promise when scheduler is not running"
-        if self._sched._exception is not None:
-            raise self._sched._exception
-        elif self._prof is None:
-            raise ValueError("profile was None, likely due to an exception")
-        else:
-            return self._value
+    def __exit__(self, *args):
+        self.close()
