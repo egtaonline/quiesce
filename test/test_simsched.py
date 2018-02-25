@@ -33,7 +33,7 @@ async def test_basic_profile(conf, game):
         assert rsgame.emptygame_copy(sched.game()) == game
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
-        pays = np.stack(awaited)
+    pays = np.stack(awaited)
     assert pays.shape == profs.shape
     assert np.allclose(pays[profs == 0], 0)
     assert np.any(pays != 0)

@@ -1,10 +1,10 @@
+import asyncio
 import io
 import json
-import pytest
-import time
 import zipfile
 
 import numpy as np
+import pytest
 from gameanalysis import rsgame
 
 from egta import zipsched
@@ -18,63 +18,63 @@ def batch_to_zip(bash):
     return buff
 
 
-def test_basic_profile():
+@pytest.fixture
+def jgame():
     with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+        return json.load(f)
+
+
+@pytest.fixture
+def conf(jgame):
+    return jgame['configuration']
+
+
+@pytest.fixture
+def game(jgame):
+    return rsgame.emptygame_json(jgame)
+
+
+@pytest.mark.asyncio
+async def test_basic_profile(conf, game):
     profs = game.random_profiles(20)
     zipf = 'cdasim/cdasim.zip'
 
-    with zipsched.ZipScheduler(game, conf, zipf) as sched:
+    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
         assert rsgame.emptygame_copy(sched.game()) == game
-        proms = [sched.schedule(p) for p in profs]
-        pays = np.stack([p.get() for p in proms])
+        awaited = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
+
+    pays = np.stack(awaited)
     assert pays.shape == profs.shape
     assert np.allclose(pays[profs == 0], 0)
     assert np.any(pays != 0)
 
 
-def test_get_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_get_fail(conf, game):
     prof = game.random_profile()
     zipf = batch_to_zip('sleep 0.2 && false')
 
-    with zipsched.ZipScheduler(game, conf, zipf) as sched:
-        prom = sched.schedule(prof)
+    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
+        future = sched.sample_payoffs(prof)
         with pytest.raises(AssertionError):
-            prom.get()
+            await future
 
 
-def test_schedule_fail():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
+@pytest.mark.asyncio
+async def test_bad_zipfile(conf, game):
+    zipf = 'nonexistent'
+    with pytest.raises(FileNotFoundError):
+        async with zipsched.ZipScheduler(game, conf, zipf):
+            pass  # pragma: no cover
+
+
+@pytest.mark.asyncio
+async def test_no_obs(conf, game):
     prof = game.random_profile()
-    zipf = batch_to_zip('sleep 0.2 && false')
+    zipf = batch_to_zip('sleep 0.2')
 
-    with zipsched.ZipScheduler(game, conf, zipf) as sched:
-        sched.schedule(prof)
-        time.sleep(1)
+    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
+        future = sched.sample_payoffs(prof)
         with pytest.raises(AssertionError):
-            sched.schedule(prof)
-
-
-def test_kill_extra_procs():
-    with open('cdasim/game.json') as f:
-        jgame = json.load(f)
-    conf = jgame['configuration']
-    game = rsgame.emptygame_json(jgame)
-    prof = game.random_profile()
-    zipf = batch_to_zip('sleep 0.2 && false')
-
-    with zipsched.ZipScheduler(game, conf, zipf) as sched:
-        prom = sched.schedule(prof)
-        sched.schedule(prof)
-        time.sleep(1)
-        with pytest.raises(AssertionError):
-            prom.get()
+            await future
