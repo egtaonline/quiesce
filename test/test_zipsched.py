@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from gameanalysis import rsgame
 
+from egta import countsched
 from egta import zipsched
 
 
@@ -41,6 +42,23 @@ async def test_basic_profile(conf, game):
 
     async with zipsched.ZipScheduler(game, conf, zipf) as sched:
         assert rsgame.emptygame_copy(sched.game()) == game
+        awaited = await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
+
+    pays = np.stack(awaited)
+    assert pays.shape == profs.shape
+    assert np.allclose(pays[profs == 0], 0)
+    assert np.any(pays != 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('count', [2, 3])
+async def test_simultaneous_obs(conf, game, count):
+    profs = game.random_profiles(10).repeat(2, 0)
+    zipf = 'cdasim/cdasim.zip'
+
+    async with countsched.CountScheduler(zipsched.ZipScheduler(
+            game, conf, zipf, simultaneous_obs=count), count) as sched:
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
 
