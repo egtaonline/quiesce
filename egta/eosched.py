@@ -1,6 +1,5 @@
+import asyncio
 import logging
-import queue
-import threading
 
 import numpy as np
 from gameanalysis import paygame
@@ -58,14 +57,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # XXX Copy to samplegame to get sample payoff reading
         self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
 
+        self._loop = asyncio.get_event_loop()
         # {hprof: (lock, obs, _Record)}
         self._profiles = {}
-        self._prof_lock = threading.Lock()
         self._num_running_profiles = 0
         # {prof_id: ^above^}
         self._prof_ids = {}
-        self._runprof_lock = threading.Lock()
-        self._pending_profiles = queue.Queue()
 
         self._sleep_time = sleep_time
         self._max_running = (max_scheduled * simultaneous_obs) - 1
@@ -77,7 +74,6 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._simult_obs = simultaneous_obs
 
         self._sched = None
-        self._thread_timeout_lock = threading.Lock()
         self._exception = None
 
     def schedule(self, profile):
