@@ -125,6 +125,7 @@ class SimulationScheduler(profsched.Scheduler):
         except Exception as ex:
             await self.close()
             raise ex
+        return self
 
     async def close(self):
         self._is_open = False
@@ -133,7 +134,7 @@ class SimulationScheduler(profsched.Scheduler):
             self._reader.cancel()
             with contextlib.suppress(Exception):
                 await self._reader
-        self._reader = None
+            self._reader = None
 
         if self._proc is not None:
             with contextlib.suppress(ProcessLookupError):
@@ -144,7 +145,7 @@ class SimulationScheduler(profsched.Scheduler):
                 self._proc.kill()
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(self._proc.wait(), 0.25)
-        self._proc = None
+            self._proc = None
 
         while not self._read_queue.empty():
             self._read_queue.get_nowait()

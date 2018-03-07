@@ -137,7 +137,7 @@ async def test_buffer_blocking(conf, game):
     async with simsched.SimulationScheduler(game, conf, cmd) as sched:
         await sched.sample_payoffs(prof)
         bprof = json.dumps(sched._base, separators=(',', ':')).encode('utf8')
-        # number we have to write to blow out buffer, multiple is to make sure we do
+        # number we have to write to blow out buffer
         num = 5 * math.ceil(4096 / (len(bprof) + 1))
         await asyncio.gather(*[
             sched.sample_payoffs(p) for p in itertools.repeat(prof, num)])

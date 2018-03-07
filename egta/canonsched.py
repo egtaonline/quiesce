@@ -32,10 +32,3 @@ class CanonScheduler(profsched.Scheduler):
 
     def game(self):
         return self._game
-
-    async def __aenter__(self):
-        await self._sched.__aenter__()
-        return self
-
-    async def __aexit__(self, *args):
-        return await self._sched.__aexit__(*args)

@@ -139,9 +139,9 @@ class ZipScheduler(profsched.Scheduler):
         self._sim_dir.cleanup()
         self._prof_dir.cleanup()
 
-    async def __aenter__(self):
+    def __enter__(self):
         self.open()
         return self
 
-    async def __aexit__(self, *args):
+    def __exit__(self, *args):
         self.close()

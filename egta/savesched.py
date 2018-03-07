@@ -42,10 +42,3 @@ class SaveScheduler(profsched.Scheduler):
             self._game = paygame.samplegame_replace_flat(
                 self._game, new_profs, new_pays)
         return self._game
-
-    async def __aenter__(self):
-        await self._sched.__aenter__()
-        return self
-
-    async def __aexit__(self, *args):
-        return await self._sched.__aexit__(*args)

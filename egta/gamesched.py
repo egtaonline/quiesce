@@ -116,9 +116,3 @@ class SampleGameScheduler(profsched.Scheduler):
 
     def game(self):
         return self._sgame
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *args):
-        pass
