@@ -1,5 +1,7 @@
 import asyncio
+import itertools
 import json
+import math
 import pytest
 
 import numpy as np
@@ -45,7 +47,7 @@ async def test_delayed_fail(conf, game):
     cmd = ['bash', '-c', 'sleep 1 && false']
 
     async with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             await sched.sample_payoffs(prof)
 
 
@@ -55,7 +57,7 @@ async def test_immediate_fail(conf, game):
     cmd = ['bash', '-c', 'false']
 
     async with simsched.SimulationScheduler(game, conf, cmd) as sched:
-        with pytest.raises(BrokenPipeError):
+        with pytest.raises(RuntimeError):
             await asyncio.gather(sched.sample_payoffs(prof),
                                  sched.sample_payoffs(prof))
 
@@ -79,7 +81,7 @@ async def test_read_delay_fail(conf, game):
     async with simsched.SimulationScheduler(game, conf, cmd) as sched:
         future = asyncio.ensure_future(sched.sample_payoffs(
             game.random_profile()))
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             await future
 
 
@@ -91,10 +93,10 @@ async def test_read_delay_schedule_fail(conf, game):
         future = asyncio.ensure_future(sched.sample_payoffs(
             game.random_profile()))
         await asyncio.sleep(1)  # make sure process is dead
-        with pytest.raises(AssertionError):
-            # Since we're using asyncio, the future actually gets assigned the
-            # error before this one kicks off.
-            asyncio.ensure_future(sched.sample_payoffs(game.random_profile()))
+        # Since we're using asyncio, the future actually gets assigned the
+        # error before this one kicks off.
+        asyncio.ensure_future(sched.sample_payoffs(game.random_profile()))
+        with pytest.raises(RuntimeError):
             await future
 
 
@@ -124,3 +126,18 @@ async def test_bad_command_exit(conf, game):
     with pytest.raises(FileNotFoundError):
         async with simsched.SimulationScheduler(game, conf, ['unknown']):
             pass  # pragma: no cover never called
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_buffer_blocking(conf, game):
+    prof = game.random_profile()
+    cmd = ['python3', 'cdasim/sim.py', '--single', '1']
+
+    async with simsched.SimulationScheduler(game, conf, cmd) as sched:
+        await sched.sample_payoffs(prof)
+        bprof = json.dumps(sched._base, separators=(',', ':')).encode('utf8')
+        # number we have to write to blow out buffer, multiple is to make sure we do
+        num = 5 * math.ceil(4096 / (len(bprof) + 1))
+        await asyncio.gather(*[
+            sched.sample_payoffs(p) for p in itertools.repeat(prof, num)])

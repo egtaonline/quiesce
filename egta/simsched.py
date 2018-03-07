@@ -1,10 +1,10 @@
 """A scheduler that gets payoffs from a local simulation"""
 import asyncio
+import collections
+import contextlib
 import json
 import logging
-import queue
 import subprocess
-import threading
 
 from gameanalysis import paygame
 from gameanalysis import rsgame
@@ -39,181 +39,122 @@ class SimulationScheduler(profsched.Scheduler):
         standard out. After all input lines have been read, this must flush the
         output otherwise this could hang waiting for results that are trapped
         in a buffer.
+    buff_size : int, optional
+        The maximum number of bytes to send to the command at a time. The
+        default should be fine for most applications, but if you know your
+        machine has a larger or smaller buffer size, setting this accurately
+        will prevent unnecessary blocking.
     """
 
-    def __init__(self, game, config, command):
+    def __init__(self, game, config, command, buff_size=4096):
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self._base = {'configuration': config}
         self.command = command
+        self.buff_size = buff_size
 
-        self._loop = asyncio.get_event_loop()
         self._is_open = False
         self._proc = None
-        self._inthread = None
-        self._outthread = None
-        self._inqueue = queue.Queue()
-        self._outqueue = queue.Queue()
+        self._reader = None
+        self._read_queue = asyncio.Queue()
+        self._write_lock = asyncio.Lock()
+        self._buffer_empty = asyncio.Event()
+        self._buffer_bytes = 0
+        self._line_bytes = collections.deque()
 
-        self._exceptions = []
+        self._buffer_empty.set()
 
     async def sample_payoffs(self, profile):
         assert self._is_open, "not open"
-        if self._exceptions:
-            raise self._exceptions[0]
-        lock = asyncio.Lock()
-        await lock.acquire()
-        qitem = [profile, lock, None]
-        self._inqueue.put(qitem)
-        await lock.acquire()
-        if self._exceptions:
-            raise self._exceptions[0]
-        return qitem[2]
+
+        self._base['assignment'] = self._game.profile_to_json(profile)
+        bprof = json.dumps(self._base, separators=(',', ':')).encode('utf8')
+        size = len(bprof) + 1
+        assert size < self.buff_size, \
+            "profile could not be written to buffer without blocking"
+        async with self._write_lock:
+            self._buffer_bytes += size
+            self._line_bytes.appendleft(size)
+            if self._buffer_bytes >= self.buff_size:
+                self._buffer_empty.clear()
+                await self._buffer_empty.wait()
+
+            got_data = asyncio.Event()
+            line = [None]
+            self._read_queue.put_nowait((line, got_data))
+
+            self._proc.stdin.write(bprof)
+            self._proc.stdin.write(b'\n')
+            try:
+                await self._proc.stdin.drain()
+            except ConnectionError:  # pragma: no cover race condition
+                raise RuntimeError("process died unexpectedly")
+
+        await got_data.wait()
+        if self._reader.done() and self._reader.exception() is not None:
+            raise self._reader.exception()
+        jpays = json.loads(line[0].decode('utf8'))
+        payoffs = self._game.payoff_from_json(jpays)
+        payoffs.setflags(write=False)
+        return payoffs
 
     def game(self):
         return self._game
 
-    def _enqueue(self):
-        """Thread used to push lines to stdin"""
-        lock = None
-        try:
-            while True:
-                qitem = self._inqueue.get()
-                if qitem is None:
-                    return  # told to terminate
-                prof, lock, _ = qitem
-                assert self._is_open and not self._exceptions
-                jprof = self._game.profile_to_json(prof)
-                self._base['assignment'] = jprof
-                json.dump(self._base, self._proc.stdin, separators=(',', ':'))
-                self._proc.stdin.write('\n')
-                self._proc.stdin.flush()
-                assert self._is_open and not self._exceptions
-                self._outqueue.put(qitem)
-                lock = None
-                assert self._is_open and not self._exceptions
-                _log.debug("sent profile: %s",
-                           self._game.profile_to_repr(prof))
-        except Exception as ex:  # pragma: no cover
-            self._exceptions.append(ex)
-        finally:
-            if lock is not None:
-                self._loop.call_soon_threadsafe(lock.release)
-            while True:
-                try:
-                    qitem = self._inqueue.get_nowait()
-                    if qitem is None:
-                        continue
-                    _, lock, _ = qitem
-                    self._loop.call_soon_threadsafe(lock.release)
-                except queue.Empty:
-                    break  # expected
+    async def _read(self):
+        while True:
+            line, got_data = await self._read_queue.get()
+            try:
+                line[0] = await self._proc.stdout.readline()
+                if not len(line[0]):
+                    raise RuntimeError("process died unexpectedly")
+                self._buffer_bytes -= self._line_bytes.pop()
+                if self._buffer_bytes < self.buff_size:  # pragma: no branch
+                    self._buffer_empty.set()
+            finally:
+                got_data.set()
 
-    def _dequeue(self):
-        """Thread used to get output from simulator"""
-        lock = None
-        try:
-            while True:
-                line = self._proc.stdout.readline()
-                if not line and self._outqueue.empty():
-                    # Process closed stdout and had nothing else to run
-                    return
-                assert line and self._proc.poll() is None, \
-                    "Process died unexpectedly with code {}".format(
-                        self._proc.poll())
-                assert self._is_open and not self._exceptions
-                jpays = json.loads(line)
-                payoffs = self._game.payoff_from_json(jpays)
-                payoffs.setflags(write=False)
-                qitem = self._outqueue.get()
-                if qitem is None:
-                    return  # told to exit
-                prof, lock, _ = qitem
-                assert self._is_open and not self._exceptions
-                _log.debug("read payoff for profile: %s",
-                           self._game.profile_to_repr(prof))
-                qitem[2] = payoffs
-                self._loop.call_soon_threadsafe(lock.release)
-                lock = None
-                assert self._is_open and not self._exceptions
-        except Exception as ex:  # pragma: no cover
-            self._exceptions.append(ex)
-        finally:
-            if lock is not None:
-                self._loop.call_soon_threadsafe(lock.release)
-            while True:
-                try:
-                    qitem = self._outqueue.get_nowait()
-                    if qitem is None:
-                        continue
-                    _, lock, _ = qitem
-                    self._loop.call_soon_threadsafe(lock.release)
-                except queue.Empty:
-                    break  # expected
-
-    def open(self):
+    async def open(self):
         assert not self._is_open, "can't open twice"
-        assert self._inthread is None
-        assert self._outthread is None
         assert self._proc is None
+        assert self._reader is None
         try:
-            self._proc = subprocess.Popen(
-                self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                universal_newlines=True)
-            self._inthread = threading.Thread(
-                target=self._enqueue, daemon=True)
-            self._inthread.start()
-            self._outthread = threading.Thread(
-                target=self._dequeue, daemon=True)
-            self._outthread.start()
+            self._proc = await asyncio.create_subprocess_exec(
+                *self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            self._reader = asyncio.ensure_future(self._read())
             self._is_open = True
         except Exception as ex:
-            self.close()
+            await self.close()
             raise ex
 
-    def close(self):
+    async def close(self):
         self._is_open = False
 
-        # This tells threads to die
-        self._inqueue.put(None)
-        self._outqueue.put(None)
+        if self._reader is not None:
+            self._reader.cancel()
+            with contextlib.suppress(Exception):
+                await self._reader
+        self._reader = None
 
-        # killing the process should close the streams and kill the threads
-        if self._proc is not None and self._proc.poll() is None:
-            # Kill process nicely, and then not nicely
-            try:
+        if self._proc is not None:
+            with contextlib.suppress(ProcessLookupError):
                 self._proc.terminate()
-            except ProcessLookupError:  # pragma: no cover
-                pass  # race condition, process died
-            try:
-                self._proc.wait(0.25)
-            except subprocess.TimeoutExpired:
-                _log.warning("couldn't terminate simulation, killing it...")
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(self._proc.wait(), 0.25)
+            with contextlib.suppress(ProcessLookupError):
                 self._proc.kill()
-            try:
-                self._proc.wait(0.25)
-                # XXX If we get here then the streams might not be closed, and
-                # we'll have a thread blocking on stdout, but we're unable to
-                # close it.
-            except subprocess.TimeoutExpired:  # pragma: no cover
-                _log.error("couldn't kill simulation")
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(self._proc.wait(), 0.25)
         self._proc = None
 
-        # Threads should be dead at this point, but we close anyways
-        if self._inthread is not None and self._inthread.is_alive():  # pragma: no cover # noqa
-            self._inthread.join(0.25)
-            if self._inthread.is_alive():
-                _log.warning("couldn't kill enqueue thread...")
-        self._inthread = None
-
-        if self._outthread is not None and self._outthread.is_alive():  # pragma: no cover # noqa
-            self._outthread.join(0.25)
-            if self._outthread.is_alive():
-                _log.warning("couldn't kill dequeue thread...")
-        self._outthread = None
+        while not self._read_queue.empty():
+            self._read_queue.get_nowait()
+        self._buffer_empty.set()
+        self._buffer_bytes = 0
+        self._line_bytes.clear()
 
     async def __aenter__(self):
-        self.open()
+        await self.open()
         return self
 
     async def __aexit__(self, *args):
-        self.close()
+        await self.close()
