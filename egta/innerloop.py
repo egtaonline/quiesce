@@ -238,18 +238,24 @@ def inner_loop(
                 add_restriction(rest)
         join_threads()
 
+        first_backups = True
         # Repeat with backups until found all
         while (len(equilibria) < num_equilibria
                and (not all(q.empty() for q in backups) or
                     not next(iter(exp_restrictions)).all())):
-            _log.warning(
-                "scheduling backup restrictions. This only happens when "
-                "quiesce criteria could not be met with current maximum "
-                "restriction size (%d). This probably means that the "
-                "maximum restriction size should be increased. If this is "
-                "happening frequently, increasing the number of backups taken "
-                "at a time might be desired (currently %s).",
-                restricted_game_size, num_backups)
+            if first_backups:
+                _log.warning(
+                    "scheduling backup restrictions. This only happens when "
+                    "quiesce criteria could not be met with current maximum "
+                    "restriction size (%d). This probably means that the "
+                    "maximum restriction size should be increased. If this is "
+                    "happening frequently, increasing the number of backups "
+                    "taken at a time might be desired (currently %s).",
+                    restricted_game_size, num_backups)
+            else:
+                _log.info("scheduling backup restrictions")
+            first_backups = False
+
             for r, back in enumerate(backups):
                 to_schedule = num_backups
                 while to_schedule > 0:
