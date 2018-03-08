@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import logging
 import queue
@@ -19,7 +20,7 @@ _log = logging.getLogger(__name__)
 # payoff, that might mean we should warn, or at least explore something else.
 
 
-def inner_loop(
+async def inner_loop(
         game, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
         num_equilibria=1, num_backups=1, devs_by_role=False,
@@ -83,14 +84,6 @@ def inner_loop(
     equilibria_lock = threading.Lock()
     equilibria = collect.mcces(dist_thresh)
     exceptions = []
-
-    # Handle case where game might not have role_index key word
-    if 'role_index' in inspect.signature(game.deviation_payoffs).parameters:
-        def deviation_payoffs(mix, role_index):
-            return game.deviation_payoffs(mix, role_index=role_index)
-    else:
-        def deviation_payoffs(mix, role_index):
-            return game.deviation_payoffs(mix)
 
     def add_restriction(rest):
         with exp_restrictions_lock:
