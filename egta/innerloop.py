@@ -1,14 +1,12 @@
 import asyncio
-import inspect
+import functools
+import heapq
 import logging
-import queue
-import threading
-import time
+from concurrent import futures
 
 import numpy as np
 from gameanalysis import collect
 from gameanalysis import nash
-from gameanalysis import paygame
 from gameanalysis import regret
 from gameanalysis import restrict
 
@@ -21,10 +19,10 @@ _log = logging.getLogger(__name__)
 
 
 async def inner_loop(
-        game, *, initial_restrictions=None, regret_thresh=1e-3,
+        agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
         num_equilibria=1, num_backups=1, devs_by_role=False,
-        at_least_one=False):
+        at_least_one=False, nash_procs=2):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -71,136 +69,102 @@ async def inner_loop(
         game.  This has the potential to run for a very long time as it may
         take exponential time. If your regret threshold is not set too log for
         your game, this is relatively reasonable though.
+    nash_procs : int, optional
+        The number of processes to use for finding Nash equilibria. Setting
+        None will result in using all of the available processes.
     """
-    initial_restrictions = (
-        game.pure_restrictions() if initial_restrictions is None
-        else np.asarray(initial_restrictions, bool))
     init_role_dev = 0 if devs_by_role else None
 
-    threads = queue.Queue()
-    exp_restrictions = collect.BitSet()
-    exp_restrictions_lock = threading.Lock()
-    backups = [queue.PriorityQueue() for _ in range(game.num_roles)]
-    equilibria_lock = threading.Lock()
+    exp_restrictions = collect.bitset()
+    exp_restrictions.add(np.zeros(agame.num_strats, bool))
+    backups = [[] for _ in range(agame.num_roles)]
     equilibria = collect.mcces(dist_thresh)
-    exceptions = []
+    loop = asyncio.get_event_loop()
 
-    def add_restriction(rest):
-        with exp_restrictions_lock:
-            schedule = exp_restrictions.add(rest)
-        if schedule and not exceptions:
-            thread = threading.Thread(
-                target=run_restriction, args=(rest,), daemon=True)
-            thread.start()
-            threads.put(thread)
-        return schedule
+    async def add_restriction(rest):
+        if not exp_restrictions.add(rest):
+            return  # already explored
+        _log.info(
+            "scheduling profiles from restricted strategies %s",
+            agame.restriction_to_repr(rest))
+        if np.all(np.add.reduceat(rest, agame.role_starts) == 1):
+            # Short circuit for pure restriction
+            await add_deviations(rest, rest.astype(float), init_role_dev)
+            return
+        data = await agame.get_restricted_game(rest)
+        reqa = await loop.run_in_executor(executor, functools.partial(
+            nash.mixed_nash, data, regret_thresh=regret_thresh,
+            dist_thresh=dist_thresh, at_least_one=at_least_one))
+        if reqa.size:
+            eqa = restrict.translate(data.trim_mixture_support(reqa), rest)
+            await asyncio.gather(*[
+                add_deviations(rest, eqm, init_role_dev) for eqm in eqa])
+        else:
+            _log.warning(
+                "couldn't find equilibria in restricted game %s. This is "
+                "likely due to high variance in payoffs which means "
+                "quiesce should be re-run with more samples per profile. "
+                "This could also be fixed by performing a more expensive "
+                "equilibria search to always return one.",
+                agame.restriction_to_repr(rest))
 
-    def run_restriction(rest):
-        try:
-            _log.info(
-                "scheduling profiles from restricted strategies %s",
-                game.restriction_to_repr(rest))
-            # TODO For anything but a SchedulerGame, this is a waste, but it
-            # also potentially speeds up nash computation for Scheduler game.
-            # The issue comes with computing the jacobian for noncomplete
-            # mixtures. Scheduler games will return nan jacobians outside of
-            # support for mixtures to save with sampling deviations.
-            data = paygame.game_copy(game.restrict(rest))
-            start = time.time()
-            eqa = restrict.translate(data.trim_mixture_support(
-                nash.mixed_nash(
-                    data, regret_thresh=regret_thresh,
-                    dist_thresh=dist_thresh,
-                    at_least_one=at_least_one),
-                thresh=support_thresh), rest)
-            duration = time.time() - start
-            if duration > 600:  # pragma: no cover
-                _log.warning(
-                    "equilibrium finding took %.0f seconds in "
-                    "restricted game %s", duration,
-                    game.restriction_to_repr(rest))
-            if eqa.size:
-                for eqm in eqa:
-                    add_deviations(rest, eqm, init_role_dev)
-            else:
-                _log.warning(
-                    "couldn't find equilibria in restricted game %s. This is "
-                    "likely due to high variance in payoffs which means "
-                    "quiesce should be re-run with more samples per profile. "
-                    "This could also be fixed by performing a more expensive "
-                    "equilibria search to always return one.",
-                    game.restriction_to_repr(rest))
-        except Exception as ex:  # pragma: no cover
-            exceptions.append(ex)
-
-    def add_deviations(rest, mix, role_index):
-        if not exceptions:
-            thread = threading.Thread(
-                target=run_deviations, args=(rest, mix, role_index),
-                daemon=True)
-            thread.start()
-            threads.put(thread)
-
-    def run_deviations(rest, mix, role_index):
+    async def add_deviations(rest, mix, role_index):
         # We need the restriction here, since trimming support may increase
         # regret of strategies in the initial restriction
-        try:
-            _log.info(
-                "scheduling deviations from mixture %s%s",
-                game.mixture_to_repr(mix),
-                "" if role_index is None
-                else " to role {}".format(game.role_names[role_index]))
-            devs = deviation_payoffs(mix, role_index)
-            exp = np.add.reduceat(devs * mix, game.role_starts)
-            gains = devs - exp.repeat(game.num_role_strats)
-            if role_index is None:
-                if np.all((gains <= regret_thresh) | rest):
-                    # Found equilibrium
-                    reg = gains.max()
-                    with equilibria_lock:
-                        added = equilibria.add(mix, reg)
-                    if added:
-                        _log.warning('found equilibrium %s with regret %f',
-                                     game.mixture_to_repr(mix), reg)
-                else:
+        _log.info(
+            "scheduling deviations from mixture %s%s",
+            agame.mixture_to_repr(mix),
+            "" if role_index is None
+            else " to role {}".format(agame.role_names[role_index]))
+        data = await agame.get_deviation_game(mix > 0, role_index)
+        devs = data.deviation_payoffs(mix)
+        exp = np.add.reduceat(devs * mix, agame.role_starts)
+        gains = devs - exp.repeat(agame.num_role_strats)
+        if role_index is None:
+            if np.all((gains <= regret_thresh) | rest):
+                # Found equilibrium
+                reg = gains.max()
+                if equilibria.add(mix, reg):
+                    _log.warning('found equilibrium %s with regret %f',
+                                 agame.mixture_to_repr(mix), reg)
+            else:
+                await asyncio.gather(*[
+                    queue_restrictions(rgains, ri, rest)
                     for ri, rgains in enumerate(np.split(
-                            gains, game.role_starts[1:])):
-                        queue_restrictions(rgains, ri, rest)
+                            gains, agame.role_starts[1:]))])
 
-            else:  # Set role index
-                rgains = np.split(gains, game.role_starts[1:])[role_index]
-                rrest = np.split(rest, game.role_starts[1:])[role_index]
-                if np.all((rgains <= regret_thresh) | rrest):  # No deviations
-                    role_index += 1
-                    if role_index < game.num_roles:  # Explore next deviation
-                        add_deviations(rest, mix, role_index)
-                    else:  # found equilibrium
-                        # This should not require scheduling as to get here all
-                        # deviations have to be scheduled
-                        reg = regret.mixture_regret(game, mix)
+        else:  # Set role index
+            rgains = np.split(gains, agame.role_starts[1:])[role_index]
+            rrest = np.split(rest, agame.role_starts[1:])[role_index]
+            if np.all((rgains <= regret_thresh) | rrest):  # No deviations
+                role_index += 1
+                if role_index < agame.num_roles:  # Explore next deviation
+                    await add_deviations(rest, mix, role_index)
+                else:  # found equilibrium
+                    # This should not require scheduling as to get here all
+                    # deviations have to be scheduled
+                    data = await agame.get_deviation_game(mix > 0)
+                    reg = regret.mixture_regret(data, mix)
+                    if equilibria.add(mix, reg):
                         _log.warning('found equilibrium %s with regret %f',
-                                     game.mixture_to_repr(mix), reg)
-                        with equilibria_lock:
-                            equilibria.add(mix, reg)
-                else:
-                    queue_restrictions(rgains, role_index, rest)
-        except Exception as ex:  # pragma: no cover
-            exceptions.append(ex)
+                                     agame.mixture_to_repr(mix), reg)
+            else:
+                await queue_restrictions(rgains, role_index, rest)
 
-    def queue_restrictions(role_gains, role_index, rest):
-        role_rest = np.split(rest, game.role_starts[1:])[role_index]
+    async def queue_restrictions(role_gains, role_index, rest):
+        role_rest = np.split(rest, agame.role_starts[1:])[role_index]
         if role_rest.all():
             return  # Can't deviate
 
         rest_size = rest.sum()
-        rs = game.role_starts[role_index]
+        rs = agame.role_starts[role_index]
 
         br = np.nanargmax(np.where(role_rest, np.nan, role_gains))
         if (role_gains[br] > regret_thresh
                 and rest_size < restricted_game_size):
             br_sub = rest.copy()
             br_sub[rs + br] = True
-            add_restriction(br_sub)
+            await add_restriction(br_sub)
         else:
             br = None  # Add best response to backup
 
@@ -211,78 +175,62 @@ async def inner_loop(
             sub = rest.copy()
             sub[rs + si] = True
             # XXX Tie id to deterministic random source
-            back.put((-gain, id(sub), sub))  # id for tie-breaking
+            heapq.heappush(back, (-gain, id(sub), sub))  # id for tie-breaking
 
-    def join_threads():
-        while not threads.empty():
-            threads.get().join()
-            if exceptions:
-                raise exceptions[0]
+    restrictions = (
+        agame.pure_restrictions() if initial_restrictions is None
+        else np.asarray(initial_restrictions, bool))
 
-    try:
-        # Quiesce first time
-        for rest in initial_restrictions:
-            if np.all(np.add.reduceat(rest, game.role_starts) == 1):
-                # Pure restriction, so we can skip right to deviations
-                add_deviations(rest, rest.astype(float), init_role_dev)
-            else:
-                # Not pure, so equilibria are not obvious, schedule restriction
-                # instead
-                add_restriction(rest)
-        join_threads()
-
-        first_backups = True
-        # Repeat with backups until found all
+    with futures.ProcessPoolExecutor(nash_procs) as executor:
+        iteration = 0
         while (len(equilibria) < num_equilibria
-               and (not all(q.empty() for q in backups) or
+               and (any(q for q in backups) or
                     not next(iter(exp_restrictions)).all())):
-            if first_backups:
+            if iteration == 1:
                 _log.warning(
                     "scheduling backup restrictions. This only happens when "
                     "quiesce criteria could not be met with current maximum "
                     "restriction size (%d). This probably means that the "
-                    "maximum restriction size should be increased. If this is "
-                    "happening frequently, increasing the number of backups "
-                    "taken at a time might be desired (currently %s).",
+                    "maximum restriction size should be increased. If this "
+                    "is happening frequently, increasing the number of "
+                    "backups taken at a time might be desired (currently %s).",
                     restricted_game_size, num_backups)
-            else:
+            elif iteration > 1:
                 _log.info("scheduling backup restrictions")
-            first_backups = False
+
+            await asyncio.gather(*[
+                add_restriction(r) for r in restrictions])
+
+            # FIXME Change this to iterable constructor
+            restrictions = collect.bitset()
+            for rest in exp_restrictions:
+                restrictions.add(rest)
 
             for r, back in enumerate(backups):
-                to_schedule = num_backups
-                while to_schedule > 0:
-                    # First try from backups
-                    if not back.empty():
-                        # This won't count if restriction already explored
-                        to_schedule -= add_restriction(back.get()[-1])
-                        continue
-                    # Else pick unexplored subgames
-                    rest = None
-                    with exp_restrictions_lock:
-                        for mask in exp_restrictions:
-                            rmask = np.split(mask, game.role_starts[1:])[r]
-                            if not rmask.all():
-                                rest = mask.copy()
-                                break
-                    if rest is not None:
-                        # TODO might be ideal if this is random, but it might
-                        # make games not quiesce reliably
-                        s = np.split(rest, game.role_starts[1:])[r].argmin()
-                        rest[game.role_starts[r] + s] = True
-                        add_restriction(rest)
-                        to_schedule -= 1
-                    else:
-                        to_schedule = 0
-            join_threads()
+                unscheduled = num_backups
+                while unscheduled > 0 and back:
+                    rest = heapq.heappop(back)[-1]
+                    unscheduled -= restrictions.add(rest)
+                for _ in range(unscheduled):
+                    added = False
+                    for mask in restrictions:
+                        rmask = np.split(mask, agame.role_starts[1:])[r]
+                        if rmask.all():
+                            continue
+                        rest = mask.copy()
+                        # TODO We could randomize instead of taking the first
+                        # strategy, but this would remove reproducability
+                        s = np.split(rest, agame.role_starts[1:])[r].argmin()
+                        rest[agame.role_starts[r] + s] = True
+                        restrictions.add(rest)
+                        added = True
+                        break
+                    if not added:
+                        break
+            iteration += 1
 
-        # Return equilibria
-        if equilibria:
-            return np.stack([eqm for eqm, _ in equilibria])
-        else:
-            return np.empty((0, game.num_strats))  # pragma: no cover
-
-    except Exception as ex:
-        # Set exception so all threads exit
-        exceptions.append(ex)
-        raise ex
+    # Return equilibria
+    if equilibria:
+        return np.stack([eqm for eqm, _ in equilibria])
+    else:
+        return np.empty((0, agame.num_strats))  # pragma: no cover

@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from gameanalysis import gamegen
-from gameanalysis import paygame
 
 from egta import gamesched
 from egta import rschedgame

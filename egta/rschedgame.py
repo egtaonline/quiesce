@@ -29,7 +29,8 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
             hprof = utils.hash_array(prof)
             future = self._profiles.get(hprof, None)
             if future is None:
-                future = asyncio.ensure_future(self._sched.sample_payoffs(prof))
+                future = asyncio.ensure_future(
+                    self._sched.sample_payoffs(prof))
                 self._profiles[hprof] = future
             futures.append(future)
         lpays = await asyncio.gather(*futures)
