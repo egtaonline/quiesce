@@ -1,7 +1,9 @@
+import asyncio
+
 import numpy as np
 
 
-def deviation_payoffs(prof_sched, mix, num, *, boots=0, chunk_size=None):
+async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
     """Bootstrap deviation payoffs
 
     Parameters
@@ -39,35 +41,42 @@ def deviation_payoffs(prof_sched, mix, num, *, boots=0, chunk_size=None):
         The deviation payoffs for each bootstrap sample.
     """
     assert num > 0, "can't schedule zero samples"
+    game = sched.game()
     mix = np.asarray(mix, float)
     chunk_size = chunk_size or boots * 10 or 1000
-    profiles = _chunk_profiles(prof_sched, mix, num, chunk_size)
     devs = np.empty(mix.size)
     mean_devs = np.zeros(mix.size)
     boot_devs = np.zeros((boots, mix.size))
     remaining = np.empty(boots, int)
     remaining.fill(num)
-    for i in range(num):
-        for j in range(mix.size):
-            devs[j] = next(profiles)[j]
-        mean_devs += (devs - mean_devs) / (i + 1)
-        samps = np.random.binomial(remaining, 1 / (num - i))
-        remaining -= samps
-        boot_devs += samps[:, None] * devs / num
+
+    # XXX This could be made less awkward, but it would help to require python
+    # 3.6
+    i = 0
+    futures = []
+
+    async def update():
+        nonlocal i
+        fiter = iter(futures)
+        for _ in range(len(futures) // game.num_strats):
+            for j in range(game.num_strats):
+                pay = await next(fiter)
+                devs[j] = pay[j]
+            np.add((devs - mean_devs) / (i + 1), mean_devs, mean_devs)
+            samps = np.random.binomial(remaining, 1 / (num - i))
+            np.subtract(remaining, samps, remaining)
+            np.add(samps[:, None] * devs / num, boot_devs, boot_devs)
+            i += 1
+
+    n = num
+    while 0 < n:
+        new_profs = game.random_deviation_profiles(
+            min(num, chunk_size), mix).reshape((-1, mix.size))
+        n -= chunk_size
+        new_futures = [asyncio.ensure_future(sched.sample_payoffs(prof))
+                       for prof in new_profs]
+        await update()
+        futures = new_futures
+    await update()
 
     return mean_devs, boot_devs
-
-
-def _chunk_profiles(sched, mix, num, chunk_size):
-    """Return a generator over payoffs that schedules somewhat efficiently"""
-    proms = []
-    while 0 < num:
-        new_profs = sched.game().random_deviation_profiles(
-            min(num, chunk_size), mix).reshape((-1, mix.size))
-        num -= chunk_size
-        new_proms = [sched.schedule(prof) for prof in new_profs]
-        for prom in proms:
-            yield prom.get()
-        proms = new_proms
-    for prom in proms:  # pragma: no branch
-        yield prom.get()

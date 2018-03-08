@@ -6,7 +6,7 @@ from egta import bootstrap
 from egta import gamesched
 
 
-SIZES = [
+sizes = [
     [[2], [2]],
     [[2, 2], [2, 2]],
     [[3, 2], [2, 3]],
@@ -14,24 +14,26 @@ SIZES = [
 ]
 
 
-@pytest.mark.parametrize('players,strats', SIZES)
-def test_random_mean_reg(players, strats):
+@pytest.mark.asyncio
+@pytest.mark.parametrize('players,strats', sizes)
+async def test_random_mean_reg(players, strats):
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
-    with gamesched.RsGameScheduler(game) as sched:
-        mean, boot = bootstrap.deviation_payoffs(sched, mix, 20)
+    sched = gamesched.RsGameScheduler(game)
+    mean, boot = await bootstrap.deviation_payoffs(sched, mix, 20)
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (0, game.num_strats)
 
 
-@pytest.mark.parametrize('players,strats', SIZES)
-def test_random_boot_reg(players, strats):
+@pytest.mark.asyncio
+@pytest.mark.parametrize('players,strats', sizes)
+async def test_random_boot_reg(players, strats):
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
     devs = game.deviation_payoffs(mix)
-    with gamesched.RsGameScheduler(game) as sched:
-        mean, boot = bootstrap.deviation_payoffs(
-            sched, mix, 20, boots=101, chunk_size=5)
+    sched = gamesched.RsGameScheduler(game)
+    mean, boot = await bootstrap.deviation_payoffs(
+        sched, mix, 20, boots=101, chunk_size=5)
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (101, game.num_strats)
     # These aren't guaranteed to be false, but it's incredibly unlikely
@@ -39,15 +41,16 @@ def test_random_boot_reg(players, strats):
     assert not np.allclose(devs, boot)
 
 
-@pytest.mark.parametrize('players,strats', SIZES)
-def test_random_pure_boot_reg(players, strats):
+@pytest.mark.asyncio
+@pytest.mark.parametrize('players,strats', sizes)
+async def test_random_pure_boot_reg(players, strats):
     game = gamegen.game(players, strats)
-    with gamesched.RsGameScheduler(game) as sched:
-        for mix in game.pure_mixtures():
-            devs = game.deviation_payoffs(mix)
-            mean, boot = bootstrap.deviation_payoffs(
-                sched, mix, 20, boots=101)
-            assert np.allclose(devs, mean)
-            assert np.allclose(devs, boot)
-            assert mean.shape == (game.num_strats,)
-            assert boot.shape == (101, game.num_strats)
+    sched = gamesched.RsGameScheduler(game)
+    for mix in game.pure_mixtures():
+        devs = game.deviation_payoffs(mix)
+        mean, boot = await bootstrap.deviation_payoffs(
+            sched, mix, 20, boots=101)
+        assert np.allclose(devs, mean)
+        assert np.allclose(devs, boot)
+        assert mean.shape == (game.num_strats,)
+        assert boot.shape == (101, game.num_strats)
