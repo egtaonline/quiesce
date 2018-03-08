@@ -1,6 +1,5 @@
 import asyncio
 import random
-import time
 
 import numpy as np
 import pytest
@@ -24,6 +23,7 @@ def egta_info():
         sim.add_dict({role: strats for role, strats
                       in zip(game.role_names, game.strat_names)})
         yield server, egta, game, sim
+
 
 @pytest.mark.asyncio
 async def test_basic_profile(egta_info):
@@ -71,23 +71,24 @@ async def test_exception_in_create(egta_info):
     server.throw_exception(TimeoutError)
     with pytest.raises(TimeoutError):
         async with eosched.EgtaOnlineScheduler(
-                game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as sched:
+                game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0):
             pass  # pragma: no cover
 
 
 @pytest.mark.asyncio
 async def test_exception_in_get(egta_info):
     server, egta, game, sim = egta_info
-    prof = game.random_profile()
+    profs = game.random_profiles(20)
 
     async with eosched.EgtaOnlineScheduler(
-            game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as sched:
-        future = asyncio.ensure_future(sched.sample_payoffs(prof))
+            game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+        futures = asyncio.gather(*[
+            sched.sample_payoffs(p) for p in profs])
         await asyncio.sleep(0.1)
         server.throw_exception(TimeoutError)
         await asyncio.sleep(0.1)
         with pytest.raises(TimeoutError):
-            await future
+            await futures
 
 
 @pytest.mark.asyncio

@@ -52,7 +52,6 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
 
         self._sleep_time = sleep_time
-        self._max_running = (max_scheduled * simultaneous_obs) - 1
         self._sim_id = sim_id
         self._configuration = configuration
         self._obs_memory = obs_memory
@@ -64,6 +63,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._prof_ids = {}
         self._sched = None
         self._fetcher = None
+        self._sched_lock = asyncio.Lock()
+        self._scheduled = asyncio.BoundedSemaphore(
+            max_scheduled * simultaneous_obs)
 
     def _check_fetcher(self):
         if self._fetcher.done() and self._fetcher.exception() is not None:
@@ -76,21 +78,21 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         data = self._profiles.setdefault(
             hprof, ([0], [0], [0], [None], asyncio.Queue()))
         scheduled, _, claimed, prof_id, pays = data
-        if scheduled[0] == claimed[0]:
-            # TODO make requests async, this may require locking - make sure
-            # the locking doesn't mess with other updates
-            # FIXME Need some sort of locking (semaphore) to prevent scheduling
-            # more than max_running
-            pid = prof_id[0]
-            if pid is not None:
-                self._sched.remove_profile(pid)
-            scheduled[0] += self._simult_obs
-            assignment = self._game.profile_to_repr(profile)
-            prof_id[0] = self._sched.add_profile(
-                assignment, scheduled[0])['id']
-            if pid is None:
-                self._prof_ids[prof_id[0]] = data
         claimed[0] += 1
+        if scheduled[0] < claimed[0]:
+            # TODO make requests async
+            scheduled[0] += self._simult_obs
+            async with self._sched_lock:
+                for _ in range(self._simult_obs):
+                    await self._scheduled.acquire()
+                pid = prof_id[0]
+                if pid is not None:
+                    self._sched.remove_profile(pid)
+                assignment = self._game.profile_to_repr(profile)
+                prof_id[0] = self._sched.add_profile(
+                    assignment, scheduled[0])['id']
+                if pid is None:
+                    self._prof_ids[prof_id[0]] = data
         pay = await pays.get()
         self._check_fetcher()
         return pay
@@ -99,11 +101,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         return self._game
 
     async def _fetch(self):
-        # FIXME Make sure that all queues get signaled to stop
         # TODO Make requests async
         try:
             while True:
-                # First update requirements and mark completed
                 _log.info("query scheduler %d", self._sched['id'])
                 info = self._sched.get_requirements()
                 assert info['active'], "scheduler was deactivated"
@@ -118,18 +118,20 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     # TODO Is this still necessary
                     # valid = all(o['symmetry_groups'] is not None for o
                     #             in jobs['observations'])
-                    new_obs = self._game.samplepay_from_json(jobs)
-                    new_obs = new_obs[:new_obs.shape[0] - received[0]].copy()
-                    new_obs.setflags(write=False)
-                    for obs in new_obs:
-                        pays.put_nowait(obs)
+                    obs = self._game.samplepay_from_json(jobs)
+                    num = obs.shape[0] - received[0]
+                    received[0] += num
+                    for _ in range(num):
+                        self._scheduled.release()
+                    obs = obs[:num].copy()
+                    obs.setflags(write=False)
+                    for o in obs:
+                        pays.put_nowait(o)
                 await asyncio.sleep(self._sleep_time)
         except Exception as ex:
             for _, (received,), (claimed,), _, pays in self._profiles.values():
-                print(received, claimed)
                 for _ in range(claimed - received):
                     pays.put_nowait(None)
-            print('exception', ex)
             raise ex
 
     async def open(self):
@@ -193,6 +195,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             _log.info("deactivated scheduler %d", self._sched['id'])
             self._sched = None
 
+        if self._sched_lock.locked():
+            self._sched_lock.release()
+        while True:
+            try:
+                self._scheduled.release()
+            except ValueError:
+                break  # Fully reset
         self._profiles.clear()
         self._prof_ids.clear()
 

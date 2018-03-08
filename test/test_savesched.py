@@ -16,8 +16,7 @@ async def test_basic_profile(_):
 
     sched = savesched.SaveScheduler(gamesched.SampleGameScheduler(sgame))
     assert rsgame.emptygame_copy(sgame) == rsgame.emptygame_copy(sched.game())
-    async with sched:
-        await asyncio.gather(*[sched.sample_payoffs(p) for p in profs[:10]])
+    await asyncio.gather(*[sched.sample_payoffs(p) for p in profs[:10]])
     savegame = sched.game()
 
     sched = savesched.SaveScheduler(gamesched.SampleGameScheduler(sgame))

@@ -61,12 +61,6 @@ class RsGameScheduler(profsched.Scheduler):
     def game(self):
         return self._game
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *args):
-        pass
-
 
 class SampleGameScheduler(profsched.Scheduler):
     """Schedule profiles by adding noise to a sample game

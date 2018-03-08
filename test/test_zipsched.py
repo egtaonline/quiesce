@@ -40,7 +40,7 @@ async def test_basic_profile(conf, game):
     profs = game.random_profiles(20)
     zipf = 'cdasim/cdasim.zip'
 
-    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
+    with zipsched.ZipScheduler(game, conf, zipf) as sched:
         assert rsgame.emptygame_copy(sched.game()) == game
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
@@ -57,8 +57,9 @@ async def test_simultaneous_obs(conf, game, count):
     profs = game.random_profiles(10).repeat(2, 0)
     zipf = 'cdasim/cdasim.zip'
 
-    async with countsched.CountScheduler(zipsched.ZipScheduler(
-            game, conf, zipf, simultaneous_obs=count), count) as sched:
+    with zipsched.ZipScheduler(
+            game, conf, zipf, simultaneous_obs=count) as sched:
+        sched = countsched.CountScheduler(sched, count)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
 
@@ -73,7 +74,7 @@ async def test_get_fail(conf, game):
     prof = game.random_profile()
     zipf = batch_to_zip('sleep 0.2 && false')
 
-    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
+    with zipsched.ZipScheduler(game, conf, zipf) as sched:
         future = sched.sample_payoffs(prof)
         with pytest.raises(AssertionError):
             await future
@@ -83,7 +84,7 @@ async def test_get_fail(conf, game):
 async def test_bad_zipfile(conf, game):
     zipf = 'nonexistent'
     with pytest.raises(FileNotFoundError):
-        async with zipsched.ZipScheduler(game, conf, zipf):
+        with zipsched.ZipScheduler(game, conf, zipf):
             pass  # pragma: no cover
 
 
@@ -92,7 +93,7 @@ async def test_no_obs(conf, game):
     prof = game.random_profile()
     zipf = batch_to_zip('sleep 0.2')
 
-    async with zipsched.ZipScheduler(game, conf, zipf) as sched:
+    with zipsched.ZipScheduler(game, conf, zipf) as sched:
         future = sched.sample_payoffs(prof)
         with pytest.raises(AssertionError):
             await future
