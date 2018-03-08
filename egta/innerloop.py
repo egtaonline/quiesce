@@ -18,6 +18,8 @@ _log = logging.getLogger(__name__)
 # payoff, that might mean we should warn, or at least explore something else.
 
 
+# FIXME Should nash_procs just be the executor instead? Although a thread
+# executor might make it fail?
 async def inner_loop(
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
