@@ -39,6 +39,9 @@ async def amain(*argv):
         '-r', '--recipient', metavar='<email-address>', action='append',
         default=[], help="""Specify an email address to receive email logs at.
         Can specify multiple email addresses.""")
+    parser.add_argument(
+        '--tag', metavar='<tag>', help="""Specify an optional tag that will get
+        appended to logs and appear in the email subject.""")
     # FIXME Add tag
 
     # All of the actual methods to run
@@ -52,11 +55,13 @@ async def amain(*argv):
     args = parser.parse_args(argv)
     method = eq_methods.choices[args.method]
 
+    tag = '' if args.tag is None else args.tag + ' '
+
     stderr_handle = logging.StreamHandler(sys.stderr)
     stderr_handle.setLevel(50 - 10 * min(args.verbose, 4))
     stderr_handle.setFormatter(logging.Formatter(
-        '%(asctime)s {} %(message)s'.format(
-            args.method)))
+        '%(asctime)s {}{} %(message)s'.format(
+            args.method, tag)))
     log_handlers = [stderr_handle]
 
     # Email Logging
@@ -72,7 +77,7 @@ async def amain(*argv):
 
         email_handler = logging.handlers.SMTPHandler(
             smtp_host, smtp_fromaddr, args.recipient,
-            'EGTA Status for {}'.format(args.method))
+            'EGTA Status for {}{}'.format(args.method, tag))
         email_handler.setLevel(50 - args.email_verbosity * 10)
         email_handler.setFormatter(logging.Formatter(
             '%(message)s'))
