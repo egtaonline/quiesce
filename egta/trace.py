@@ -9,9 +9,6 @@ from egta import asyncgame
 from egta import innerloop
 
 
-_log = logging.getLogger(__name__)
-
-
 # TODO Expose max step
 async def trace_all_equilibria(
         agame0, agame1, regret_thresh=1e-3, **innerloop_args):
@@ -33,11 +30,11 @@ async def trace_all_equilibria(
             return ()
         mid = (lower + upper) / 2
 
-        eqa = await innerloop.inner_loop(
-            asyncgame.merge(agame0, agame1, mid), **innerloop_args)
+        midgame = asyncgame.merge(agame0, agame1, mid)
+        eqa = await innerloop.inner_loop(midgame, **innerloop_args)
 
         if not eqa.size:  # pragma: no cover
-            _log.warning("found no equilibria for t: %g", mid)
+            logging.warning("%s: found no equilibria for t: %g", midgame, mid)
             return ()
 
         # XXX This shouldn't really be async as all data should be there, could
@@ -47,7 +44,8 @@ async def trace_all_equilibria(
 
         lupper = min(t[0] for t, _ in traces)
         ulower = max(t[-1] for t, _ in traces)
-        _log.warning("traced %g out to %g - %g", mid, lupper, ulower)
+        logging.warning(
+            "%s: traced %g out to %g - %g", midgame, mid, lupper, ulower)
 
         lower_traces, upper_traces = await asyncio.gather(
             trace_between(lower, lupper), trace_between(ulower, upper))

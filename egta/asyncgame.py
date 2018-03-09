@@ -43,6 +43,9 @@ class CompleteAsyncGame(AsyncGame):
     def __eq__(self, other):
         return super().__eq__(other) and self._game == other._game
 
+    def __str__(self):
+        return repr(self._game)
+
 
 def wrap(game):
     """Wrap a CompleteGame as an AsyncGame"""
@@ -79,6 +82,10 @@ class MergedAsyncGame(AsyncGame):
                 self._agame0 == other._agame0 and
                 self._agame1 == other._agame1 and
                 self._t == other._t)
+
+    def __str__(self):
+        return '{} {:g} - {:g} {}'.format(
+            self._agame0, 1 - self._t, self._t, self._agame1)
 
 
 def merge(agame0, agame1, t):

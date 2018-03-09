@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import numpy as np
 from gameanalysis import paygame
@@ -43,16 +44,27 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
             rest)
 
     async def get_restricted_game(self, rest):
+        logging.info(
+            "%s: scheduling restriction %s", self,
+            self.restriction_to_repr(rest))
         game = await self._get_game(self._rprofs(rest))
         return _ReductionGame(
             game.restrict(rest), self._red, self._rgame.num_role_players)
 
     async def get_deviation_game(self, rest, role_index=None):
+        logging.info(
+            "%s: scheduling deviations from %s%s", self,
+            self.restriction_to_repr(rest),
+            '' if role_index is None else ' by role ' +
+            self.role_names[role_index])
         dprofs = self._red.expand_deviation_profiles(
             self, rest, self._rgame.num_role_players, role_index)
         rprofs = self._rprofs(rest)
         game = await self._get_game(np.concatenate([rprofs, dprofs]))
         return _ReductionGame(game, self._red, self._rgame.num_role_players)
+
+    def __str__(self):
+        return str(self._sched)
 
 
 def schedgame(sched, red=idr, red_players=None):

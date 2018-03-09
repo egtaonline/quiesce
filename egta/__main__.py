@@ -42,7 +42,6 @@ async def amain(*argv):
     parser.add_argument(
         '--tag', metavar='<tag>', help="""Specify an optional tag that will get
         appended to logs and appear in the email subject.""")
-    # FIXME Add tag
 
     # All of the actual methods to run
     eq_methods = parser.add_subparsers(

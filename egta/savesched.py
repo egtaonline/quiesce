@@ -44,6 +44,9 @@ class SaveScheduler(profsched.Scheduler):
                 self._game, new_profs, new_pays)
         return self._game
 
+    def __str__(self):
+        return str(self._sched)
+
 
 def savesched(sched):
     return SaveScheduler(sched)

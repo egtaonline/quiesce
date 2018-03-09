@@ -97,7 +97,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # TODO Make requests async
         try:
             while True:
-                logging.info("query scheduler %d", self._sched['id'])
+                logging.info("query scheduler %d for game %d",
+                             self._sched['id'], self._game_id)
                 info = self._sched.get_requirements()
                 assert info['active'], "scheduler was deactivated"
                 reqs = info['scheduling_requirements']
@@ -155,8 +156,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 data = ([num_spays], [num_spays], [0], [pid], pays)
                 self._profiles[hprof] = data
                 self._prof_ids[pid] = data
-            logging.info("found %d existing profiles with %d payoffs",
-                         num_profs, num_pays)
+            logging.info(
+                "found %d existing profiles with %d payoffs in game %d",
+                num_profs, num_pays, self._game_id)
 
             # Create and start scheduler
             self._sched = self._api.create_generic_scheduler(
@@ -164,9 +166,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 self._obs_memory, self._game.num_players, self._obs_time,
                 self._simult_obs, 1, conf)
             logging.warning(
-                "created scheduler %s (%d) for running simulations: "
-                "https://%s/generic_schedulers/%d", self._sched['name'],
-                self._sched['id'], self._api.domain, self._sched['id'])
+                "created scheduler %d for running simulations of game %d: "
+                "https://%s/generic_schedulers/%d", self._sched['id'],
+                self._game_id, self._api.domain, self._sched['id'])
             for role, count in zip(self._game.role_names,
                                    self._game.num_role_players):
                 self._sched.add_role(role, count)
@@ -186,7 +188,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
         if self._sched is not None:
             self._sched.deactivate()
-            logging.info("deactivated scheduler %d", self._sched['id'])
+            logging.info("deactivated scheduler %d for game %d",
+                         self._sched['id'], self._game_id)
             self._sched = None
 
         if self._sched_lock.locked():
@@ -205,6 +208,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
     async def __aexit__(self, *args):
         await self.close()
+
+    def __str__(self):
+        return str(self._game_id)
 
 
 def eosched(

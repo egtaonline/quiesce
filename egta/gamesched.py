@@ -60,6 +60,9 @@ class RsGameScheduler(profsched.Scheduler):
         payoff.setflags(write=False)
         return payoff
 
+    def __str__(self):
+        return repr(self._game)
+
 
 def gamesched(
         game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200):
@@ -115,6 +118,9 @@ class SampleGameScheduler(profsched.Scheduler):
         payoff[profile == 0] = 0
         payoff.setflags(write=False)
         return payoff
+
+    def __str__(self):
+        return repr(self._sgame)
 
 
 def samplegamesched(sgame, noise_dist=lambda: 0, param_dist=lambda: ()):

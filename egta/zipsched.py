@@ -15,9 +15,6 @@ from gameanalysis import utils
 from egta import profsched
 
 
-_log = logging.getLogger(__name__)
-
-
 class ZipScheduler(profsched.Scheduler):
     """Schedule profiles using am EGTA Online zip file
 
@@ -63,8 +60,8 @@ class ZipScheduler(profsched.Scheduler):
             if next(counter) >= self._count:
                 self._extra_profs.pop(hprof)
             pay = await queue.get()
-            _log.debug("read payoff for profile: %s",
-                       self._game.profile_to_repr(profile))
+            logging.debug(
+                "read payoff for profile: %s", self.profile_to_repr(profile))
             return pay
 
         else:
@@ -80,6 +77,9 @@ class ZipScheduler(profsched.Scheduler):
             with open(os.path.join(direc, 'simulation_spec.json'),
                       'w') as f:
                 json.dump(self._base, f)
+            logging.debug(
+                "scheduled %d profile%s: %s", self._count,
+                '' if self._count == 1 else 's', self.profile_to_repr(profile))
 
             # Limit simultaneous processes
             async with self._procs:
@@ -107,8 +107,8 @@ class ZipScheduler(profsched.Scheduler):
                 "simulation wrote too many observation files"
             shutil.rmtree(direc)
             pay = queue.get_nowait()
-            _log.debug("read payoff for profile: %s",
-                       self._game.profile_to_repr(profile))
+            logging.debug("read payoff for profile: %s",
+                          self.profile_to_repr(profile))
             return pay
 
     def open(self):
@@ -145,6 +145,9 @@ class ZipScheduler(profsched.Scheduler):
 
     def __exit__(self, *args):
         self.close()
+
+    def __str__(self):
+        return self.zipf
 
 
 def zipsched(game, conf, zipf, *, max_procs=4, simultaneous_obs=1):

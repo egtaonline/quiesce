@@ -32,6 +32,9 @@ class CountScheduler(profsched.Scheduler):
             payoff += (pay - payoff) / i
         return payoff
 
+    def __str__(self):
+        return str(self._sched)
+
 
 def countsched(sched, count):
     return CountScheduler(sched, count)

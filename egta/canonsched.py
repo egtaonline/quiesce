@@ -29,6 +29,9 @@ class CanonScheduler(profsched.Scheduler):
         full_pay = await self._sched.sample_payoffs(full_prof)
         return full_pay[self._mask]
 
+    def __str__(self):
+        return str(self._sched)
+
 
 def canon(sched):
     return CanonScheduler(sched)

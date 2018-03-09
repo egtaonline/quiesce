@@ -12,15 +12,6 @@ from gameanalysis import rsgame
 from egta import profsched
 
 
-_log = logging.getLogger(__name__)
-
-
-# XXX There exists a coroutine process object as well that could be used in
-# this circumstance, but there are issues with blocking while reading and
-# writing to the subprocess streams that make threads preferable for the time
-# being.
-
-
 class SimulationScheduler(profsched.Scheduler):
     """Schedule profiles using a command line program
 
@@ -91,12 +82,16 @@ class SimulationScheduler(profsched.Scheduler):
             except ConnectionError:  # pragma: no cover race condition
                 raise RuntimeError("process died unexpectedly")
 
+        logging.debug("scheduled profile: %s",
+                      self._game.profile_to_repr(profile))
         await got_data.wait()
         if self._reader.done() and self._reader.exception() is not None:
             raise self._reader.exception()
         jpays = json.loads(line[0].decode('utf8'))
         payoffs = self._game.payoff_from_json(jpays)
         payoffs.setflags(write=False)
+        logging.debug("read payoff for profile: %s",
+                      self.profile_to_repr(profile))
         return payoffs
 
     async def _read(self):
@@ -158,6 +153,9 @@ class SimulationScheduler(profsched.Scheduler):
 
     async def __aexit__(self, *args):
         await self.close()
+
+    def __str__(self):
+        return ' '.join(self.command)
 
 
 def simsched(game, config, command, buff_size=4096):

@@ -11,8 +11,6 @@ from gameanalysis import regret
 from gameanalysis import restrict
 
 
-_log = logging.getLogger(__name__)
-
 # TODO There's something to be said about individual rationality constraints
 # relative to best deviation, i.e. if all are positive gains, but negative
 # payoff, that might mean we should warn, or at least explore something else.
@@ -86,9 +84,6 @@ async def inner_loop(
     async def add_restriction(rest):
         if not exp_restrictions.add(rest):
             return  # already explored
-        _log.info(
-            "scheduling profiles from restricted strategies %s",
-            agame.restriction_to_repr(rest))
         if agame.is_pure_restriction(rest):
             # Short circuit for pure restriction
             await add_deviations(rest, rest.astype(float), init_role_dev)
@@ -102,22 +97,17 @@ async def inner_loop(
             await asyncio.gather(*[
                 add_deviations(rest, eqm, init_role_dev) for eqm in eqa])
         else:
-            _log.warning(
-                "couldn't find equilibria in restricted game %s. This is "
+            logging.warning(
+                "%s: couldn't find equilibria in restricted game %s. This is "
                 "likely due to high variance in payoffs which means "
                 "quiesce should be re-run with more samples per profile. "
                 "This could also be fixed by performing a more expensive "
                 "equilibria search to always return one.",
-                agame.restriction_to_repr(rest))
+                agame, agame.restriction_to_repr(rest))
 
     async def add_deviations(rest, mix, role_index):
         # We need the restriction here, since trimming support may increase
         # regret of strategies in the initial restriction
-        _log.info(
-            "scheduling deviations from mixture %s%s",
-            agame.mixture_to_repr(mix),
-            "" if role_index is None
-            else " to role {}".format(agame.role_names[role_index]))
         data = await agame.get_deviation_game(mix > 0, role_index)
         devs = data.deviation_payoffs(mix)
         exp = np.add.reduceat(devs * mix, agame.role_starts)
@@ -127,8 +117,9 @@ async def inner_loop(
                 # Found equilibrium
                 reg = gains.max()
                 if equilibria.add(mix, reg):
-                    _log.warning('found equilibrium %s with regret %f',
-                                 agame.mixture_to_repr(mix), reg)
+                    logging.warning(
+                        "%s: found equilibrium %s with regret %f", agame,
+                        agame.mixture_to_repr(mix), reg)
             else:
                 await asyncio.gather(*[
                     queue_restrictions(rgains, ri, rest)
@@ -148,8 +139,9 @@ async def inner_loop(
                     data = await agame.get_deviation_game(mix > 0)
                     reg = regret.mixture_regret(data, mix)
                     if equilibria.add(mix, reg):
-                        _log.warning('found equilibrium %s with regret %f',
-                                     agame.mixture_to_repr(mix), reg)
+                        logging.warning(
+                            "%s: found equilibrium %s with regret %f", agame,
+                            agame.mixture_to_repr(mix), reg)
             else:
                 await queue_restrictions(rgains, role_index, rest)
 
@@ -189,25 +181,21 @@ async def inner_loop(
                and (any(q for q in backups) or
                     not next(iter(exp_restrictions)).all())):
             if iteration == 1:
-                _log.warning(
-                    "scheduling backup restrictions. This only happens when "
-                    "quiesce criteria could not be met with current maximum "
-                    "restriction size (%d). This probably means that the "
-                    "maximum restriction size should be increased. If this "
-                    "is happening frequently, increasing the number of "
+                logging.warning(
+                    "%s: scheduling backup restrictions. This only happens "
+                    "when quiesce criteria could not be met with current "
+                    "maximum restriction size (%d). This probably means that "
+                    "the maximum restriction size should be increased. If "
+                    "this is happening frequently, increasing the number of "
                     "backups taken at a time might be desired (currently %s).",
-                    restricted_game_size, num_backups)
+                    agame, restricted_game_size, num_backups)
             elif iteration > 1:
-                _log.info("scheduling backup restrictions")
+                logging.info("%s: scheduling backup restrictions", agame)
 
             await asyncio.gather(*[
                 add_restriction(r) for r in restrictions])
 
-            # FIXME Change this to iterable constructor
-            restrictions = collect.bitset()
-            for rest in exp_restrictions:
-                restrictions.add(rest)
-
+            restrictions = collect.bitset(exp_restrictions)
             for r, back in enumerate(backups):
                 unscheduled = num_backups
                 while unscheduled > 0 and back:
