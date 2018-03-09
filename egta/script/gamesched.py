@@ -1,21 +1,35 @@
+import sys
+
 from gameanalysis import paygame
+from gameanalysis import gamereader
 
 from egta import gamesched
 
 
-def add_parser(subparsers):
-    parser = subparsers.add_parser(
-        'game', help="""Schedule simulations with noise added to a game""",
-        description="""Sample profiles by adding noise to game data.""")
-    parser.add_argument(
-        '--sample', '-s', action='store_true', help="""Run the game scheduler
-        in sample mode, where first sample payoffs are selected randomly before
-        adding noise.""")
-    return parser
-
-
-def create_scheduler(game, args, **_):
-    if args.sample:
-        return gamesched.SampleGameScheduler(paygame.samplegame_copy(game))
+def create_scheduler(game='-', sample=None, **_):
+    if game == '-':
+        rsgame = gamereader.load(sys.stdin)
     else:
-        return gamesched.RsGameScheduler(game)
+        with open(game) as f:
+            rsgame = gamereader.load(f)
+
+    if sample is not None:
+        return Sgs(paygame.samplegame_copy(rsgame))
+    else:
+        return Rgs(rsgame)
+
+
+class Sgs(gamesched.SampleGameScheduler):
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+
+class Rgs(gamesched.RsGameScheduler):
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass

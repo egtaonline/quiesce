@@ -1,75 +1,31 @@
-import argparse
-import json
-import logging
-import sys
-
 from egtaonline import api
+from gameanalysis import gamereader
+from gameanalysis import rsgame
 
 from egta import eosched
 
 
-_log = logging.getLogger(__name__)
+def create_scheduler(
+        game_id=None, mem=None, time=None, auth=None, count='1', sleep='600',
+        max='100', **_):
+    assert game_id is not None, "`game_id` must be specified"
+    assert mem is not None, "`mem` must be specified"
+    assert time is not None, "`time` must be specified"
+    mem = int(mem)
+    time = int(time)
+    count = int(count)
+    sleep = int(sleep)
+    max_sims = int(max)
 
+    egta = api.EgtaOnlineApi(auth_token=auth)
+    with egta:
+        summ = egta.get_game(int(game_id)).get_summary()
+        sim_id = egta.get_simulator(*summ['simulator_fullname'].split('-', 1))
+    game = rsgame.emptygame_copy(gamereader.loadj(summ))
+    config = dict(summ.get('configuration', ()) or ())
 
-def add_parser(subparsers):
-    parser = subparsers.add_parser(
-        'eo', help="""Schedule simulations through egta online""",
-        description="""Sample profiles from egta online.""")
-    parser.add_argument(
-        'sim_memory', metavar='<sim-memory-mb>', type=int, help="""Maximum memory
-        needed to run simulation. Standard limit per core is 4096, but if your
-        simulation needs less, you should request less. Note, that if you set
-        it too low you'll get biased samples for simulations that require less
-        memory to run which could be very bad.""")
-    parser.add_argument(
-        'sim_time', metavar='<sim-time-sec>', type=int, help="""Maximum amount of
-        time needed to run a single simulation.  Longer times will result in
-        simulations taking longer to schedule, but shorter times could result
-        in jobs being canceled from going over time which will bias payoff
-        results for shorter running simulations.""")
-    parser.add_argument(
-        '--conf', '-c', metavar='<conf-json>', type=argparse.FileType('r'),
-        help="""The configuration file for the simulator. This only needs to be
-        specified if a configuration couldn't be found in the specified
-        game.""")
-    parser.add_argument(
-        '--sim-id', metavar='<sim-id>', type=int, help="""The id of the
-        simulator to use. If a game id was specified the simulator id will be
-        looked up, but it will take a bit longer.""")
-    parser.add_argument(
-        '--sleep', '-s', metavar='<sleep-seconds>', default=600, type=float,
-        help="""Amount of time to sleep in seconds while waiting for output
-        from the simulator. Too long and the script will be paused waiting for
-        a response from the simulator, too short and a lof of cpu cycles will
-        be wasted checking an empty buffer. (default: %(default)g)""")
-    parser.add_argument(
-        '--max-schedule', metavar='<observations>', default=100, type=int,
-        help="""The maximum number of observations to schedule simultaneously.
-        This isn't a strict limit, but it won't be violated by much. (default:
-        %(default)d)""")
-    return parser
-
-
-def create_scheduler(game, args, configuration=None, simname=None, **_):
-    assert (configuration is not None) == (args.conf is None), \
-        "`conf` must be specified or supplied in the game, but not both"
-    assert simname is not None or args.sim_id is not None, \
-        "`sim-id` must be specified or supplied in the game"
-    if args.conf is not None:
-        configuration = json.load(args.conf)
-
-    if args.sim_id is None:
-        with api.EgtaOnlineApi(auth_token=args.auth_string) as egta:
-            args.sim_id = egta.get_simulator(*simname.split('-', 1))['id']
-    if args.sim_id is None:  # pragma: no cover
-        _log.critical("couldn't find simulator with name \"{}\"".format(
-            simname))
-        sys.exit(1)
-
-    egta = api.EgtaOnlineApi(auth_token=args.auth_string)
     return ApiWrapper(
-        game, egta, args.sim_id, args.count, configuration, args.sleep,
-        args.max_schedule, args.sim_memory, args.sim_time, args.game_id)
+        game, egta, sim_id, count, config, sleep, max_sims, mem, time)
 
 
 class ApiWrapper(eosched.EgtaOnlineScheduler):
@@ -77,10 +33,10 @@ class ApiWrapper(eosched.EgtaOnlineScheduler):
         super().__init__(game, api, *args, **kwargs)
         self.api = api
 
-    def __enter__(self):
+    async def __aenter__(self):
         self.api.__enter__()
-        return super().__enter__()
+        return await super().__aenter__()
 
-    def __exit__(self, *args, **kwargs):
-        super().__exit__(*args, **kwargs)
-        self.api.__exit__(*args, **kwargs)
+    async def __aexit__(self, *args):
+        await super().__aexit__(*args)
+        self.api.__exit__(*args)

@@ -2,6 +2,7 @@
 import abc
 
 
+# FIXME Make this extend GameLike
 class Scheduler(abc.ABC):  # pragma: no cover
     """A profile scheduler
 
@@ -12,9 +13,4 @@ class Scheduler(abc.ABC):  # pragma: no cover
         """Schedule a profile
 
         Return a promise for the payoff data"""
-        pass
-
-    @abc.abstractmethod
-    def game(self):
-        """Get the game that this scheduler returns information about"""
         pass

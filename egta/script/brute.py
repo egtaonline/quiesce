@@ -4,14 +4,11 @@ import logging
 
 import numpy as np
 from gameanalysis import nash
-from gameanalysis import reduction
 from gameanalysis import regret
 from gameanalysis import restrict
 
 from egta import schedgame
-
-
-_log = logging.getLogger(__name__)
+from egta.script import utils
 
 
 def add_parser(subparsers):
@@ -22,6 +19,7 @@ def add_parser(subparsers):
         a reduction should be specified. A list of is returned where each
         element has an "equilibrium" and the corresponding "regret" in the full
         game.""")
+    parser.add_argument('scheduler', type=utils.scheduler, help="""FIXME""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -31,51 +29,43 @@ def add_parser(subparsers):
         help="""Norm threshold for two mixtures to be considered distinct.
         (default: %(default)g)""")
     parser.add_argument(
+        '--supp-thresh', metavar='<min-prob>', type=float, default=1e-4,
+        help="""Minimum probability for a strategy to be considered in support.
+        (default: %(default)g)""")
+    parser.add_argument(
         '--restrict', '-r', metavar='<restriction-file>',
         type=argparse.FileType('r'), help="""Specify an optional restricted
         game to sample instead of the whole game. Only deviations from the
         restricted strategy set will be scheduled.""")
-    reductions = parser.add_mutually_exclusive_group()
-    reductions.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
-        deviation preserving reduction.""")
-    reductions.add_argument(
-        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
-        hierarchical reduction.""")
+    utils.add_reductions(parser)
+
+    parser.run = run
     return parser
 
 
-def run(scheduler, args):
+async def run(args):
+    scheduler = args.scheduler
     game = scheduler.game()
-    if args.dpr is not None:
-        red_players = game.role_from_repr(args.dpr, dtype=int)
-        red = reduction.deviation_preserving
-    elif args.hr is not None:
-        red_players = game.role_from_repr(args.hr, dtype=int)
-        red = reduction.hierarchical
-    else:
-        red = reduction.identity
-        red_players = None
+    red, red_players = utils.parse_reduction(game, args)
 
     rest = (np.ones(game.num_strats, bool) if args.restrict is None
             else game.restriction_from_json(json.load(args.restrict)))
-    game = schedgame.schedgame(scheduler, red, red_players)
-    rgame = game.restrict(rest)
 
-    # schedule all deviations
-    game.deviation_payoffs(restrict.translate(rgame.uniform_mixture(), rest))
+    async with scheduler:
+        data = await schedgame.schedgame(
+            scheduler, red, red_players).get_deviation_game(rest)
 
     # now find equilibria
-    eqa = restrict.translate(nash.mixed_nash(
-        rgame, regret_thresh=args.regret_thresh,
-        dist_thresh=args.dist_thresh), rest)
+    eqa = game.trim_mixture_support(restrict.translate(nash.mixed_nash(
+        data.restrict(rest), regret_thresh=args.regret_thresh,
+        dist_thresh=args.dist_thresh), rest), thresh=args.supp_thresh)
     reg_info = []
     for eqm in eqa:
-        gains = regret.mixture_deviation_gains(game, eqm)
+        gains = regret.mixture_deviation_gains(data, eqm)
         bri = np.argmax(gains)
         reg_info.append((gains[bri],) + game.role_strat_names[bri])
 
-    _log.error(
+    logging.error(
         "brute sampling finished finding %d equilibria:\n%s",
         eqa.shape[0], '\n'.join(
             '{:d}) {} with regret {:g} to {} {}'.format(

@@ -159,3 +159,7 @@ class SimulationScheduler(profsched.Scheduler):
 
     async def __aexit__(self, *args):
         await self.close()
+
+
+def simsched(game, config, command, buff_size=4096):
+    return SimulationScheduler(game, config, command, buff_size=buff_size)

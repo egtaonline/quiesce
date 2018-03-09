@@ -51,7 +51,7 @@ class ZipScheduler(profsched.Scheduler):
         self._num = 0
         self._procs = asyncio.Semaphore(max_procs)
 
-    # FIXME Is it possible to do more of these async
+    # FIXME Is it possible to do file ops async
     async def sample_payoffs(self, profile):
         assert self._is_open, "must enter scheduler"
         hprof = utils.hash_array(profile)
@@ -126,7 +126,8 @@ class ZipScheduler(profsched.Scheduler):
             os.chmod(os.path.join(self._sim_root, 'script', 'batch'), 0o700)
 
             with open(os.path.join(self._sim_root, 'defaults.json')) as f:
-                self._base['configuration'] = json.load(f)
+                self._base['configuration'] = json.load(f).get(
+                    'configuration', {})
             self._base['configuration'].update(self.conf)
 
             self._is_open = True
@@ -145,3 +146,9 @@ class ZipScheduler(profsched.Scheduler):
 
     def __exit__(self, *args):
         self.close()
+
+
+def zipsched(game, conf, zipf, *, max_procs=4, simultaneous_obs=1):
+    return ZipScheduler(
+        game, conf, zipf, max_procs=max_procs,
+        simultaneous_obs=simultaneous_obs)

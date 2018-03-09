@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 import numpy as np
 from gameanalysis import paygame
@@ -10,9 +9,8 @@ from gameanalysis.reduction import identity as idr
 
 from egta import asyncgame
 
-_log = logging.getLogger(__name__)
 
-
+# TODO Add logging
 class ReductionSchedulerGame(asyncgame.AsyncGame):
     def __init__(self, sched, red, red_players):
         super().__init__(sched.game().role_names, sched.game().strat_names,
@@ -57,7 +55,7 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
         return _ReductionGame(game, self._red, self._rgame.num_role_players)
 
 
-def rschedgame(sched, red=idr, red_players=None):
+def schedgame(sched, red=idr, red_players=None):
     return ReductionSchedulerGame(sched, red, red_players)
 
 

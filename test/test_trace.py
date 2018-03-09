@@ -47,7 +47,8 @@ def verify_complete_traces(traces):
 async def test_random_trace_game(players, strats, _):
     agame1 = asyncgame.wrap(gamegen.game(players, strats))
     agame2 = asyncgame.wrap(gamegen.game(players, strats))
-    traces = await trace.trace_all_equilibria(agame1, agame2, at_least_one=True)
+    traces = await trace.trace_all_equilibria(
+        agame1, agame2, at_least_one=True)
     verify_complete_traces(traces)
 
 
