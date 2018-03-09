@@ -5,9 +5,7 @@ import logging
 import numpy as np
 
 from egta import bootstrap
-
-
-_log = logging.getLogger(__name__)
+from egta.script import utils
 
 
 def add_parser(subparsers):
@@ -18,6 +16,9 @@ def add_parser(subparsers):
         percentiles, bootstrap confidence bounds will be returned. The result
         is a json dictionary mapping surplus and regret to either "mean" or a
         string representation of the percentile.""")
+    parser.add_argument(
+        'scheduler', metavar='<sched-spec>', type=utils.scheduler,
+        help="""FIXME""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -48,52 +49,54 @@ def add_parser(subparsers):
         '--standard', action='store_true', help="""Force output to be
         consistent irrespective of if percentiles is specified or the game is
         symmetric.""")
+    parser.run = run
     return parser
 
 
-def run(scheduler, args):
-    game = scheduler.game()
+async def run(args):
+    sched = args.scheduler
     if not args.percentile:
         args.boots = 0
-    mix = game.mixture_from_json(json.load(args.mixture))
-    means, boots = bootstrap.deviation_payoffs(
-        scheduler, mix, args.num, boots=args.boots, chunk_size=args.chunk_size)
+    mix = sched.mixture_from_json(json.load(args.mixture))
+    async with sched:
+        means, boots = await bootstrap.deviation_payoffs(
+            sched, mix, args.num, boots=args.boots, chunk_size=args.chunk_size)
 
-    exp_means = np.add.reduceat(means * mix, game.role_starts)
-    exp_boots = np.add.reduceat(boots * mix, game.role_starts, 1)
+    exp_means = np.add.reduceat(means * mix, sched.role_starts)
+    exp_boots = np.add.reduceat(boots * mix, sched.role_starts, 1)
 
-    gain_means = means - exp_means.repeat(game.num_role_strats)
-    gain_boots = boots - exp_boots.repeat(game.num_role_strats, 1)
+    gain_means = means - exp_means.repeat(sched.num_role_strats)
+    gain_boots = boots - exp_boots.repeat(sched.num_role_strats, 1)
 
     role_ind_reg_means = np.fromiter(map(np.argmax, np.split(
-        gain_means, game.role_starts[1:])), int, game.num_roles)
-    role_reg_means = gain_means[role_ind_reg_means + game.role_starts]
+        gain_means, sched.role_starts[1:])), int, sched.num_roles)
+    role_reg_means = gain_means[role_ind_reg_means + sched.role_starts]
     ind_reg_means = np.argmax(role_reg_means)
     reg_means = role_reg_means[ind_reg_means]
 
-    role_reg_boots = np.maximum.reduceat(gain_boots, game.role_starts, 1)
+    role_reg_boots = np.maximum.reduceat(gain_boots, sched.role_starts, 1)
     reg_boots = role_reg_boots.max(1)
 
-    role_surp_means = exp_means * game.num_role_players
+    role_surp_means = exp_means * sched.num_role_players
     surp_means = role_surp_means.sum()
-    role_surp_boots = exp_boots * game.num_role_players
+    role_surp_boots = exp_boots * sched.num_role_players
     surp_boots = role_surp_boots.sum(1)
 
     reg_percs = np.percentile(reg_boots, args.percentile)
     surp_percs = np.percentile(surp_boots, args.percentile)
 
-    _log.error("bootstrap regret finished with regret %g and surplus %g%s",
-               reg_means, surp_means, '' if not args.percentile else
-               ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
-               '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
-                         for p, r, s
-                         in zip(args.percentile, reg_percs, surp_percs)))
+    logging.error("bootstrap regret finished with regret %g and surplus %g%s",
+                  reg_means, surp_means, '' if not args.percentile else
+                  ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
+                  '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
+                            for p, r, s
+                            in zip(args.percentile, reg_percs, surp_percs)))
 
     # format output
-    if game.is_symmetric() and not args.standard:
+    if sched.is_symmetric() and not args.standard:
         result = {'surplus': surp_means,
                   'regret': reg_means,
-                  'response': game.strat_names[0][role_ind_reg_means[0]]}
+                  'response': sched.strat_names[0][role_ind_reg_means[0]]}
 
         if args.percentile:
             result = {'mean': result}
@@ -101,13 +104,14 @@ def run(scheduler, args):
                 result['{:g}'.format(p)] = {'surplus': surp, 'regret': reg}
     else:
         mean_dev = '{}: {}'.format(
-            game.role_names[ind_reg_means],
-            game.strat_names[ind_reg_means][role_ind_reg_means[ind_reg_means]])
+            sched.role_names[ind_reg_means],
+            sched.strat_names[ind_reg_means][role_ind_reg_means[
+                ind_reg_means]])
         result = {'total': {'surplus': surp_means,
                             'regret': reg_means,
                             'response': mean_dev}}
         for role, strats, surp, reg, dev in zip(
-                game.role_names, game.strat_names, role_surp_means,
+                sched.role_names, sched.strat_names, role_surp_means,
                 role_reg_means, role_ind_reg_means):
             result[role] = {'surplus': surp,
                             'regret': reg,
@@ -122,7 +126,8 @@ def run(scheduler, args):
                 np.percentile(role_reg_boots, args.percentile, 0)):
             perc = {'total': {'surplus': surp,
                               'regret': reg}}
-            for role, surp, reg in zip(game.role_names, role_surps, role_regs):
+            for role, surp, reg in zip(sched.role_names, role_surps,
+                                       role_regs):
                 perc[role] = {'surplus': surp, 'regret': reg}
             result['{:g}'.format(p)] = perc
 

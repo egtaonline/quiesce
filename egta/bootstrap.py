@@ -41,7 +41,6 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
         The deviation payoffs for each bootstrap sample.
     """
     assert num > 0, "can't schedule zero samples"
-    game = sched.game()
     mix = np.asarray(mix, float)
     chunk_size = chunk_size or boots * 10 or 1000
     devs = np.empty(mix.size)
@@ -58,8 +57,8 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
     async def update():
         nonlocal i
         fiter = iter(futures)
-        for _ in range(len(futures) // game.num_strats):
-            for j in range(game.num_strats):
+        for _ in range(len(futures) // sched.num_strats):
+            for j in range(sched.num_strats):
                 pay = await next(fiter)
                 devs[j] = pay[j]
             np.add((devs - mean_devs) / (i + 1), mean_devs, mean_devs)
@@ -70,7 +69,7 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
 
     n = num
     while 0 < n:
-        new_profs = game.random_deviation_profiles(
+        new_profs = sched.random_deviation_profiles(
             min(num, chunk_size), mix).reshape((-1, mix.size))
         n -= chunk_size
         new_futures = [asyncio.ensure_future(sched.sample_payoffs(prof))

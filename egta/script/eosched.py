@@ -6,21 +6,22 @@ from egta import eosched
 
 
 def create_scheduler(
-        game_id=None, mem=None, time=None, auth=None, count='1', sleep='600',
+        game=None, mem=None, time=None, auth=None, count='1', sleep='600',
         max='100', **_):
-    assert game_id is not None, "`game_id` must be specified"
+    assert game is not None, "`game_id` must be specified"
     assert mem is not None, "`mem` must be specified"
     assert time is not None, "`time` must be specified"
     mem = int(mem)
     time = int(time)
     count = int(count)
-    sleep = int(sleep)
+    sleep = float(sleep)
     max_sims = int(max)
 
     egta = api.EgtaOnlineApi(auth_token=auth)
     with egta:
-        summ = egta.get_game(int(game_id)).get_summary()
-        sim_id = egta.get_simulator(*summ['simulator_fullname'].split('-', 1))
+        summ = egta.get_game(int(game)).get_summary()
+        sim_id = egta.get_simulator(
+            *summ['simulator_fullname'].split('-', 1))['id']
     game = rsgame.emptygame_copy(gamereader.loadj(summ))
     config = dict(summ.get('configuration', ()) or ())
 

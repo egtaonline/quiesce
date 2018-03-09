@@ -1,22 +1,15 @@
 """Script utility for running equilibrium trace"""
+import asyncio
 import json
 import logging
 
 from gameanalysis import mergegame
-from gameanalysis import reduction
 from gameanalysis import regret
-from gameanalysis import rsgame
 
-import egta.script.eosched as seosched
 from egta import canonsched
-from egta import countsched
-from egta import eosched
-from egta import savesched
 from egta import schedgame
 from egta import trace
-
-
-_log = logging.getLogger(__name__)
+from egta.script import utils
 
 
 def add_parser(subparsers):
@@ -30,23 +23,13 @@ def add_parser(subparsers):
         regret. In order to allow this to work on games with singleton players,
         games are "normalized" by removing them prior to scheduling. Thus, any
         roles with only one strategy should be omitted from reductions, and
-        will also be omitted from equilibria as their answer is trivial. Also
-        note that this starts two schedulers so max-schedule is effectively
-        doubled.""")
+        will also be omitted from equilibria as their answer is trivial.""")
     parser.add_argument(
-        'other_id', metavar='<game-id>', type=int, help="""The game id of the
-        other game to trace. A mixture value of one corresponds to this game,
-        where as a mixture value of zero corresponds to the game and
-        configuration initially specified with the scheduler.""")
+        'sched0', metavar='<sched-spec-0>', type=utils.scheduler,
+        help="""FIXME""")
     parser.add_argument(
-        'other_memory', metavar='<other-memory-mb>', type=int, help="""Amount
-        of memory in mega bytes to reserve for the other game, specified with
-        other-id.""")
-    parser.add_argument(
-        'other_time', metavar='<other-time-sec>', type=int, help="""Amount of
-        time in seconds to give for one simulation of the other game, specified
-        with other-id.""")
-
+        'sched1', metavar='<sched-spec-1>', type=utils.scheduler,
+        help="""FIXME""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -86,85 +69,67 @@ def add_parser(subparsers):
         '--one', action='store_true', help="""Guarantee that an equilibrium is
         found in every restricted game. This may take up to exponential time,
         but a warning will be logged if it takes more than five minutes.""")
-    reductions = parser.add_mutually_exclusive_group()
-    reductions.add_argument(
-        '--dpr', metavar='<role:count;role:count,...>', help="""Specify a
-        deviation preserving reduction.""")
-    reductions.add_argument(
-        '--hr', metavar='<role:count;role:count,...>', help="""Specify a
-        hierarchical reduction.""")
+    utils.add_reductions(parser)
+    parser.run = run
     return parser
 
 
-def run(sched, args):
-    asched = (sched._sched if isinstance(sched, countsched.CountScheduler)
-              else sched)
-    asched = (asched._sched if isinstance(asched, savesched.SaveScheduler)
-              else asched)
-    assert isinstance(asched, seosched.ApiWrapper), \
-        "trace currently only supports eo schedulers"
-    sched1 = canonsched.CanonScheduler(sched)
+async def run(args):
+    sched0 = CanonWrapper(args.sched0)
+    sched1 = CanonWrapper(args.sched1)
+    red, red_players = utils.parse_reduction(sched0, args)
+    agame0 = schedgame.schedgame(sched0, red, red_players)
+    agame1 = schedgame.schedgame(sched1, red, red_players)
 
-    game = sched1.game()
-    if args.dpr is not None:
-        red_players = game.role_from_repr(args.dpr, dtype=int)
-        red = reduction.deviation_preserving
-    elif args.hr is not None:
-        red_players = game.role_from_repr(args.hr, dtype=int)
-        red = reduction.hierarchical
-    else:
-        red = reduction.identity
-        red_players = None
+    async def get_point(t, eqm):
+        supp = eqm > 0
+        game0 = await agame0.get_deviation_game(supp)
+        game1 = await agame1.get_deviation_game(supp)
+        reg = regret.mixture_regret(
+            mergegame.merge(game0, game1, t), eqm)
+        return {
+            't': float(t),
+            'equilibrium': sched0.mixture_to_json(eqm),
+            'regret': float(reg)}
 
-    egta = asched.api
-    egame = egta.get_game(args.other_id).get_observations()
-    esim = egta.get_simulator(*egame['simulator_fullname'].split('-', 1))
-    with eosched.EgtaOnlineScheduler(
-            rsgame.emptygame_json(egame), egta, esim['id'], args.count,
-            dict(egame['configuration']), args.sleep, args.max_schedule,
-            args.other_memory, args.other_time, args.other_id) as sched2:
-        if args.count > 1:
-            sched2 = countsched.CountScheduler(sched2, args.count)
-        sched2 = canonsched.CanonScheduler(sched2)
+    async def get_trace(ts, teqa):
+        return await asyncio.gather(*[
+            get_point(t, eqm) for t, eqm in zip(ts, teqa)])
 
-        game1 = schedgame.schedgame(sched1, red, red_players)
-        game2 = schedgame.schedgame(sched2, red, red_players)
-
-        traces = trace.trace_all_equilibria(
-            game1, game2, regret_thresh=args.regret_thresh,
+    async with sched0, sched1:
+        traces = await trace.trace_all_equilibria(
+            agame0, agame1, regret_thresh=args.regret_thresh,
             dist_thresh=args.dist_thresh,
             restricted_game_size=args.max_restrict_size,
             num_equilibria=args.num_equilibria, num_backups=args.num_backups,
             devs_by_role=args.dev_by_role, at_least_one=args.one)
+        jtraces = await asyncio.gather(*[
+            get_trace(ts, teqa) for ts, teqa in traces])
 
-        max_reg = 0.0
-        spans = [[-1, -1]]
-        jtraces = []
-        for ts, teqa in traces:
-            # compute spans
-            span = spans[-1]
-            start, *_, end = ts
-            if start <= span[1]:
-                span[1] = max(span[1], end)
-            else:
-                spans.append([start, end])
+    max_reg = 0.0
+    spans = [[-1, -1]]
+    for jtrace in jtraces:
+        max_reg = max(max_reg, max(p['regret'] for p in jtrace))
+        span = spans[-1]
+        start, *_, end = jtrace
+        if start['t'] <= span[1]:
+            span[1] = max(span[1], end['t'])
+        else:
+            spans.append([start['t'], end['t']])
 
-            # serialize trace
-            jtrace = []
-            for t, eqm in zip(ts, teqa):
-                reg = regret.mixture_regret(
-                    mergegame.merge(game1, game2, t), eqm)
-                max_reg = max(max_reg, reg)
-                jtrace.append({
-                    't': float(t),
-                    'equilibrium': game.mixture_to_json(eqm),
-                    'regret': float(reg)})
-            jtraces.append(jtrace)
-
-    _log.error(
+    logging.error(
         "tracing finished finding %d traces covering %s, with maximum regret "
         "%g", len(jtraces),
         ' U '.join('[{:g}, {:g}]'.format(s, e) for s, e in spans[1:]), max_reg)
 
     json.dump(jtraces, args.output)
     args.output.write('\n')
+
+
+class CanonWrapper(canonsched.CanonScheduler):
+    async def __aenter__(self):
+        await self._sched.__aenter__()
+        return self
+
+    async def __aexit__(self, *args):
+        await self._sched.__aexit__(*args)

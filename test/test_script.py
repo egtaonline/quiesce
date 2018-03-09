@@ -15,10 +15,9 @@ from egtaonline import mockserver
 from gameanalysis import gamegen
 from gameanalysis import gamereader
 from gameanalysis import rsgame
-from gameanalysis import utils as gu
+from gameanalysis import utils
 
 from egta import __main__ as main
-from test import utils as tu
 
 
 base = path.dirname(path.realpath(__file__))
@@ -27,10 +26,10 @@ EGTA = path.join(DIR, '..', 'bin', 'egta')
 SIM_DIR = path.join(DIR, '..', 'cdasim')
 
 
-def run(*args):
+async def run(*args):
     """Run a command line and return if it ran successfully"""
     try:
-        main.main(*args)
+        await main.amain(*args)
     except SystemExit as ex:
         return not int(str(ex))
     except Exception:
@@ -60,11 +59,11 @@ def game_info(tmpdir_factory):
     game = gamegen.game([3, 2], [2, 3])
     with open(game_file, 'w') as f:
         json.dump(game.to_json(), f)
-    return (game, game_file)
+    return game, 'game:game:{}'.format(game_file)
 
 
-@pytest.fixture
-def sim_game_info():
+@pytest.fixture(scope='session')
+def sim_game_info(tmpdir_factory):
     sim_dir = path.join(base, '..', 'cdasim')
     game_file = path.join(sim_dir, 'small_game.json')
     sim = [path.join(base, '..', 'bin', 'python'),
@@ -72,8 +71,14 @@ def sim_game_info():
     zip_file = path.join(sim_dir, 'cdasim.zip')
     with open(game_file) as f:
         jgame = json.load(f)
-    return (gamereader.loadj(jgame), game_file, sim, zip_file,
-            jgame['configuration'])
+    conf_file = str(tmpdir_factory.mktemp('conf').join('conf.json'))
+    with open(conf_file, 'w') as f:
+        json.dump(jgame['configuration'], f)
+    game = rsgame.emptygame_copy(gamereader.loadj(jgame))
+    simsched = 'sim:game:{},conf:{},command:{}'.format(
+        game_file, conf_file, ' '.join(sim))
+    zipsched = 'zip:game:{},zipf:{}'.format(game_file, zip_file)
+    return game, simsched, zipsched
 
 
 def assert_term(sleep1, sleep2, *args):
@@ -96,92 +101,70 @@ def assert_term(sleep1, sleep2, *args):
         assert False, "process didn't terminate in second sleep"
 
 
-def test_help():
-    assert not run()
-    assert not run('--fail')
+@pytest.mark.asyncio
+async def test_help():
+    assert not await run()
+    assert not await run('--fail')
     with stderr() as err:
-        assert run('--help'), err.getvalue()
+        assert await run('--help'), err.getvalue()
     with stderr() as err:
-        assert run('brute', '--help'), err.getvalue()
+        assert await run('brute', '--help'), err.getvalue()
     with stderr() as err:
-        assert run('quiesce', '--help'), err.getvalue()
+        assert await run('quiesce', '--help'), err.getvalue()
     with stderr() as err:
-        assert run('boot', '--help'), err.getvalue()
+        assert await run('boot', '--help'), err.getvalue()
     with stderr() as err:
-        assert run('trace', '--help'), err.getvalue()
-    with stderr() as err:
-        assert run('brute', 'game', '--help'), err.getvalue()
-    with stderr() as err:
-        assert run('brute', 'sim', '--help'), err.getvalue()
-    with stderr() as err:
-        assert run('brute', 'zip', '--help'), err.getvalue()
-    with stderr() as err:
-        assert run('brute', 'eo', '--help'), err.getvalue()
+        assert await run('trace', '--help'), err.getvalue()
 
 
-def test_brute_game(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+@pytest.mark.parametrize('red', [
+    [],
+    ['--dpr', 'r0:2,r1:2'],
+    ['--hr', 'r0:2,r1:2'],
+])
+async def test_brute_game(game_info, red):
+    game, sched = game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--count', '2', '--game-json', game_file, 'brute',
-            'game'), err.getvalue()
+        assert await run(
+            'brute', sched + ',count:2', *red), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def test_brute_game_tag(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_brute_game_tag(game_info):
+    game, sched = game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--tag', 'test', '--count', '2', '--game-json', game_file, 'brute',
-            'game'), err.getvalue()
+        assert await run(
+            '--tag', 'test', 'brute', sched + ',count:2'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def test_brute_game_restriction(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_brute_game_restriction(game_info):
+    game, sched = game_info
     rest = json.dumps(game.restriction_to_json(game.random_restriction()))
     with stdin(rest), stdout() as out, stderr() as err:
-        assert run(
-            '--count', '2', '--game-json', game_file, 'brute', '--restrict',
-            '-', 'game'), err.getvalue()
+        assert await run(
+            'brute', sched + ',count:2', '--restrict', '-'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
 def test_brute_game_term(game_info):
-    assert_term(0.5, 0.5, '--count', '2', '--game-json', game_info[1], 'brute',
-                'game')
+    _, sched = game_info
+    assert_term(0.5, 0.5, 'brute', sched + ',count:2')
 
 
-def test_brute_dpr_game(game_info):
-    game, game_file = game_info
-    with stdout() as out, stderr() as err:
-        assert run(
-            '--count', '2', '--game-json', game_file, 'brute', '--dpr',
-            'r0:2;r1:2', 'game'), err.getvalue()
-        for eqm in json.loads(out.getvalue()):
-            game.mixture_from_json(eqm['equilibrium'])
-
-
-def test_brute_hr_game(game_info):
-    game, game_file = game_info
-    with stdout() as out, stderr() as err:
-        assert run(
-            '--count', '2', '--game-json', game_file, 'brute', '--hr',
-            'r0:2;r1:2', 'game'), err.getvalue()
-        for eqm in json.loads(out.getvalue()):
-            game.mixture_from_json(eqm['equilibrium'])
-
-
-def test_prof_data(game_info, tmpdir):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_prof_data(game_info, tmpdir):
+    game, sched = game_info
     prof_file = str(tmpdir.join('profs.json'))
     with stdout() as out, stderr() as err:
-        assert run(
-            '--profile-data', prof_file, '--game-json', game_file, 'brute',
-            'game', '--sample'), err.getvalue()
+        assert await run(
+            'brute', sched + ',sample:,save:' + prof_file), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
     with open(prof_file) as f:
@@ -189,91 +172,105 @@ def test_prof_data(game_info, tmpdir):
     assert rsgame.emptygame_copy(game) == rsgame.emptygame_copy(prof_game)
 
 
-def test_sim(sim_game_info):
-    game, game_file, sim, *_ = sim_game_info
+@pytest.mark.asyncio
+async def test_sim(sim_game_info):
+    game, sched, _ = sim_game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'brute', '--dpr', 'buyers:2;sellers:2',
-            'sim', '--', *sim), err.getvalue()
+        assert await run(
+            'brute', sched, '--dpr', 'buyers:2;sellers:2'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def test_zip(sim_game_info):
-    game, game_file, _, zip_file, _ = sim_game_info
+@pytest.mark.asyncio
+async def test_zip(sim_game_info):
+    game, _, sched = sim_game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'brute', '--dpr', 'buyers:2;sellers:2',
-            'zip', zip_file, '-p1'), err.getvalue()
+        assert await run(
+            'brute', '--dpr', 'buyers:2;sellers:2', sched), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
 def test_brute_sim_term(sim_game_info):
-    _, game_file, sim, *_ = sim_game_info
-    assert_term(0.5, 0.5, '--game-json', game_file, 'brute', 'sim', '--', *sim)
+    _, sched, _ = sim_game_info
+    assert_term(0.5, 0.5, 'brute', sched)
 
 
-def test_sim_delayed_fail(game_info):
+@pytest.mark.asyncio
+async def test_sim_delayed_fail(tmpdir):
+    game = rsgame.emptygame(4, 3)
+    game_file = str(tmpdir.join('game.json'))
+    with open(game_file, 'w') as f:
+        json.dump(game.to_json(), f)
+    script = str(tmpdir.join('script.sh'))
+    with open(script, 'w') as f:
+        f.write('sleep 1 && false')
+    sched = 'sim:game:{},command:bash {}'.format(game_file, script)
     with stdin(json.dumps({})):
-        assert not run(
-            '--game-json', game_info[1], 'brute', 'sim', '--conf', '-', '--',
-            'bash', '-c', 'sleep 1 && false')
+        assert not await run(
+            'brute', sched)
 
 
-def test_sim_conf(sim_game_info, tmpdir):
-    game, game_file, sim, _, conf = sim_game_info
+@pytest.mark.asyncio
+async def test_sim_conf(sim_game_info, tmpdir):
+    game, sched, _ = sim_game_info
     conf_file = str(tmpdir.join('conf.json'))
     with open(conf_file, 'w') as f:
-        json.dump(dict(conf, markup='standard'), f)
+        json.dump({
+            'markup': 'standard',
+            'max_value': 1,
+            'arrivals': 'simple',
+            'market': 'call',
+        }, f)
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'brute', '--dpr', 'buyers:2;sellers:2',
-            'sim', '-c', conf_file, '--', *sim), err.getvalue()
+        assert await run(
+            'brute', '--dpr', 'buyers:2;sellers:2', sched + ',conf:' +
+            conf_file), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-@tu.warnings_filter(RuntimeWarning)
-def test_innerloop(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_innerloop(game_info):
+    game, sched = game_info
     with stdout() as out, stderr() as err:
-        assert run('--game-json', game_file, 'quiesce', 'game'), err.getvalue()
+        assert await run('quiesce', sched), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
 def test_innerloop_game_term(game_info):
-    assert_term(0.5, 0.5, '--game-json', game_info[1], 'quiesce', 'game')
+    _, sched = game_info
+    assert_term(0.5, 0.5, 'quiesce', sched)
 
 
 def test_innerloop_sim_term(sim_game_info):
-    _, game_file, sim, *_ = sim_game_info
-    assert_term(0.5, 0.5, '--game-json', game_file, 'quiesce', 'sim', '--',
-                *sim)
+    _, sched, _ = sim_game_info
+    assert_term(0.5, 0.5, 'quiesce', sched)
 
 
-def test_innerloop_dpr(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_innerloop_dpr(game_info):
+    game, sched = game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'quiesce', '--dpr', 'r0:2;r1:2',
-            'game'), err.getvalue()
+        assert await run(
+            'quiesce', sched, '--dpr', 'r0:2;r1:2'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def test_innerloop_hr(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_innerloop_hr(game_info):
+    game, sched = game_info
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'quiesce', '--hr', 'r0:2;r1:2',
-            'game'), err.getvalue()
+        assert await run(
+            'quiesce', sched, '--hr', 'r0:2;r1:2'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def get_gameid(server, game, name):
+def get_eosched(server, game, name):
     with api.EgtaOnlineApi() as egta:
         sim = egta.get_simulator(server.create_simulator(
             name, '1', delay_dist=lambda: random.random() / 100))
@@ -285,33 +282,20 @@ def get_gameid(server, game, name):
             eogame.add_role(role, count)
             for strat in strats:
                 eogame.add_strategy(role, strat)
-        return sim['id'], eogame['id']
+        return 'eo:game:{:d},mem:2048,time:60,sleep:0.1'.format(
+            eogame['id'])
 
 
-def test_game_id_brute_egta_game(game_info):
+@pytest.mark.asyncio
+async def test_brute_egta_game(game_info):
     game, game_file = game_info
     with mockserver.Server() as server:
-        _, game_id = get_gameid(server, game, 'game')
+        sched = get_eosched(server, game, 'game')
         with stdout() as out, stderr() as err:
-            assert run(
-                '-g', str(game_id), 'brute', '--dpr', 'r0:2;r1:2', 'eo',
-                '2048', '60', '--sleep', '0.1'), err.getvalue()
+            assert await run(
+                'brute', '--dpr', 'r0:2;r1:2', sched), err.getvalue()
             for eqm in json.loads(out.getvalue()):
                 game.mixture_from_json(eqm['equilibrium'])
-
-
-def test_game_id_brute_egta_game_wconf(game_info):
-    game, game_file = game_info
-    conf = json.dumps({})
-    with mockserver.Server() as server:
-        sim_id, _ = get_gameid(server, game, 'game')
-        with stdin(conf), stdout() as out, stderr() as err:
-            assert run(
-                '--game-json', game_file, 'brute', '--dpr',
-                'r0:2;r1:2', 'eo', '-c', '-', '2048', '60', '--sleep',
-                '0.1', '--sim-id', str(sim_id)), err.getvalue()
-        for eqm in json.loads(out.getvalue()):
-            game.mixture_from_json(eqm['equilibrium'])
 
 
 def verify_trace_json(game, traces):
@@ -319,41 +303,35 @@ def verify_trace_json(game, traces):
         for point in trace:
             assert point.keys() == {'regret', 'equilibrium', 't'}
             game.mixture_from_json(point['equilibrium'])
-        assert gu.is_sorted(trace, key=lambda t: t['t'])
+        assert utils.is_sorted(trace, key=lambda t: t['t'])
 
 
-@tu.warnings_filter(RuntimeWarning)
-def test_trace_dpr(tmpdir):
-    game = rsgame.emptygame([3, 2], [2, 3])
-    prof_data = str(tmpdir.join('data'))
-    with mockserver.Server() as server:
-        _, game1 = get_gameid(server, game, 'game1')
-        _, game2 = get_gameid(server, game, 'game2')
-        with stdout() as out, stderr() as err:
-            assert run(
-                '-g', str(game1), '--profile-data', prof_data, 'trace',
-                str(game2), '2048', '60', '--dpr', 'r0:2;r1:2', 'eo', '2048',
-                '60', '--sleep', '1'), err.getvalue()
-        traces = json.loads(out.getvalue())
+@pytest.mark.asyncio
+@pytest.mark.parametrize('red', [
+    [],
+    ['--dpr', 'buyers:2,sellers:2'],
+    ['--hr', 'buyers:2,sellers:2'],
+])
+async def test_trace(sim_game_info, tmpdir, red):
+    game, sched, _ = sim_game_info
+    conf_file = str(tmpdir.join('conf.json'))
+    with open(conf_file, 'w') as f:
+        json.dump({
+            'markup': 'standard',
+            'max_value': 1,
+            'arrivals': 'simple',
+            'market': 'call',
+        }, f)
+    prof_data = str(tmpdir.join('data.json'))
+    with stdout() as out, stderr() as err:
+        assert await run(
+            'trace', sched + ',save:' + prof_data, sched + ',conf:' +
+            conf_file, *red), err.getvalue()
+    traces = json.loads(out.getvalue())
     verify_trace_json(game, traces)
     with open(prof_data) as f:
         data = gamereader.load(f)
     assert game == rsgame.emptygame_copy(data)
-
-
-@tu.warnings_filter(RuntimeWarning)
-def test_trace_hr():
-    game = rsgame.emptygame([3, 2], [2, 3])
-    with mockserver.Server() as server:
-        _, game1 = get_gameid(server, game, 'game1')
-        _, game2 = get_gameid(server, game, 'game2')
-        with stdout() as out, stderr() as err:
-            assert run(
-                '-g', str(game1), '--count', '2', 'trace', str(game2), '2048',
-                '60', '--hr', 'r0:2;r1:2', 'eo', '2048', '60', '--sleep',
-                '1'), err.getvalue()
-        traces = json.loads(out.getvalue())
-    verify_trace_json(game, traces)
 
 
 def add_singleton_role(game, index, role_name, strat_name, num_players):
@@ -366,71 +344,71 @@ def add_singleton_role(game, index, role_name, strat_name, num_players):
     return rsgame.emptygame_names(role_names, role_players, strat_names)
 
 
-@tu.warnings_filter(RuntimeWarning)
-def test_trace_norm():
+@pytest.mark.asyncio
+async def test_trace_norm():
     base_game = rsgame.emptygame([3, 2], [2, 3])
     with mockserver.Server() as server:
-        game1 = add_singleton_role(base_game, 0, 'a', 'sx', 1)
-        _, id1 = get_gameid(server, game1, 'game1')
-        game2 = add_singleton_role(base_game, 1, 'r00', 's0', 3)
-        _, id2 = get_gameid(server, game2, 'game2')
+        game0 = add_singleton_role(base_game, 0, 'a', 'sx', 1)
+        sched0 = get_eosched(server, game0, 'game0')
+        game1 = add_singleton_role(base_game, 1, 'r00', 's0', 3)
+        sched1 = get_eosched(server, game1, 'game1')
         with stdout() as out, stderr() as err:
-            assert run(
-                '-g', str(id1), 'trace', str(id2), '2048', '60', 'eo', '2048',
-                '60', '--sleep', '1'), err.getvalue()
+            assert await run('trace', sched0, sched1), err.getvalue()
         traces = json.loads(out.getvalue())
     verify_trace_json(base_game, traces)
 
 
-def test_boot_game(game_info, tmpdir):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_boot_game(game_info, tmpdir):
+    game, sched = game_info
     mix_file = str(tmpdir.join('mix.json'))
     with open(mix_file, 'w') as f:
         json.dump(game.mixture_to_json(game.random_mixture()), f)
     with stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'boot', mix_file, '10',
-            'game'), err.getvalue()
+        assert await run(
+            'boot', sched, mix_file, '10'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'total', 'r0', 'r1'} == results.keys()
     for val in results.values():
         assert {'surplus', 'regret', 'response'} == val.keys()
 
 
-def test_boot_symmetric(tmpdir):
+@pytest.mark.asyncio
+async def test_boot_symmetric(tmpdir):
     game = gamegen.game(4, 3)
     mix_file = str(tmpdir.join('mix.json'))
     with open(mix_file, 'w') as f:
         json.dump(game.mixture_to_json(game.random_mixture()), f)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', '-', 'boot', mix_file, '10', 'game'), err.getvalue()
+        assert await run(
+            'boot', 'game', mix_file, '10'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'surplus', 'regret', 'response'} == results.keys()
 
 
-def test_boot_symmetric_percs(tmpdir):
+@pytest.mark.asyncio
+async def test_boot_symmetric_percs(tmpdir):
     game = gamegen.game(4, 3)
     mix_file = str(tmpdir.join('mix.json'))
     with open(mix_file, 'w') as f:
         json.dump(game.mixture_to_json(game.random_mixture()), f)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', '-', 'boot', mix_file, '10', '-p', '95',
-            'game'), err.getvalue()
+        assert await run(
+            'boot', 'game', mix_file, '10', '-p95'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'95', 'mean'} == results.keys()
     assert {'surplus', 'regret', 'response'} == results['mean'].keys()
     assert {'surplus', 'regret'} == results['95'].keys()
 
 
-def test_boot_game_percs(game_info):
-    game, game_file = game_info
+@pytest.mark.asyncio
+async def test_boot_game_percs(game_info):
+    game, sched = game_info
     mix = json.dumps(game.mixture_to_json(game.random_mixture()))
     with stdin(mix), stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'boot', '-', '20', '--percentile', '95',
-            '-p99', 'game'), err.getvalue()
+        assert await run(
+            'boot', sched, '-', '20', '--percentile', '95',
+            '-p99'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'mean', '99', '95'} == results.keys()
     for val in results.values():
@@ -441,13 +419,13 @@ def test_boot_game_percs(game_info):
         assert {'surplus', 'regret'} == val.keys()
 
 
-def test_boot_sim(sim_game_info):
-    game, game_file, sim, *_ = sim_game_info
+@pytest.mark.asyncio
+async def test_boot_sim(sim_game_info):
+    game, sched, _ = sim_game_info
     mix = json.dumps(game.mixture_to_json(game.random_mixture()))
     with stdin(mix), stdout() as out, stderr() as err:
-        assert run(
-            '--game-json', game_file, 'boot', '-', '50', '--chunk-size', '10',
-            'sim', '--', *sim), err.getvalue()
+        assert await run(
+            'boot', sched, '-', '50', '--chunk-size', '10'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'total', 'buyers', 'sellers'} == results.keys()
     for val in results.values():

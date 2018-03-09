@@ -6,11 +6,15 @@ import smtplib
 import sys
 import traceback
 
+from egta.script import bootstrap
 from egta.script import brute
+from egta.script import innerloop
+from egta.script import trace
 
 
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
+# FIXME Add help for schedulers
 
 async def amain(*argv):
     parser = argparse.ArgumentParser(
@@ -41,7 +45,7 @@ async def amain(*argv):
     eq_methods = parser.add_subparsers(
         title='operations', dest='method', metavar='<operation>', help="""The
         operation to run on the game. Available commands are:""")
-    for module in [brute]:
+    for module in [brute, bootstrap, innerloop, trace]:
         module.add_parser(eq_methods)
 
     # Parse args and process

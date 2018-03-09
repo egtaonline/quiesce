@@ -19,7 +19,7 @@ sizes = [
 async def test_random_mean_reg(players, strats):
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     mean, boot = await bootstrap.deviation_payoffs(sched, mix, 20)
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (0, game.num_strats)
@@ -31,7 +31,7 @@ async def test_random_boot_reg(players, strats):
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
     devs = game.deviation_payoffs(mix)
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     mean, boot = await bootstrap.deviation_payoffs(
         sched, mix, 20, boots=101, chunk_size=5)
     assert mean.shape == (game.num_strats,)
@@ -45,7 +45,7 @@ async def test_random_boot_reg(players, strats):
 @pytest.mark.parametrize('players,strats', sizes)
 async def test_random_pure_boot_reg(players, strats):
     game = gamegen.game(players, strats)
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     for mix in game.pure_mixtures():
         devs = game.deviation_payoffs(mix)
         mean, boot = await bootstrap.deviation_payoffs(

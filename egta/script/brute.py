@@ -19,7 +19,9 @@ def add_parser(subparsers):
         a reduction should be specified. A list of is returned where each
         element has an "equilibrium" and the corresponding "regret" in the full
         game.""")
-    parser.add_argument('scheduler', type=utils.scheduler, help="""FIXME""")
+    parser.add_argument(
+        'scheduler', metavar='<sched-spec>', type=utils.scheduler,
+        help="""FIXME""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -38,7 +40,6 @@ def add_parser(subparsers):
         game to sample instead of the whole game. Only deviations from the
         restricted strategy set will be scheduled.""")
     utils.add_reductions(parser)
-
     parser.run = run
     return parser
 

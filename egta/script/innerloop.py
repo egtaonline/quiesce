@@ -1,15 +1,13 @@
 """Script utility for running inner loop"""
+import asyncio
 import json
 import logging
 
-from gameanalysis import reduction
 from gameanalysis import regret
 
 from egta import innerloop
 from egta import schedgame
-
-
-_log = logging.getLogger(__name__)
+from egta.script import utils
 
 
 def add_parser(subparsers):
@@ -20,6 +18,9 @@ def add_parser(subparsers):
         equilibria. For games with a large number of players, a reduction
         should be specified. The result is a list where each element specifies
         an "equilibrium".""")
+    parser.add_argument(
+        'scheduler', metavar='<sched-spec>', type=utils.scheduler,
+        help="""FIXME""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -57,44 +58,38 @@ def add_parser(subparsers):
         '--one', action='store_true', help="""Guarantee that an equilibrium is
         found in every restricted game. This may take up to exponential time,
         but a warning will be logged if it takes more than five minutes.""")
-    reductions = parser.add_mutually_exclusive_group()
-    reductions.add_argument(
-        '--dpr', metavar='<role:count;role:count,...>', help="""Specify a
-        deviation preserving reduction.""")
-    reductions.add_argument(
-        '--hr', metavar='<role:count;role:count,...>', help="""Specify a
-        hierarchical reduction.""")
+    utils.add_reductions(parser)
+    parser.run = run
     return parser
 
 
-def run(scheduler, args):
-    game = scheduler.game()
-    if args.dpr is not None:
-        red_players = game.role_from_repr(args.dpr, dtype=int)
-        red = reduction.deviation_preserving
-    elif args.hr is not None:
-        red_players = game.role_from_repr(args.hr, dtype=int)
-        red = reduction.hierarchical
-    else:
-        red = reduction.identity
-        red_players = None
+async def run(args):
+    sched = args.scheduler
+    red, red_players = utils.parse_reduction(sched, args)
+    agame = schedgame.schedgame(sched, red, red_players)
 
-    game = schedgame.schedgame(scheduler, red, red_players)
-    eqa = innerloop.inner_loop(
-        game, regret_thresh=args.regret_thresh, dist_thresh=args.dist_thresh,
-        restricted_game_size=args.max_restrict_size,
-        num_equilibria=args.num_equilibria, num_backups=args.num_backups,
-        devs_by_role=args.dev_by_role, at_least_one=args.one)
-    regrets = [float(regret.mixture_regret(game, eqm)) for eqm in eqa]
+    async def get_regret(eqm):
+        game = await agame.get_deviation_game(eqm > 0)
+        return float(regret.mixture_regret(game, eqm))
 
-    _log.error(
+    async with sched:
+        eqa = await innerloop.inner_loop(
+            agame, regret_thresh=args.regret_thresh,
+            dist_thresh=args.dist_thresh,
+            restricted_game_size=args.max_restrict_size,
+            num_equilibria=args.num_equilibria, num_backups=args.num_backups,
+            devs_by_role=args.dev_by_role, at_least_one=args.one)
+        regrets = await asyncio.gather(*[
+            get_regret(eqm) for eqm in eqa])
+
+    logging.error(
         "quiesce finished finding %d equilibria:\n%s",
         eqa.shape[0], '\n'.join(
             '{:d}) {} with regret {:g}'.format(
-                i, game.mixture_to_repr(eqm), reg)
+                i, sched.mixture_to_repr(eqm), reg)
             for i, (eqm, reg) in enumerate(zip(eqa, regrets), 1)))
 
-    json.dump([{'equilibrium': game.mixture_to_json(eqm), 'regret': reg}
+    json.dump([{'equilibrium': sched.mixture_to_json(eqm), 'regret': reg}
                for eqm, reg in zip(eqa, regrets)],
               args.output)
     args.output.write('\n')

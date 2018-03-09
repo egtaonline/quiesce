@@ -8,7 +8,7 @@ from gameanalysis.reduction import deviation_preserving as dpr
 from egta import asyncgame
 from egta import innerloop
 from egta import gamesched
-from egta import rschedgame
+from egta import schedgame
 
 
 games = [
@@ -32,8 +32,8 @@ def verify_dist_thresh(eqa, thresh=0.1):
 @pytest.mark.parametrize('_', range(1))
 async def test_innerloop_simple(players, strats, _):
     sgame = gamegen.samplegame(players, strats)
-    sched = gamesched.SampleGameScheduler(sgame)
-    eqa = await innerloop.inner_loop(rschedgame.rschedgame(sched))
+    sched = gamesched.samplegamesched(sgame)
+    eqa = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqa)
 
 
@@ -41,8 +41,8 @@ async def test_innerloop_simple(players, strats, _):
 @pytest.mark.parametrize('players,strats', games)
 async def test_innerloop_game(players, strats):
     game = gamegen.samplegame(players, strats)
-    sched = gamesched.RsGameScheduler(game)
-    eqas = await innerloop.inner_loop(rschedgame.rschedgame(sched))
+    sched = gamesched.gamesched(game)
+    eqas = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqas)
     eqag = await innerloop.inner_loop(asyncgame.wrap(game))
     equality = np.isclose(eqas, eqag[:, None], atol=1e-3).all(2)
@@ -59,8 +59,8 @@ async def test_innerloop_dpr(players, strats):
     pays = np.random.random(profs.shape)
     pays[profs == 0] = 0
     sgame = paygame.samplegame_replace(fullgame, profs, [pays[:, None]])
-    sched = gamesched.SampleGameScheduler(sgame)
-    game = rschedgame.rschedgame(sched, dpr, redgame.num_role_players)
+    sched = gamesched.samplegamesched(sgame)
+    game = schedgame.schedgame(sched, dpr, redgame.num_role_players)
     eqa = await innerloop.inner_loop(game)
     verify_dist_thresh(eqa)
 
@@ -69,9 +69,9 @@ async def test_innerloop_dpr(players, strats):
 @pytest.mark.parametrize('players,strats', games)
 async def test_innerloop_by_role_simple(players, strats):
     sgame = gamegen.samplegame(players, strats)
-    sched = gamesched.SampleGameScheduler(sgame)
+    sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched), devs_by_role=True)
+        schedgame.schedgame(sched), devs_by_role=True)
     verify_dist_thresh(eqa)
 
 
@@ -83,7 +83,7 @@ async def test_innerloop_by_role_simple(players, strats):
 async def test_innerloop_failures(players, strats, count, when):
     game = gamegen.game(players, strats)
     sched = ExceptionScheduler(game, count, when)
-    sgame = rschedgame.rschedgame(sched)
+    sgame = schedgame.schedgame(sched)
     with pytest.raises(SchedulerException):
         await innerloop.inner_loop(sgame, restricted_game_size=5)
 
@@ -92,9 +92,9 @@ async def test_innerloop_failures(players, strats, count, when):
 @pytest.mark.parametrize('eq_prob', [x / 10 for x in range(11)])
 async def test_innerloop_known_eq(eq_prob):
     game = gamegen.sym_2p2s_known_eq(eq_prob)
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched), devs_by_role=True)
+        schedgame.schedgame(sched), devs_by_role=True)
     assert eqa.size, "didn't find equilibrium"
     expected = [eq_prob, 1 - eq_prob]
     assert np.isclose(eqa, expected, atol=1e-3, rtol=1e-3).all(-1).any()
@@ -106,9 +106,9 @@ async def test_innerloop_known_eq(eq_prob):
 @pytest.mark.parametrize('num', [1, 2])
 async def test_innerloop_num_eqa(players, strats, num):
     sgame = gamegen.samplegame(players, strats)
-    sched = gamesched.SampleGameScheduler(sgame)
+    sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched),
+        schedgame.schedgame(sched),
         num_equilibria=num, devs_by_role=True)
     verify_dist_thresh(eqa)
 
@@ -120,9 +120,9 @@ async def test_backups_used():
     Since restricted game size is 1, but the only equilibria has support two,
     this must use backups to find an equilibrium."""
     sgame = gamegen.sym_2p2s_known_eq(0.5)
-    sched = gamesched.RsGameScheduler(sgame)
+    sched = gamesched.gamesched(sgame)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched), restricted_game_size=1)
+        schedgame.schedgame(sched), restricted_game_size=1)
     assert eqa.size, "didn't find equilibrium"
     expected = [0.5, 0.5]
     assert np.isclose(eqa, expected, atol=1e-3, rtol=1e-3).all(-1).any()
@@ -136,9 +136,9 @@ async def test_initial_restrictions():
     Since restricted game size is 1, but the only equilibria has support two,
     this must use backups to find an equilibrium."""
     game = gamegen.sym_2p2s_known_eq(0.5)
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched), initial_restrictions=[[True, True]],
+        schedgame.schedgame(sched), initial_restrictions=[[True, True]],
         restricted_game_size=1)
     assert eqa.size, "didn't find equilibrium"
     expected = [0.5, 0.5]
@@ -150,9 +150,9 @@ async def test_initial_restrictions():
 async def test_nash_failure():
     """With regret thresh of zero, nash will fail"""
     game = gamegen.sym_2p2s_known_eq(1 / 3)
-    sched = gamesched.RsGameScheduler(game)
+    sched = gamesched.gamesched(game)
     eqa = await innerloop.inner_loop(
-        rschedgame.rschedgame(sched), regret_thresh=0)
+        schedgame.schedgame(sched), regret_thresh=0)
     assert not eqa.size
 
 
