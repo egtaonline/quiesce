@@ -19,19 +19,17 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         The gameanalysis basegame representing the game to schedule.
     api : EgtaOnlineApi
         The api object to be uased to query EGTA Online.
-    sim_id : int
-        The id of the egtaonline simulator to use.
-    simultaneous_obs : int
-        The number of simultaneous observations to schedule at a time. EGTA
-        Online will use this when scheduling.
-    configuration : {key: value}
-        Dictionary of configuration to use with the scheduler. Any fields that
-        are omitted will be filled in by the defaults specified in the
-        simulator.
+    game_id : int
+        The id of the egtaonline game to use. It must match the setup of game.
+        Use the egtaonline `get_or_create_game` if you need to get a game_id
+        from a configuration.
     sleep_time : int
         Time in seconds between queries to egtaonline to determine if profiles
         have finished. This should probably be set roughly equal to the time it
         takes for a simulation to run.
+    simultaneous_obs : int
+        The number of simultaneous observations to schedule at a time. EGTA
+        Online will use this when scheduling.
     max_scheduled : int
         The maximum number of observations to schedule simultaneously. Keeping
         this low helps prevent starving others of flux cycles.
@@ -43,16 +41,15 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         samples, too long and it will take longer to schedule jobs on flux.
     """
 
-    def __init__(self, game, api, sim_id, simultaneous_obs, configuration,
-                 sleep_time, max_scheduled, obs_memory, obs_time):
+    def __init__(self, game, api, game_id, sleep_time, simultaneous_obs,
+                 max_scheduled, obs_memory, obs_time):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._api = api
         self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
+        self._game_id = game_id
 
         self._sleep_time = sleep_time
-        self._sim_id = sim_id
-        self._configuration = configuration
         self._obs_memory = obs_memory
         self._obs_time = obs_time
         self._simult_obs = simultaneous_obs
@@ -133,13 +130,14 @@ class EgtaOnlineScheduler(profsched.Scheduler):
     async def open(self):
         assert not self._is_open, "already open"
         try:
-            players = dict(zip(self._game.role_names,
-                               self._game.num_role_players))
-            strategies = dict(zip(self._game.role_names,
-                                  self._game.strat_names))
-            egta_game = self._api.create_or_get_game(
-                self._sim_id, players, strategies, self._configuration)
-            profiles = egta_game.get_observations().get('profiles', ()) or ()
+            obs = self._api.get_game(self._game_id).get_observations()
+            assert (rsgame.emptygame_copy(self._game) ==
+                    rsgame.emptygame_json(obs)), \
+                "egtaonline game didn't match specified game"
+            conf = dict(obs.get('configuration', ()) or ())
+            sim_id = self._api.get_simulator(
+                *obs['simulator_fullname'].split('-', 1))['id']
+            profiles = obs.get('profiles', ()) or ()
 
             # Parse profiles
             num_profs = len(profiles)
@@ -162,9 +160,9 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
             # Create and start scheduler
             self._sched = self._api.create_generic_scheduler(
-                self._sim_id, 'egta_' + eu.random_string(20), True,
+                sim_id, 'egta_' + eu.random_string(20), True,
                 self._obs_memory, self._game.num_players, self._obs_time,
-                self._simult_obs, 1, self._configuration)
+                self._simult_obs, 1, conf)
             logging.warning(
                 "created scheduler %s (%d) for running simulations: "
                 "https://%s/generic_schedulers/%d", self._sched['name'],
@@ -210,8 +208,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
 
 def eosched(
-        game, api, sim_id, simultaneous_obs, configuration, sleep_time,
-        max_scheduled, obs_memory, obs_time):
+        game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
+        obs_memory, obs_time):
     return EgtaOnlineScheduler(
-        game, api, sim_id, simultaneous_obs, configuration, sleep_time,
-        max_scheduled, obs_memory, obs_time)
+        game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
+        obs_memory, obs_time)

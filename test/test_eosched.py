@@ -17,19 +17,24 @@ def egta_info():
     with mockserver.Server() as server, api.EgtaOnlineApi() as egta:
         sim = egta.get_simulator(server.create_simulator(
             'sim', '1', delay_dist=lambda: random.random() / 10))
-        sim.add_dict({role: strats for role, strats
-                      in zip(game.role_names, game.strat_names)})
-        yield server, egta, game, sim
+        strats = {role: strats for role, strats
+                  in zip(game.role_names, game.strat_names)}
+        players = {role: plays for role, plays
+                   in zip(game.role_names, game.num_role_players)}
+        sim.add_dict(strats)
+        game_id = egta.create_or_get_game(
+            sim['id'], players, strats, {})['id']
+        yield server, egta, game, game_id
 
 
 @pytest.mark.asyncio
 async def test_basic_profile(egta_info):
-    _, egta, game, sim = egta_info
+    _, egta, game, game_id = egta_info
     profs = game.random_profiles(20)
 
     # Schedule all new profiles and verify it works
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+            game, egta, game_id, 0.1, 1, 10, 0, 0) as sched:
         assert game == rsgame.emptygame_copy(sched)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
@@ -38,7 +43,7 @@ async def test_basic_profile(egta_info):
 
     # Schedule old profiles and verify it still works
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+            game, egta, game_id, 0.1, 1, 10, 0, 0) as sched:
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
     pays = np.stack(awaited)
@@ -46,7 +51,7 @@ async def test_basic_profile(egta_info):
 
     # Schedule two at a time, in two batches
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as base_sched:
+            game, egta, game_id, 0.1, 2, 10, 0, 0) as base_sched:
         sched = countsched.CountScheduler(base_sched, 2)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
@@ -55,7 +60,7 @@ async def test_basic_profile(egta_info):
 
     # Try again now that everything should be scheduled
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as base_sched:
+            game, egta, game_id, 0.1, 2, 10, 0, 0) as base_sched:
         sched = countsched.CountScheduler(base_sched, 2)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
@@ -65,21 +70,21 @@ async def test_basic_profile(egta_info):
 
 @pytest.mark.asyncio
 async def test_exception_in_create(egta_info):
-    server, egta, game, sim = egta_info
+    server, egta, game, game_id = egta_info
     server.throw_exception(TimeoutError)
     with pytest.raises(TimeoutError):
         async with eosched.eosched(
-                game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0):
+                game, egta, game_id, 0.1, 1, 25, 0, 0):
             pass  # pragma: no cover
 
 
 @pytest.mark.asyncio
 async def test_exception_in_get(egta_info):
-    server, egta, game, sim = egta_info
+    server, egta, game, game_id = egta_info
     profs = game.random_profiles(20)
 
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+            game, egta, game_id, 0.1, 1, 10, 0, 0) as sched:
         futures = asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
         await asyncio.sleep(0.1)
@@ -91,11 +96,11 @@ async def test_exception_in_get(egta_info):
 
 @pytest.mark.asyncio
 async def test_exception_in_schedule(egta_info):
-    server, egta, game, sim = egta_info
+    server, egta, game, game_id = egta_info
     prof = game.random_profile()
 
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 25, 0, 0) as sched:
+            game, egta, game_id, 0.1, 1, 25, 0, 0) as sched:
         # so that enough calls to get_requirements are made
         server.throw_exception(TimeoutError)
         await asyncio.sleep(0.1)
@@ -105,12 +110,12 @@ async def test_exception_in_schedule(egta_info):
 
 @pytest.mark.asyncio
 async def test_scheduler_deactivate(egta_info):
-    _, egta, game, sim = egta_info
+    _, egta, game, game_id = egta_info
 
     # Schedule all new profiles and verify it works
     # This first time should have to wait to schedule more
     async with eosched.eosched(
-            game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+            game, egta, game_id, 0.1, 1, 10, 0, 0) as sched:
         # Deactivate scheduler
         for esched in egta.get_generic_schedulers():
             esched.deactivate()

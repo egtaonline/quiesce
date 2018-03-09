@@ -1,5 +1,4 @@
 from egtaonline import api
-from gameanalysis import gamereader
 from gameanalysis import rsgame
 
 from egta import eosched
@@ -8,9 +7,10 @@ from egta import eosched
 def create_scheduler(
         game=None, mem=None, time=None, auth=None, count='1', sleep='600',
         max='100', **_):
-    assert game is not None, "`game_id` must be specified"
+    assert game is not None, "`game` must be specified"
     assert mem is not None, "`mem` must be specified"
     assert time is not None, "`time` must be specified"
+    game_id = int(game)
     mem = int(mem)
     time = int(time)
     count = int(count)
@@ -19,14 +19,9 @@ def create_scheduler(
 
     egta = api.EgtaOnlineApi(auth_token=auth)
     with egta:
-        summ = egta.get_game(int(game)).get_summary()
-        sim_id = egta.get_simulator(
-            *summ['simulator_fullname'].split('-', 1))['id']
-    game = rsgame.emptygame_copy(gamereader.loadj(summ))
-    config = dict(summ.get('configuration', ()) or ())
+        game = rsgame.emptygame_json(egta.get_game(game_id).get_summary())
 
-    return ApiWrapper(
-        game, egta, sim_id, count, config, sleep, max_sims, mem, time)
+    return ApiWrapper(game, egta, game_id, sleep, count, max_sims, mem, time)
 
 
 class ApiWrapper(eosched.EgtaOnlineScheduler):
