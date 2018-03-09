@@ -21,7 +21,7 @@ def add_parser(subparsers):
         game.""")
     parser.add_argument(
         'scheduler', metavar='<sched-spec>', type=utils.scheduler,
-        help="""FIXME""")
+        help="""A scheduler specification, see below.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -46,6 +46,7 @@ def add_parser(subparsers):
         '--min-reg', action='store_true', help="""Return the minimum regret
         profile found, if none were found below regret threshold.""")
     utils.add_reductions(parser)
+    utils.add_scheduler_epilog(parser)
     parser.run = run
     return parser
 

@@ -26,10 +26,12 @@ def add_parser(subparsers):
         will also be omitted from equilibria as their answer is trivial.""")
     parser.add_argument(
         'sched0', metavar='<sched-spec-0>', type=utils.scheduler,
-        help="""FIXME""")
+        help="""The scheduler specification for the game when t is 0. See
+        below.""")
     parser.add_argument(
         'sched1', metavar='<sched-spec-1>', type=utils.scheduler,
-        help="""FIXME""")
+        help="""The scheduler specification for the game when t is 1. See
+        below.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -70,6 +72,7 @@ def add_parser(subparsers):
         found in every restricted game. This may take up to exponential
         time.""")
     utils.add_reductions(parser)
+    utils.add_scheduler_epilog(parser)
     parser.run = run
     return parser
 

@@ -6,7 +6,13 @@ from gameanalysis import gamereader
 from egta import gamesched
 
 
-def create_scheduler(game='-', sample=None, **_):
+def create_scheduler(
+        game: "A file with the game data. `-` is interpreted as stdin."='-',
+        sample: """Treat the game as a sample game. This doesn't require a value,
+        just a trialing colon."""=None, **_):
+    """A scheduler that samples payoff data from an existing game. If sample is
+    specified, payoffs will be a random payoff from each payoff for the
+    profile."""
     if game == '-':
         rsgame = gamereader.load(sys.stdin)
     else:

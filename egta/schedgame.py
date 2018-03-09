@@ -11,7 +11,6 @@ from gameanalysis.reduction import identity as idr
 from egta import asyncgame
 
 
-# TODO Add logging
 class ReductionSchedulerGame(asyncgame.AsyncGame):
     def __init__(self, sched, red, red_players):
         super().__init__(sched.role_names, sched.strat_names,

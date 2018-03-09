@@ -7,7 +7,20 @@ from egta import zipsched
 
 
 def create_scheduler(
-        game='-', procs='4', zipf=None, conf=None, count='1', **_):
+        game: """A file with the description of the game to generate profiles
+        from. Only the basic game structure is necessary. `-` is interpreted as
+        stdin."""='-',
+        procs: """The maximum number of processes used to generate payoff
+        data."""='4',
+        zipf: """The zipfile to run. This must be identical to what would be
+        uploaded to egtaonline. (required)"""=None,
+        conf: """A file with the specific configuration to load. `-` is
+        interpreted as stdin. (default: {})"""=None,
+        count: """This scheduler is more efficient at sampling several
+        profiles."""='1', **_):
+    """Get payoffs from an egtaonline style simulator. This won't be as
+    efficient as using `sim`, but requires no modifications from an existing
+    egtaonline scheduler."""
     assert zipf is not None, '"zipf" must be specified'
     max_procs = int(procs)
     count = int(count)

@@ -14,7 +14,6 @@ from egta.script import trace
 
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
-# FIXME Add help for schedulers
 
 async def amain(*argv):
     parser = argparse.ArgumentParser(

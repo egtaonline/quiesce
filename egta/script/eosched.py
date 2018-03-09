@@ -5,8 +5,18 @@ from egta import eosched
 
 
 def create_scheduler(
-        game=None, mem=None, time=None, auth=None, count='1', sleep='600',
-        max='100', **_):
+        game: "The game id of the game to get profiles from. (required)"=None,
+        mem: "Memory in MB for the scheduler. (required)"=None,
+        time: "Time in seconds for an observation. (required)"=None,
+        auth: "Auth string for egtaonline."=None,
+        count: """This scheduler is more efficient at sampling several
+        profiles."""='1',
+        sleep: """Time to wait in seconds before querying egtaonline to see if
+        profiles are complete. Due to the way flux and egtaonline schedule
+        jobs, this never needs to be less than 300."""='600',
+        max: """The maximum number of jobs to have active on egtaonline at any
+        specific time."""='100', **_):
+    """A scheduler that gets payoff data from egtaonline."""
     assert game is not None, "`game` must be specified"
     assert mem is not None, "`mem` must be specified"
     assert time is not None, "`time` must be specified"

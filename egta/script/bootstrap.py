@@ -18,7 +18,7 @@ def add_parser(subparsers):
         string representation of the percentile.""")
     parser.add_argument(
         'scheduler', metavar='<sched-spec>', type=utils.scheduler,
-        help="""FIXME""")
+        help="""A scheduler specification, see below.""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -49,6 +49,7 @@ def add_parser(subparsers):
         '--standard', action='store_true', help="""Force output to be
         consistent irrespective of if percentiles is specified or the game is
         symmetric.""")
+    utils.add_scheduler_epilog(parser)
     parser.run = run
     return parser
 
