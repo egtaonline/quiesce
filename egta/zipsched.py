@@ -36,6 +36,8 @@ class ZipScheduler(profsched.Scheduler):
     """
 
     def __init__(self, game, conf, zipf, *, max_procs=4, simultaneous_obs=1):
+        super().__init__(
+            game.role_names, game.strat_names, game.num_role_players)
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self.conf = conf
         self.zipf = zipf
@@ -108,9 +110,6 @@ class ZipScheduler(profsched.Scheduler):
             _log.debug("read payoff for profile: %s",
                        self._game.profile_to_repr(profile))
             return pay
-
-    def game(self):
-        return self._game
 
     def open(self):
         assert not self._is_open

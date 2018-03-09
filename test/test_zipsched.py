@@ -41,7 +41,7 @@ async def test_basic_profile(conf, game):
     zipf = 'cdasim/cdasim.zip'
 
     with zipsched.zipsched(game, conf, zipf) as sched:
-        assert rsgame.emptygame_copy(sched.game()) == game
+        assert rsgame.emptygame_copy(sched) == game
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
 
@@ -57,7 +57,7 @@ async def test_no_conf(game):
     zipf = 'cdasim/cdasim.zip'
 
     with zipsched.zipsched(game, {}, zipf) as sched:
-        assert rsgame.emptygame_copy(sched.game()) == game
+        assert rsgame.emptygame_copy(sched) == game
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
 

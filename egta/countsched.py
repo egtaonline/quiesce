@@ -18,6 +18,8 @@ class CountScheduler(profsched.Scheduler):
     """
 
     def __init__(self, sched, count):
+        super().__init__(
+            sched.role_names, sched.strat_names, sched.num_role_players)
         assert count > 0, "count must be positive {:d}".format(count)
         self._sched = sched
         self._count = count
@@ -25,10 +27,11 @@ class CountScheduler(profsched.Scheduler):
     async def sample_payoffs(self, profile):
         payoffs = await asyncio.gather(*[
             self._sched.sample_payoffs(profile) for _ in range(self._count)])
-        payoff = np.zeros(self.game().num_strats)
+        payoff = np.zeros(self.num_strats)
         for i, pay in enumerate(payoffs, 1):
             payoff += (pay - payoff) / i
         return payoff
 
-    def game(self):
-        return self._sched.game()
+
+def countsched(sched, count):
+    return CountScheduler(sched, count)

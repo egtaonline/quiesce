@@ -4,11 +4,8 @@ import asyncio
 from gameanalysis import rsgame
 from gameanalysis import mergegame
 
-# TODO There may be a better way to do this, other than raise runtime errors
-# for all inappropriate methods
 
-
-class AsyncGame(rsgame.RsGame):
+class AsyncGame(rsgame.GameLike):
     """An asynchronous game
 
     Supports asynchronous methods for ensuring particular payoff data"""
@@ -25,43 +22,6 @@ class AsyncGame(rsgame.RsGame):
         If role index is specified, only deviations from that role are
         necessary."""
         pass  # pragma: no cover
-
-    # Async games don't actually have data
-
-    @property
-    def num_complete_profiles(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    @property
-    def num_profiles(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def payoffs(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def profiles(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def deviation_payoffs(self, mix, *, jacobian=True, **_):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def get_payoffs(self, profiles):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def max_strat_payoffs(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def min_strat_payoffs(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def normalize(self):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def restrict(self, rest):
-        raise ValueError("AsyncGames don't function in normal game contexts")
-
-    def __contains__(self, profile):
-        raise ValueError("AsyncGames don't function in normal game contexts")
 
 
 class CompleteAsyncGame(AsyncGame):

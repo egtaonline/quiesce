@@ -1,9 +1,10 @@
 """An abstract profile scheduler"""
 import abc
 
+from gameanalysis import rsgame
 
-# FIXME Make this extend GameLike
-class Scheduler(abc.ABC):  # pragma: no cover
+
+class Scheduler(rsgame.GameLike):
     """A profile scheduler
 
     It must be a context manager for its resources."""
@@ -12,5 +13,5 @@ class Scheduler(abc.ABC):  # pragma: no cover
     async def sample_payoffs(self, profile):
         """Schedule a profile
 
-        Return a promise for the payoff data"""
+        Return a future for the payoff data"""
         pass

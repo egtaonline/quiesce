@@ -47,6 +47,8 @@ class SimulationScheduler(profsched.Scheduler):
     """
 
     def __init__(self, game, config, command, buff_size=4096):
+        super().__init__(
+            game.role_names, game.strat_names, game.num_role_players)
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))
         self._base = {'configuration': config}
         self.command = command
@@ -96,9 +98,6 @@ class SimulationScheduler(profsched.Scheduler):
         payoffs = self._game.payoff_from_json(jpays)
         payoffs.setflags(write=False)
         return payoffs
-
-    def game(self):
-        return self._game
 
     async def _read(self):
         while True:

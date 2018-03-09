@@ -40,6 +40,8 @@ class RsGameScheduler(profsched.Scheduler):
 
     def __init__(self, game, noise_dist=lambda: 0, param_dist=lambda: (),
                  size_ratio=200):
+        super().__init__(
+            game.role_names, game.strat_names, game.num_role_players)
         self._noise_dist = noise_dist
         self._param_dist = param_dist
         self._max_size = max(int(math.log(game.num_all_profiles) * size_ratio),
@@ -58,8 +60,12 @@ class RsGameScheduler(profsched.Scheduler):
         payoff.setflags(write=False)
         return payoff
 
-    def game(self):
-        return self._game
+
+def gamesched(
+        game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200):
+    return RsGameScheduler(
+        game, noise_dist=noise_dist, param_dist=param_dist,
+        size_ratio=size_ratio)
 
 
 class SampleGameScheduler(profsched.Scheduler):
@@ -89,6 +95,8 @@ class SampleGameScheduler(profsched.Scheduler):
 
     def __init__(self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
         assert hasattr(sgame, 'get_sample_payoffs'), "sgame not a sample game"
+        super().__init__(
+            sgame.role_names, sgame.strat_names, sgame.num_role_players)
         self._noise_dist = noise_dist
         self._param_dist = param_dist
         self._sgame = sgame
@@ -108,5 +116,7 @@ class SampleGameScheduler(profsched.Scheduler):
         payoff.setflags(write=False)
         return payoff
 
-    def game(self):
-        return self._sgame
+
+def samplegamesched(sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
+    return SampleGameScheduler(
+        sgame, noise_dist=noise_dist, param_dist=param_dist)

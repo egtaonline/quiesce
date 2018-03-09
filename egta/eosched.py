@@ -45,6 +45,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
     def __init__(self, game, api, sim_id, simultaneous_obs, configuration,
                  sleep_time, max_scheduled, obs_memory, obs_time):
+        super().__init__(
+            game.role_names, game.strat_names, game.num_role_players)
         self._api = api
         self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
 
@@ -93,9 +95,6 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         pay = await pays.get()
         self._check_fetcher()
         return pay
-
-    def game(self):
-        return self._game
 
     async def _fetch(self):
         # TODO Make requests async

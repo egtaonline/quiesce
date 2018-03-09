@@ -17,9 +17,10 @@ class SaveScheduler(profsched.Scheduler):
     """
 
     def __init__(self, sched):
+        super().__init__(
+            sched.role_names, sched.strat_names, sched.num_role_players)
         self._sched = sched
-        self._game = paygame.samplegame_copy(rsgame.emptygame_copy(
-            sched.game()))
+        self._game = paygame.samplegame_copy(rsgame.emptygame_copy(self))
         self._profiles = []
         self._payoffs = []
 
@@ -29,7 +30,7 @@ class SaveScheduler(profsched.Scheduler):
         self._payoffs.append(payoff)
         return payoff
 
-    def game(self):
+    def get_game(self):
         if self._profiles:
             new_profs = np.concatenate([
                 self._game.flat_profiles(),
@@ -42,3 +43,7 @@ class SaveScheduler(profsched.Scheduler):
             self._game = paygame.samplegame_replace_flat(
                 self._game, new_profs, new_pays)
         return self._game
+
+
+def savesched(sched):
+    return SaveScheduler(sched)

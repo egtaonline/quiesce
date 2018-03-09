@@ -13,8 +13,8 @@ from egta import asyncgame
 # TODO Add logging
 class ReductionSchedulerGame(asyncgame.AsyncGame):
     def __init__(self, sched, red, red_players):
-        super().__init__(sched.game().role_names, sched.game().strat_names,
-                         sched.game().num_role_players)
+        super().__init__(sched.role_names, sched.strat_names,
+                         sched.num_role_players)
         self._sched = sched
         self._rgame = rsgame.emptygame_copy(
             red.reduce_game(rsgame.emptygame_copy(self), red_players))
@@ -103,7 +103,7 @@ class _ReductionGame(rsgame.RsGame):
     def min_strat_payoffs(self):
         return self._game.min_strat_payoffs()
 
-    # TODO These could be made more efficient by just taking the reduced game
+    # FIXME These could be made more efficient by just taking the reduced game
     # at input and normalizing it here, however, this is a preliminary
     # implementation, and so not worth the efficiency.
     def normalize(self):

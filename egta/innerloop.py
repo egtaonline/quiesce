@@ -89,7 +89,7 @@ async def inner_loop(
         _log.info(
             "scheduling profiles from restricted strategies %s",
             agame.restriction_to_repr(rest))
-        if np.all(np.add.reduceat(rest, agame.role_starts) == 1):
+        if agame.is_pure_restriction(rest):
             # Short circuit for pure restriction
             await add_deviations(rest, rest.astype(float), init_role_dev)
             return

@@ -3,7 +3,7 @@ import numpy as np
 from gameanalysis import gamegen
 
 from egta import gamesched
-from egta import rschedgame
+from egta import schedgame
 
 
 sizes = [
@@ -25,7 +25,7 @@ async def test_random_caching(players, strats, _):
         game.num_role_strats, 1)
     mix1, mix2 = mixes
     sched = gamesched.SampleGameScheduler(game)
-    sgame = rschedgame.rschedgame(sched)
+    sgame = schedgame.schedgame(sched)
 
     rgame11 = await sgame.get_restricted_game(rest1)
     rgame21 = await sgame.get_restricted_game(rest2)
@@ -49,7 +49,7 @@ async def test_random_caching(players, strats, _):
 async def test_random_complete_dev(players, strats, _):
     game = gamegen.samplegame(players, strats)
     sched = gamesched.SampleGameScheduler(game)
-    sgame = rschedgame.rschedgame(sched)
+    sgame = schedgame.schedgame(sched)
     mix = sgame.random_sparse_mixture()
     supp = mix > 0
     dev_game = await sgame.get_deviation_game(supp)
@@ -72,7 +72,7 @@ async def test_random_complete_dev(players, strats, _):
 async def test_random_normalize(players, strats, _):
     game = gamegen.samplegame(players, strats)
     sched = gamesched.SampleGameScheduler(game)
-    sgame = rschedgame.rschedgame(sched)
+    sgame = schedgame.schedgame(sched)
     rgame = await sgame.get_restricted_game(np.ones(game.num_strats, bool))
     ngame = rgame.normalize()
     assert np.all(ngame.payoffs() >= -1e-7)

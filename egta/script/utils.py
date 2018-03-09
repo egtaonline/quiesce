@@ -1,11 +1,14 @@
 import itertools
+import json
 
 from gameanalysis import reduction
 
-from egta.script import zipsched
-from egta.script import simsched
-from egta.script import gamesched
+from egta import countsched
+from egta import savesched
 from egta.script import eosched
+from egta.script import gamesched
+from egta.script import simsched
+from egta.script import zipsched
 
 
 def add_reductions(parser):
@@ -43,5 +46,33 @@ def scheduler(string):
     stype, args, *_ = itertools.chain(string.split(':', 1), [''])
     args = dict(s.split(':', 1) for s in args.split(',') if s)
     base = types[stype](**args)
-    # FIXME Wrap in save and count
+    if 'save' in args:
+        base = SaveWrapper(base, args['save'])
+    count = int(args.get('count', '1'))
+    if count > 1:
+        base = CountWrapper(base, count)
     return base
+
+
+class SaveWrapper(savesched.SaveScheduler):
+    def __init__(self, sched, dest):
+        super().__init__(sched)
+        self._dest = dest
+
+    async def __aenter__(self):
+        await self._sched.__aenter__()
+        return self
+
+    async def __aexit__(self, *args):
+        with open(self._dest, 'w') as f:
+            json.dump(self.get_game().to_json(), f)
+        await self._sched.__aexit__(*args)
+
+
+class CountWrapper(countsched.CountScheduler):
+    async def __aenter__(self):
+        await self._sched.__aenter__()
+        return self
+
+    async def __aexit__(self, *args):
+        await self._sched.__aexit__(*args)

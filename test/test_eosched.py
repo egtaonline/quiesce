@@ -30,6 +30,7 @@ async def test_basic_profile(egta_info):
     # Schedule all new profiles and verify it works
     async with eosched.eosched(
             game, egta, sim['id'], 1, {}, 0.1, 10, 0, 0) as sched:
+        assert game == rsgame.emptygame_copy(sched)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
     pays = np.stack(awaited)
