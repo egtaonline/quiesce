@@ -39,6 +39,12 @@ def add_parser(subparsers):
         type=argparse.FileType('r'), help="""Specify an optional restricted
         game to sample instead of the whole game. Only deviations from the
         restricted strategy set will be scheduled.""")
+    parser.add_argument(
+        '--one', action='store_true', help="""Guarantee that an equilibrium is
+        found. This may take up to exponential time.""")
+    parser.add_argument(
+        '--min-reg', action='store_true', help="""Return the minimum regret
+        profile found, if none were found below regret threshold.""")
     utils.add_reductions(parser)
     parser.run = run
     return parser
@@ -56,9 +62,12 @@ async def run(args):
             sched, red, red_players).get_deviation_game(rest)
 
     # now find equilibria
-    eqa = sched.trim_mixture_support(restrict.translate(nash.mixed_nash(
-        data.restrict(rest), regret_thresh=args.regret_thresh,
-        dist_thresh=args.dist_thresh), rest), thresh=args.supp_thresh)
+    eqa = sched.trim_mixture_support(
+        restrict.translate(nash.mixed_nash(
+            data.restrict(rest), regret_thresh=args.regret_thresh,
+            dist_thresh=args.dist_thresh, at_least_one=args.one,
+            min_reg=args.min_reg), rest),
+        thresh=args.supp_thresh)
     reg_info = []
     for eqm in eqa:
         gains = regret.mixture_deviation_gains(data, eqm)

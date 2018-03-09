@@ -17,6 +17,7 @@ async def test_basic_profile():
 
     save = savesched.savesched(gamesched.samplegamesched(sgame))
     sched = countsched.countsched(save, 10)
+    assert str(sched) is not None
     paylist = await asyncio.gather(*[
         sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)

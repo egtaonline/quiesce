@@ -14,4 +14,4 @@ class Scheduler(rsgame.GameLike):
         """Schedule a profile
 
         Return a future for the payoff data"""
-        pass
+        pass  # pragma: no cover

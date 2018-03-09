@@ -177,7 +177,19 @@ async def test_sim(sim_game_info):
     game, sched, _ = sim_game_info
     with stdout() as out, stderr() as err:
         assert await run(
-            'brute', sched, '--dpr', 'buyers:2;sellers:2'), err.getvalue()
+            'brute', sched, '--dpr', 'buyers:2;sellers:2',
+            '--min-reg'), err.getvalue()
+        for eqm in json.loads(out.getvalue()):
+            game.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.asyncio
+async def test_sim_in(sim_game_info):
+    game, sched, _ = sim_game_info
+    with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
+        assert await run(
+            'brute', sched + ',game:-', '--dpr', 'buyers:2;sellers:2',
+            '--min-reg'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
@@ -187,7 +199,45 @@ async def test_zip(sim_game_info):
     game, _, sched = sim_game_info
     with stdout() as out, stderr() as err:
         assert await run(
-            'brute', '--dpr', 'buyers:2;sellers:2', sched), err.getvalue()
+            'brute', sched, '--dpr', 'buyers:2;sellers:2',
+            '--min-reg'), err.getvalue()
+        for eqm in json.loads(out.getvalue()):
+            game.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.asyncio
+async def test_zip_in(sim_game_info, tmpdir):
+    game, _, sched = sim_game_info
+    with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
+        assert await run(
+            'brute', sched + ',game:-', '--dpr', 'buyers:2;sellers:2',
+            '--min-reg'), err.getvalue()
+        for eqm in json.loads(out.getvalue()):
+            game.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.asyncio
+async def test_zip_conf_in(sim_game_info):
+    game, _, sched = sim_game_info
+    conf = json.dumps({'max_value': 2})
+    with stdin(conf), stdout() as out, stderr() as err:
+        assert await run(
+            'brute', sched + ',conf:-', '--dpr', 'buyers:2;sellers:2',
+            '--min-reg'), err.getvalue()
+        for eqm in json.loads(out.getvalue()):
+            game.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.asyncio
+async def test_zip_conf_file(sim_game_info, tmpdir):
+    game, _, sched = sim_game_info
+    conf_file = str(tmpdir.join('conf.json'))
+    with open(conf_file, 'w') as f:
+        json.dump({'max_value': 2}, f)
+    with stdout() as out, stderr() as err:
+        assert await run(
+            'brute', sched + ',conf:' + conf_file, '--dpr',
+            'buyers:2;sellers:2', '--min-reg'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
@@ -227,6 +277,23 @@ async def test_sim_conf(sim_game_info, tmpdir):
         assert await run(
             'brute', '--dpr', 'buyers:2;sellers:2', sched + ',conf:' +
             conf_file), err.getvalue()
+        for eqm in json.loads(out.getvalue()):
+            game.mixture_from_json(eqm['equilibrium'])
+
+
+@pytest.mark.asyncio
+async def test_sim_conf_in(sim_game_info, tmpdir):
+    game, sched, _ = sim_game_info
+    conf = json.dumps({
+        'markup': 'standard',
+        'max_value': 1,
+        'arrivals': 'simple',
+        'market': 'call',
+    })
+    with stdin(conf), stdout() as out, stderr() as err:
+        assert await run(
+            'brute', '--dpr', 'buyers:2;sellers:2',
+            sched + ',conf:-'), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
 
@@ -293,7 +360,8 @@ async def test_brute_egta_game(game_info):
         sched = get_eosched(server, game, 'game')
         with stdout() as out, stderr() as err:
             assert await run(
-                'brute', '--dpr', 'r0:2;r1:2', sched), err.getvalue()
+                'brute', sched, '--dpr', 'r0:2;r1:2',
+                '--min-reg'), err.getvalue()
             for eqm in json.loads(out.getvalue()):
                 game.mixture_from_json(eqm['equilibrium'])
 

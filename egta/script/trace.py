@@ -67,8 +67,8 @@ def add_parser(subparsers):
         without exploring deviations from the other roles.""")
     parser.add_argument(
         '--one', action='store_true', help="""Guarantee that an equilibrium is
-        found in every restricted game. This may take up to exponential time,
-        but a warning will be logged if it takes more than five minutes.""")
+        found in every restricted game. This may take up to exponential
+        time.""")
     utils.add_reductions(parser)
     parser.run = run
     return parser

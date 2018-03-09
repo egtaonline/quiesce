@@ -41,6 +41,7 @@ async def test_basic_profile(conf, game):
     zipf = 'cdasim/cdasim.zip'
 
     with zipsched.zipsched(game, conf, zipf) as sched:
+        assert str(sched) is not None
         assert rsgame.emptygame_copy(sched) == game
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
