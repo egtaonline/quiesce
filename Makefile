@@ -32,7 +32,7 @@ ubuntu-reqs:
 	sudo apt-get install libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev
 
 todo:
-	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=lib --exclude-dir=lib64 --exclude=Makefile --color=always
+	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=docs --exclude-dir=sphinx --exclude-dir=lib --exclude-dir=lib64 --exclude=Makefile --color=always
 
 check:
 	bin/flake8 $(FILES)
