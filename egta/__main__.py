@@ -5,6 +5,7 @@ import logging
 import smtplib
 import sys
 import traceback
+from logging import handlers
 
 from egta.script import bootstrap
 from egta.script import brute
@@ -73,7 +74,7 @@ async def amain(*argv):
             smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
                 host=server.local_hostname)
 
-        email_handler = logging.handlers.SMTPHandler(
+        email_handler = handlers.SMTPHandler(
             smtp_host, smtp_fromaddr, args.recipient,
             'EGTA Status for {}{}'.format(args.method, tag))
         email_handler.setLevel(50 - args.email_verbosity * 10)
