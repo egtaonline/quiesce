@@ -4,7 +4,7 @@ from gameanalysis import rsgame
 from egta import eosched
 
 
-def create_scheduler(
+async def create_scheduler(
         game: "The game id of the game to get profiles from. (required)"=None,
         mem: "Memory in MB for the scheduler. (required)"=None,
         time: "Time in seconds for an observation. (required)"=None,
@@ -27,10 +27,10 @@ def create_scheduler(
     sleep = float(sleep)
     max_sims = int(max)
 
-    egta = api.EgtaOnlineApi(auth_token=auth)
-    with egta:
-        game = rsgame.emptygame_json(egta.get_game(game_id).get_summary())
-
+    async with api.api(auth_token=auth) as egta:
+        game = await egta.get_game(game_id)
+        summ = await game.get_summary()
+    game = rsgame.emptygame_json(summ)
     return ApiWrapper(game, egta, game_id, sleep, count, max_sims, mem, time)
 
 
@@ -40,9 +40,9 @@ class ApiWrapper(eosched.EgtaOnlineScheduler):
         self.api = api
 
     async def __aenter__(self):
-        self.api.__enter__()
+        await self.api.__aenter__()
         return await super().__aenter__()
 
     async def __aexit__(self, *args):
         await super().__aexit__(*args)
-        self.api.__exit__(*args)
+        await self.api.__aexit__(*args)

@@ -46,10 +46,10 @@ types = {
 }
 
 
-def scheduler(string):
+async def parse_scheduler(string):
     stype, args, *_ = itertools.chain(string.split(':', 1), [''])
     args = dict(s.split(':', 1) for s in args.split(',') if s)
-    base = types[stype](**args)
+    base = await types[stype](**args)
     if 'save' in args:
         base = SaveWrapper(base, args['save'])
     count = int(args.get('count', '1'))

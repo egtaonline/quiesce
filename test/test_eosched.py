@@ -1,3 +1,4 @@
+import async_generator
 import asyncio
 import random
 
@@ -12,19 +13,18 @@ from egta import eosched
 
 
 @pytest.fixture
-def egta_info():
+@async_generator.async_generator
+async def egta_info():
     game = rsgame.emptygame([4, 4], [11, 11])
-    with mockserver.Server() as server, api.EgtaOnlineApi() as egta:
-        sim = egta.get_simulator(server.create_simulator(
+    async with mockserver.server() as server, api.api() as egta:
+        sim = await egta.get_simulator(server.create_simulator(
             'sim', '1', delay_dist=lambda: random.random() / 10))
-        strats = {role: strats for role, strats
-                  in zip(game.role_names, game.strat_names)}
-        players = {role: plays for role, plays
-                   in zip(game.role_names, game.num_role_players)}
-        sim.add_dict(strats)
-        game_id = egta.create_or_get_game(
-            sim['id'], players, strats, {})['id']
-        yield server, egta, game, game_id
+        strats = dict(zip(game.role_names, game.strat_names))
+        symgrps = list(zip(game.role_names, game.num_role_players,
+                           game.strat_names))
+        await sim.add_strategies(strats)
+        egame = await egta.get_canon_game(sim['id'], symgrps)
+        await async_generator.yield_((server, egta, game, egame['id']))
 
 
 @pytest.mark.asyncio
@@ -117,7 +117,7 @@ async def test_scheduler_deactivate(egta_info):
     async with eosched.eosched(
             game, egta, game_id, 0.1, 1, 10, 0, 0) as sched:
         # Deactivate scheduler
-        for esched in egta.get_generic_schedulers():
-            esched.deactivate()
+        async for esched in egta.get_generic_schedulers():
+            await esched.deactivate()
         with pytest.raises(AssertionError):
             await sched.sample_payoffs(game.random_profile())

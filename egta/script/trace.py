@@ -25,13 +25,11 @@ def add_parser(subparsers):
         roles with only one strategy should be omitted from reductions, and
         will also be omitted from equilibria as their answer is trivial.""")
     parser.add_argument(
-        'sched0', metavar='<sched-spec-0>', type=utils.scheduler,
-        help="""The scheduler specification for the game when t is 0. See
-        below.""")
+        'sched0', metavar='<sched-spec-0>', help="""The scheduler specification
+        for the game when t is 0. See below.""")
     parser.add_argument(
-        'sched1', metavar='<sched-spec-1>', type=utils.scheduler,
-        help="""The scheduler specification for the game when t is 1. See
-        below.""")
+        'sched1', metavar='<sched-spec-1>', help="""The scheduler specification
+        for the game when t is 1. See below.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -78,8 +76,8 @@ def add_parser(subparsers):
 
 
 async def run(args):
-    sched0 = CanonWrapper(args.sched0)
-    sched1 = CanonWrapper(args.sched1)
+    sched0 = CanonWrapper(await utils.parse_scheduler(args.sched0))
+    sched1 = CanonWrapper(await utils.parse_scheduler(args.sched1))
     red, red_players = utils.parse_reduction(sched0, args)
     agame0 = schedgame.schedgame(sched0, red, red_players)
     agame1 = schedgame.schedgame(sched1, red, red_players)

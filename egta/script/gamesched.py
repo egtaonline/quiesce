@@ -6,7 +6,7 @@ from gameanalysis import gamereader
 from egta import gamesched
 
 
-def create_scheduler(
+async def create_scheduler(
         game: "A file with the game data. `-` is interpreted as stdin."='-',
         sample: """Treat the game as a sample game. This doesn't require a value,
         just a trialing colon."""=None, **_):

@@ -19,8 +19,8 @@ def add_parser(subparsers):
         should be specified. The result is a list where each element specifies
         an "equilibrium".""")
     parser.add_argument(
-        'scheduler', metavar='<sched-spec>', type=utils.scheduler,
-        help="""A scheduler specification, see below.""")
+        'scheduler', metavar='<sched-spec>', help="""A scheduler specification,
+        see below.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -65,7 +65,7 @@ def add_parser(subparsers):
 
 
 async def run(args):
-    sched = args.scheduler
+    sched = await utils.parse_scheduler(args.scheduler)
     red, red_players = utils.parse_reduction(sched, args)
     agame = schedgame.schedgame(sched, red, red_players)
 

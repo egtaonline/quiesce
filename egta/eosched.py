@@ -83,10 +83,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     await self._scheduled.acquire()
                 pid = prof_id[0]
                 if pid is not None:
-                    self._sched.remove_profile(pid)
+                    await self._sched.remove_profile(pid)
                 assignment = self._game.profile_to_repr(profile)
-                prof_id[0] = self._sched.add_profile(
-                    assignment, scheduled[0])['id']
+                prof_id[0] = (await self._sched.add_profile(
+                    assignment, scheduled[0]))['id']
                 if pid is None:
                     self._prof_ids[prof_id[0]] = data
         pay = await pays.get()
@@ -99,7 +99,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             while True:
                 logging.info("query scheduler %d for game %d",
                              self._sched['id'], self._game_id)
-                info = self._sched.get_requirements()
+                info = await self._sched.get_requirements()
                 assert info['active'], "scheduler was deactivated"
                 reqs = info['scheduling_requirements']
                 for req in reqs:
@@ -107,16 +107,19 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     scheduled, received, _, _, pays = self._prof_ids[prof_id]
                     if req['current_count'] <= received[0]:
                         continue
-                    egta_prof = self._api.get_profile(prof_id)
-                    jobs = egta_prof.get_info('observations')
+                    egta_prof = await self._api.get_profile(prof_id)
+                    jobs = await egta_prof.get_observations()
                     # TODO Is this still necessary
                     # valid = all(o['symmetry_groups'] is not None for o
                     #             in jobs['observations'])
                     obs = self._game.samplepay_from_json(jobs)
                     num = obs.shape[0] - received[0]
-                    received[0] += num
-                    for _ in range(num):
+                    # Only un-schedule the amount different than what you
+                    # thought you scheduled. We can get other observations from
+                    # other schedulers.
+                    for _ in range(min(num, scheduled[0] - received[0])):
                         self._scheduled.release()
+                    received[0] += num
                     obs = obs[:num].copy()
                     obs.setflags(write=False)
                     for o in obs:
@@ -131,13 +134,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
     async def open(self):
         assert not self._is_open, "already open"
         try:
-            obs = self._api.get_game(self._game_id).get_observations()
+            game = await self._api.get_game(self._game_id)
+            obs = await game.get_observations()
             assert (rsgame.emptygame_copy(self._game) ==
                     rsgame.emptygame_json(obs)), \
                 "egtaonline game didn't match specified game"
             conf = dict(obs.get('configuration', ()) or ())
-            sim_id = self._api.get_simulator(
-                *obs['simulator_fullname'].split('-', 1))['id']
             profiles = obs.get('profiles', ()) or ()
 
             # Parse profiles
@@ -161,17 +163,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 num_profs, num_pays, self._game_id)
 
             # Create and start scheduler
-            self._sched = self._api.create_generic_scheduler(
-                sim_id, 'egta_' + eu.random_string(20), True,
-                self._obs_memory, self._game.num_players, self._obs_time,
-                self._simult_obs, 1, conf)
+            self._sched = await obs.create_generic_scheduler(
+                'egta_' + eu.random_string(20), True, self._obs_memory,
+                self._obs_time, self._simult_obs, 1, conf)
             logging.warning(
                 "created scheduler %d for running simulations of game %d: "
                 "https://%s/generic_schedulers/%d", self._sched['id'],
                 self._game_id, self._api.domain, self._sched['id'])
-            for role, count in zip(self._game.role_names,
-                                   self._game.num_role_players):
-                self._sched.add_role(role, count)
             self._fetcher = asyncio.ensure_future(self._fetch())
             self._is_open = True
         except Exception as ex:
@@ -187,7 +185,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._fetcher = None
 
         if self._sched is not None:
-            self._sched.deactivate()
+            await self._sched.deactivate()
             logging.info("deactivated scheduler %d for game %d",
                          self._sched['id'], self._game_id)
             self._sched = None

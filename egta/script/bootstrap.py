@@ -17,8 +17,8 @@ def add_parser(subparsers):
         is a json dictionary mapping surplus and regret to either "mean" or a
         string representation of the percentile.""")
     parser.add_argument(
-        'scheduler', metavar='<sched-spec>', type=utils.scheduler,
-        help="""A scheduler specification, see below.""")
+        'scheduler', metavar='<sched-spec>', help="""A scheduler specification,
+        see below.""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -55,7 +55,7 @@ def add_parser(subparsers):
 
 
 async def run(args):
-    sched = args.scheduler
+    sched = await utils.parse_scheduler(args.scheduler)
     if not args.percentile:
         args.boots = 0
     mix = sched.mixture_from_json(json.load(args.mixture))

@@ -337,18 +337,14 @@ async def test_innerloop_hr(game_info):
             game.mixture_from_json(eqm['equilibrium'])
 
 
-def get_eosched(server, game, name):
-    with api.EgtaOnlineApi() as egta:
-        sim = egta.get_simulator(server.create_simulator(
+async def get_eosched(server, game, name):
+    async with api.api() as egta:
+        sim = await egta.get_simulator(server.create_simulator(
             name, '1', delay_dist=lambda: random.random() / 100))
-        sim.add_dict({role: strats for role, strats
-                      in zip(game.role_names, game.strat_names)})
-        eogame = sim.create_game(name, game.num_players)
-        for role, count, strats in zip(game.role_names, game.num_role_players,
-                                       game.strat_names):
-            eogame.add_role(role, count)
-            for strat in strats:
-                eogame.add_strategy(role, strat)
+        await sim.add_strategies(dict(zip(game.role_names, game.strat_names)))
+        eogame = await sim.create_game(name, game.num_players)
+        await eogame.add_symgroups(list(zip(
+            game.role_names, game.num_role_players, game.strat_names)))
         return 'eo:game:{:d},mem:2048,time:60,sleep:0.1'.format(
             eogame['id'])
 
@@ -356,8 +352,8 @@ def get_eosched(server, game, name):
 @pytest.mark.asyncio
 async def test_brute_egta_game(game_info):
     game, game_file = game_info
-    with mockserver.Server() as server:
-        sched = get_eosched(server, game, 'game')
+    async with mockserver.server() as server:
+        sched = await get_eosched(server, game, 'game')
         with stdout() as out, stderr() as err:
             assert await run(
                 'brute', sched, '--dpr', 'r0:2;r1:2',
@@ -415,11 +411,11 @@ def add_singleton_role(game, index, role_name, strat_name, num_players):
 @pytest.mark.asyncio
 async def test_trace_norm():
     base_game = rsgame.emptygame([3, 2], [2, 3])
-    with mockserver.Server() as server:
+    async with mockserver.server() as server:
         game0 = add_singleton_role(base_game, 0, 'a', 'sx', 1)
-        sched0 = get_eosched(server, game0, 'game0')
+        sched0 = await get_eosched(server, game0, 'game0')
         game1 = add_singleton_role(base_game, 1, 'r00', 's0', 3)
-        sched1 = get_eosched(server, game1, 'game1')
+        sched1 = await get_eosched(server, game1, 'game1')
         with stdout() as out, stderr() as err:
             assert await run('trace', sched0, sched1), err.getvalue()
         traces = json.loads(out.getvalue())

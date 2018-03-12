@@ -6,7 +6,7 @@ from gameanalysis import gamereader
 from egta import zipsched
 
 
-def create_scheduler(
+async def create_scheduler(
         game: """A file with the description of the game to generate profiles
         from. Only the basic game structure is necessary. `-` is interpreted as
         stdin."""='-',
