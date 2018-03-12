@@ -54,7 +54,7 @@ async def amain(*argv):
     args = parser.parse_args(argv)
     method = eq_methods.choices[args.method]
 
-    tag = '' if args.tag is None else args.tag + ' '
+    tag = '' if args.tag is None else ' ' + args.tag
 
     stderr_handle = logging.StreamHandler(sys.stderr)
     stderr_handle.setLevel(50 - 10 * min(args.verbose, 4))
