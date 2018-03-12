@@ -1,0 +1,7 @@
+egta.asyncgame module
+=====================
+
+.. automodule:: egta.asyncgame
+    :members:
+    :undoc-members:
+    :show-inheritance:

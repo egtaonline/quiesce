@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.eosched &#8212; Empirical Game-Theoretic Analysis 0.0.31 documentation</title>
+    <title>egta.eosched &#8212; Empirical Game-Theoretic Analysis 0.0.32 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.31 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -36,20 +36,16 @@
           <div class="body" role="main">
             
   <h1>Source code for egta.eosched</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">queue</span>
-<span class="kn">import</span> <span class="nn">threading</span>
+<span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">paygame</span>
 <span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
 <span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">gu</span>
 
 <span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">profsched</span>
 <span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">eu</span>
-
-
-<span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="EgtaOnlineScheduler"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler">[docs]</a><span class="k">class</span> <span class="nc">EgtaOnlineScheduler</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">Scheduler</span><span class="p">):</span>
@@ -61,19 +57,17 @@
 <span class="sd">        The gameanalysis basegame representing the game to schedule.</span>
 <span class="sd">    api : EgtaOnlineApi</span>
 <span class="sd">        The api object to be uased to query EGTA Online.</span>
-<span class="sd">    sim_id : int</span>
-<span class="sd">        The id of the egtaonline simulator to use.</span>
-<span class="sd">    simultaneous_obs : int</span>
-<span class="sd">        The number of simultaneous observations to schedule at a time. EGTA</span>
-<span class="sd">        Online will use this when scheduling.</span>
-<span class="sd">    configuration : {key: value}</span>
-<span class="sd">        Dictionary of configuration to use with the scheduler. Any fields that</span>
-<span class="sd">        are omitted will be filled in by the defaults specified in the</span>
-<span class="sd">        simulator.</span>
+<span class="sd">    game_id : int</span>
+<span class="sd">        The id of the egtaonline game to use. It must match the setup of game.</span>
+<span class="sd">        Use the egtaonline `get_or_create_game` if you need to get a game_id</span>
+<span class="sd">        from a configuration.</span>
 <span class="sd">    sleep_time : int</span>
 <span class="sd">        Time in seconds between queries to egtaonline to determine if profiles</span>
 <span class="sd">        have finished. This should probably be set roughly equal to the time it</span>
 <span class="sd">        takes for a simulation to run.</span>
+<span class="sd">    simultaneous_obs : int</span>
+<span class="sd">        The number of simultaneous observations to schedule at a time. EGTA</span>
+<span class="sd">        Online will use this when scheduling.</span>
 <span class="sd">    max_scheduled : int</span>
 <span class="sd">        The maximum number of observations to schedule simultaneously. Keeping</span>
 <span class="sd">        this low helps prevent starving others of flux cycles.</span>
@@ -83,306 +77,184 @@
 <span class="sd">        The amount of time in seconds to give each simulation to run. Too low</span>
 <span class="sd">        and long running simulations will get cancelled giving you biased</span>
 <span class="sd">        samples, too long and it will take longer to schedule jobs on flux.</span>
-<span class="sd">    game_id : int, optional</span>
-<span class="sd">        An optional game id corresponding to a game that matches the</span>
-<span class="sd">        configuration. This prevents creating a temporary game just to query</span>
-<span class="sd">        initial profile data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">sim_id</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="p">,</span> <span class="n">configuration</span><span class="p">,</span>
-                 <span class="n">sleep_time</span><span class="p">,</span> <span class="n">max_scheduled</span><span class="p">,</span> <span class="n">obs_memory</span><span class="p">,</span> <span class="n">obs_time</span><span class="p">,</span>
-                 <span class="n">game_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">game_id</span><span class="p">,</span> <span class="n">sleep_time</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="p">,</span>
+                 <span class="n">max_scheduled</span><span class="p">,</span> <span class="n">obs_memory</span><span class="p">,</span> <span class="n">obs_time</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="o">=</span> <span class="n">api</span>
-        <span class="c1"># XXX Copy to samplegame to get sample payoff reading</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">=</span> <span class="n">paygame</span><span class="o">.</span><span class="n">samplegame_copy</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">game</span><span class="p">))</span>
-
-        <span class="c1"># {hprof: (lock, obs, _Record)}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_prof_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="c1"># {prof_id: ^above^}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_pending_profiles</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span> <span class="o">=</span> <span class="n">game_id</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_sleep_time</span> <span class="o">=</span> <span class="n">sleep_time</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_max_running</span> <span class="o">=</span> <span class="p">(</span><span class="n">max_scheduled</span> <span class="o">*</span> <span class="n">simultaneous_obs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sim_id</span> <span class="o">=</span> <span class="n">sim_id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span> <span class="o">=</span> <span class="n">game_id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_configuration</span> <span class="o">=</span> <span class="n">configuration</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_obs_memory</span> <span class="o">=</span> <span class="n">obs_memory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_obs_time</span> <span class="o">=</span> <span class="n">obs_time</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span> <span class="o">=</span> <span class="n">simultaneous_obs</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sched_lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">BoundedSemaphore</span><span class="p">(</span>
+            <span class="n">max_scheduled</span> <span class="o">*</span> <span class="n">simultaneous_obs</span><span class="p">)</span>
 
-<div class="viewcode-block" id="EgtaOnlineScheduler.schedule"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.schedule">[docs]</a>    <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span>
+    <span class="k">def</span> <span class="nf">_check_fetcher</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span><span class="o">.</span><span class="n">exception</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span><span class="o">.</span><span class="n">exception</span><span class="p">()</span>
+
+<div class="viewcode-block" id="EgtaOnlineScheduler.sample_payoffs"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.sample_payoffs">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">sample_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span><span class="p">,</span> <span class="s2">&quot;not open&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_fetcher</span><span class="p">()</span>
         <span class="n">hprof</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prof_lock</span><span class="p">:</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
-                <span class="n">hprof</span><span class="p">,</span> <span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">(),</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">(),</span> <span class="n">_Record</span><span class="p">()))</span>
-
-        <span class="n">_</span><span class="p">,</span> <span class="n">que</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">val</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_running</span><span class="p">:</span>
-            <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;new profile queued </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-                       <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pending_profiles</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span></div>
-        <span class="k">return</span> <span class="n">_EgtaOnlinePromise</span><span class="p">(</span><span class="n">que</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
-
-<div class="viewcode-block" id="EgtaOnlineScheduler.game"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.game">[docs]</a>    <span class="k">def</span> <span class="nf">game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span>
-
-    <span class="k">def</span> <span class="nf">_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Internal implementation to actually schedule a profile</span>
-
-<span class="sd">        hprof is a hashed array profile, val is the tuple stored for each</span>
-<span class="sd">        profile. This allows differed profiles to be scheduled the same way as</span>
-<span class="sd">        new ones.&quot;&quot;&quot;</span>
-        <span class="n">profile</span> <span class="o">=</span> <span class="n">hprof</span><span class="o">.</span><span class="n">array</span>
-        <span class="n">lock</span><span class="p">,</span> <span class="n">que</span><span class="p">,</span> <span class="n">rec</span> <span class="o">=</span> <span class="n">val</span>
-        <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
-            <span class="n">rec</span><span class="o">.</span><span class="n">num_req</span> <span class="o">+=</span> <span class="mi">1</span>
-
-            <span class="k">if</span> <span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># Unknown id, schedule new amount</span>
-                <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+            <span class="n">hprof</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()))</span>
+        <span class="n">scheduled</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">claimed</span><span class="p">,</span> <span class="n">prof_id</span><span class="p">,</span> <span class="n">pays</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="n">claimed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">scheduled</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">claimed</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="c1"># TODO make requests async</span>
+            <span class="n">scheduled</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched_lock</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span><span class="p">):</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+                <span class="n">pid</span> <span class="o">=</span> <span class="n">prof_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">pid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">remove_profile</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>
                 <span class="n">assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;new profile scheduled </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">assignment</span><span class="p">)</span>
-                <span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">add_profile</span><span class="p">(</span>
-                    <span class="n">assignment</span><span class="p">,</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span><span class="p">)[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
-                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">+=</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span>
+                <span class="n">prof_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">add_profile</span><span class="p">(</span>
+                    <span class="n">assignment</span><span class="p">,</span> <span class="n">scheduled</span><span class="p">[</span><span class="mi">0</span><span class="p">]))[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">pid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">prof_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="n">pay</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pays</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_fetcher</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="n">pay</span>
 
-            <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span> <span class="o">&lt;</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_req</span> <span class="ow">and</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># Id from previous data, schedule specially</span>
-                <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">=</span> <span class="p">((((</span><span class="n">rec</span><span class="o">.</span><span class="n">num_req</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-                                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
-                <span class="n">assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                    <span class="s2">&quot;new existing data profile scheduled </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">assignment</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">add_profile</span><span class="p">(</span>
-                    <span class="n">assignment</span><span class="p">,</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span><span class="p">)</span>
-                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">+=</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">-</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span>
-
-            <span class="k">elif</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span> <span class="o">&lt;</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_req</span> <span class="ow">and</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">&lt;</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_req</span><span class="p">:</span>
-                <span class="c1"># Existing profile</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
-                <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;old profile scheduled </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-                           <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">remove_profile</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">prof_id</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">add_profile</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">),</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span><span class="p">)</span>
-                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span>
-
-    <span class="k">def</span> <span class="nf">_drain_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Drain all profile queues when an assertion is thrown&quot;&quot;&quot;</span>
-        <span class="c1"># This can also be thrown on keyboard interrupt</span>
-        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prof_lock</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">que</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-
-                <span class="n">keep_going</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">]</span>
-
-                <span class="k">def</span> <span class="nf">thread_func</span><span class="p">():</span>
-                    <span class="n">que</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-                    <span class="n">keep_going</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="n">que</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span>
-
-                <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">thread_func</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-                <span class="k">while</span> <span class="n">keep_going</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                    <span class="n">que</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-                    <span class="n">que</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_update_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Thread the constantly pings EGTA Online for updates</span>
-
-<span class="sd">        This thread constantly checks an egta online scheduler for updates to</span>
-<span class="sd">        profiles, and when found, pulls the observation data down into the</span>
-<span class="sd">        internal structures. It&#39;s also used to schedule any profiles that</span>
-<span class="sd">        couldn&#39;t be scheduled before because we were at max running.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">_fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO Make requests async</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span>
-                    <span class="kc">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sleep_time</span><span class="p">):</span>
-                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;nothing left to schedule&quot;</span><span class="p">)</span>
-                        <span class="k">continue</span>
-                <span class="c1"># First update requirements and mark completed</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;query scheduler </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
-                <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">get_requirements</span><span class="p">()</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;query scheduler </span><span class="si">%d</span><span class="s2"> for game </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">get_requirements</span><span class="p">()</span>
                 <span class="k">assert</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;active&#39;</span><span class="p">],</span> <span class="s2">&quot;scheduler was deactivated&quot;</span>
                 <span class="n">reqs</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;scheduling_requirements&#39;</span><span class="p">]</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;got reqs </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">reqs</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">reqs</span><span class="p">:</span>
                     <span class="n">prof_id</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
-                    <span class="k">if</span> <span class="n">prof_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">:</span>
-                        <span class="k">continue</span>  <span class="c1"># race condition # pragma: no cover</span>
-                    <span class="n">lock</span><span class="p">,</span> <span class="n">que</span><span class="p">,</span> <span class="n">rec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">prof_id</span><span class="p">]</span>
-
-                    <span class="c1"># Check if updated counts is greater than before</span>
-                    <span class="k">if</span> <span class="n">req</span><span class="p">[</span><span class="s1">&#39;current_count&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span><span class="p">:</span>
+                    <span class="n">scheduled</span><span class="p">,</span> <span class="n">received</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pays</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">prof_id</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">req</span><span class="p">[</span><span class="s1">&#39;current_count&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">received</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
                         <span class="k">continue</span>
-                    <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;can update profile </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">prof_id</span><span class="p">)</span>
+                    <span class="n">egta_prof</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">get_profile</span><span class="p">(</span><span class="n">prof_id</span><span class="p">)</span>
+                    <span class="n">jobs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">egta_prof</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
+                    <span class="c1"># TODO Is this still necessary</span>
+                    <span class="c1"># valid = all(o[&#39;symmetry_groups&#39;] is not None for o</span>
+                    <span class="c1">#             in jobs[&#39;observations&#39;])</span>
+                    <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">samplepay_from_json</span><span class="p">(</span><span class="n">jobs</span><span class="p">)</span>
+                    <span class="n">num</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">received</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="c1"># Only un-schedule the amount different than what you</span>
+                    <span class="c1"># thought you scheduled. We can get other observations from</span>
+                    <span class="c1"># other schedulers.</span>
+                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">scheduled</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">received</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+                    <span class="n">received</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">num</span>
+                    <span class="n">obs</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[:</span><span class="n">num</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">obs</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">obs</span><span class="p">:</span>
+                        <span class="n">pays</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sleep_time</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="p">(</span><span class="n">received</span><span class="p">,),</span> <span class="p">(</span><span class="n">claimed</span><span class="p">,),</span> <span class="n">_</span><span class="p">,</span> <span class="n">pays</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">claimed</span> <span class="o">-</span> <span class="n">received</span><span class="p">):</span>
+                    <span class="n">pays</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ex</span>
 
-                    <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
-                        <span class="c1"># If so, get observations from profile, and update data</span>
-                        <span class="c1"># This uses fact that recent profiles are listed first,</span>
-                        <span class="c1"># this will not work properly if this assumption is</span>
-                        <span class="c1"># violated</span>
-                        <span class="n">egta_prof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">get_profile</span><span class="p">(</span><span class="n">prof_id</span><span class="p">)</span>
+<div class="viewcode-block" id="EgtaOnlineScheduler.open"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.open">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span><span class="p">,</span> <span class="s2">&quot;already open&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">game</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">get_game</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span>
+            <span class="n">obs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">game</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="p">)</span> <span class="o">==</span>
+                    <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_json</span><span class="p">(</span><span class="n">obs</span><span class="p">)),</span> \
+                <span class="s2">&quot;egtaonline game didn&#39;t match specified game&quot;</span>
+            <span class="n">conf</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;configuration&#39;</span><span class="p">,</span> <span class="p">())</span> <span class="ow">or</span> <span class="p">())</span>
+            <span class="n">profiles</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;profiles&#39;</span><span class="p">,</span> <span class="p">())</span> <span class="ow">or</span> <span class="p">()</span>
 
-                        <span class="c1"># Sometimes egta returns invalid json</span>
-                        <span class="n">jobs</span> <span class="o">=</span> <span class="kc">None</span>
-                        <span class="n">valid</span> <span class="o">=</span> <span class="kc">False</span>
-                        <span class="k">while</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
-                            <span class="c1"># TODO Timeouts here are probably preferred</span>
-                            <span class="n">jobs</span> <span class="o">=</span> <span class="n">egta_prof</span><span class="o">.</span><span class="n">get_info</span><span class="p">(</span><span class="s1">&#39;observations&#39;</span><span class="p">)</span>
-                            <span class="n">valid</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;symmetry_groups&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">o</span>
-                                        <span class="ow">in</span> <span class="n">jobs</span><span class="p">[</span><span class="s1">&#39;observations&#39;</span><span class="p">])</span>
-                        <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;obs json </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>  <span class="n">jobs</span><span class="p">)</span>
-                        <span class="c1"># Parse all and slice to have accurate counts</span>
-                        <span class="n">new_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">samplepay_from_json</span><span class="p">(</span><span class="n">jobs</span><span class="p">)</span>
-                        <span class="c1"># Copy so old array can be deallocated</span>
-                        <span class="n">new_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span>
-                            <span class="n">new_obs</span><span class="p">[:</span><span class="n">new_obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span><span class="p">])</span>
-                        <span class="n">new_obs</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-                        <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">new_obs</span><span class="p">:</span>
-                            <span class="n">que</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
-                        <span class="n">finished</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">-</span> <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span><span class="p">,</span>
-                                           <span class="nb">len</span><span class="p">(</span><span class="n">new_obs</span><span class="p">)),</span> <span class="mi">0</span><span class="p">)</span>
-                        <span class="n">rec</span><span class="o">.</span><span class="n">num_rec</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_obs</span><span class="p">)</span>
-                        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runprof_lock</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">-=</span> <span class="n">finished</span>
+            <span class="c1"># Parse profiles</span>
+            <span class="n">num_profs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span>
+            <span class="n">num_pays</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">jprof</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">:</span>
+                <span class="n">pid</span> <span class="o">=</span> <span class="n">jprof</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+                <span class="n">prof</span><span class="p">,</span> <span class="n">spays</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profsamplepay_from_json</span><span class="p">(</span><span class="n">jprof</span><span class="p">)</span>
+                <span class="n">spays</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">hprof</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">prof</span><span class="p">)</span>
+                <span class="n">pays</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+                <span class="n">num_spays</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spays</span><span class="p">)</span>
+                <span class="n">num_pays</span> <span class="o">+=</span> <span class="n">num_spays</span>
+                <span class="k">for</span> <span class="n">pay</span> <span class="ow">in</span> <span class="n">spays</span><span class="p">:</span>
+                    <span class="n">pays</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">pay</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="p">([</span><span class="n">num_spays</span><span class="p">],</span> <span class="p">[</span><span class="n">num_spays</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">pid</span><span class="p">],</span> <span class="n">pays</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="p">[</span><span class="n">hprof</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;found </span><span class="si">%d</span><span class="s2"> existing profiles with </span><span class="si">%d</span><span class="s2"> payoffs in game </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">num_profs</span><span class="p">,</span> <span class="n">num_pays</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span>
 
-                <span class="c1"># Now schedule any pending profiles</span>
-                <span class="k">while</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_profiles</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span> <span class="ow">and</span>
-                       <span class="bp">self</span><span class="o">.</span><span class="n">_num_running_profiles</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_running</span><span class="p">):</span>
-                    <span class="n">hprof</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_profiles</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_schedule</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
-
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="n">ex</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_drain_queues</span><span class="p">()</span>
-
-        <span class="k">finally</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                <span class="k">pass</span>  <span class="c1"># Don&#39;t care</span>
-
-    <span class="c1"># TODO Make this an open method, and make sure it cleans up after itself</span>
-    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Create game to get initial profile data</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">jgame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">get_game</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">create_temp_game</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_sim_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">num_players</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_configuration</span><span class="p">)</span> <span class="k">as</span> <span class="n">gamea</span><span class="p">:</span>
-                <span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;created temp game </span><span class="si">%s</span><span class="s2"> </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">gamea</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
-                           <span class="n">gamea</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
-                <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">strats</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span>
-                                               <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span>
-                                               <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">):</span>
-                    <span class="n">gamea</span><span class="o">.</span><span class="n">add_role</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">strat</span> <span class="ow">in</span> <span class="n">strats</span><span class="p">:</span>
-                        <span class="n">gamea</span><span class="o">.</span><span class="n">add_strategy</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="n">strat</span><span class="p">)</span>
-                <span class="n">jgame</span> <span class="o">=</span> <span class="n">gamea</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
-        <span class="k">assert</span> <span class="p">({(</span><span class="n">k</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configuration</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span> <span class="o">&lt;=</span>
-                <span class="nb">set</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">jgame</span><span class="p">[</span><span class="s1">&#39;configuration&#39;</span><span class="p">]))),</span> \
-            <span class="s2">&quot;games configuration didn&#39;t match&quot;</span>
-        <span class="n">sim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">get_simulator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_id</span><span class="p">)</span><span class="o">.</span><span class="n">get_info</span><span class="p">()</span>
-        <span class="k">assert</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sim</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">sim</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">])</span> <span class="o">==</span>
-                <span class="n">jgame</span><span class="p">[</span><span class="s1">&#39;simulator_fullname&#39;</span><span class="p">]),</span> \
-            <span class="s2">&quot;game didn&#39;t use the appropriate simulator&quot;</span>
-        <span class="k">assert</span> <span class="p">(</span>
-            <span class="p">{(</span><span class="n">r</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">s</span>
-             <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">)}</span> <span class="o">==</span>
-            <span class="p">{(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">],</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;strategies&#39;</span><span class="p">]))</span> <span class="k">for</span> <span class="n">s</span>
-             <span class="ow">in</span> <span class="n">jgame</span><span class="p">[</span><span class="s1">&#39;roles&#39;</span><span class="p">]}),</span> \
-            <span class="s2">&quot;game didn&#39;t have the proper role configuration&quot;</span>
-        <span class="n">profiles</span> <span class="o">=</span> <span class="n">jgame</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;profiles&#39;</span><span class="p">,</span> <span class="p">())</span> <span class="ow">or</span> <span class="p">()</span>
-
-        <span class="c1"># Parse profiles</span>
-        <span class="n">num_profs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span>
-        <span class="n">num_pays</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">jprof</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">:</span>
-            <span class="n">prof</span><span class="p">,</span> <span class="n">spays</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profsamplepay_from_json</span><span class="p">(</span><span class="n">jprof</span><span class="p">)</span>
-            <span class="n">spays</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">hprof</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">prof</span><span class="p">)</span>
-            <span class="n">que</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
-            <span class="n">num_pays</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spays</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">pay</span> <span class="ow">in</span> <span class="n">spays</span><span class="p">:</span>
-                <span class="n">que</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">pay</span><span class="p">)</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">(),</span> <span class="n">que</span><span class="p">,</span> <span class="n">_Record</span><span class="p">(</span><span class="n">jprof</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">spays</span><span class="p">)))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="p">[</span><span class="n">hprof</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
-        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;found </span><span class="si">%d</span><span class="s2"> existing profiles with </span><span class="si">%d</span><span class="s2"> payoffs&quot;</span><span class="p">,</span> <span class="n">num_profs</span><span class="p">,</span>
-                  <span class="n">num_pays</span><span class="p">)</span>
-
-        <span class="c1"># Create and start scheduler</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">create_generic_scheduler</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sim_id</span><span class="p">,</span> <span class="s1">&#39;egta_&#39;</span> <span class="o">+</span> <span class="n">eu</span><span class="o">.</span><span class="n">random_string</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_obs_memory</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">num_players</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obs_time</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configuration</span><span class="p">)</span>
-        <span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="s2">&quot;created scheduler </span><span class="si">%s</span><span class="s2"> (</span><span class="si">%d</span><span class="s2">) for running simulations: &quot;</span>
-            <span class="s2">&quot;https://</span><span class="si">%s</span><span class="s2">/generic_schedulers/</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
-        <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span>
-                               <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">add_role</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
-
-        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_counts</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="c1"># Create and start scheduler</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="k">await</span> <span class="n">obs</span><span class="o">.</span><span class="n">create_generic_scheduler</span><span class="p">(</span>
+                <span class="s1">&#39;egta_&#39;</span> <span class="o">+</span> <span class="n">eu</span><span class="o">.</span><span class="n">random_string</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obs_memory</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_obs_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simult_obs</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;created scheduler </span><span class="si">%d</span><span class="s2"> for running simulations of game </span><span class="si">%d</span><span class="s2">: &quot;</span>
+                <span class="s2">&quot;https://</span><span class="si">%s</span><span class="s2">/generic_schedulers/</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fetch</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">ex</span></div>
         <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_thread_timeout_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">deactivate</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_drain_queues</span><span class="p">()</span></div>
-        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;deactivated scheduler </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="EgtaOnlineScheduler.close"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.EgtaOnlineScheduler.close">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fetcher</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">deactivate</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;deactivated scheduler </span><span class="si">%d</span><span class="s2"> for game </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sched_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">break</span>  <span class="c1"># Fully reset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prof_ids</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">__aenter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">__aexit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game_id</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">_Record</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;All mutable data associated with a profile&quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prof_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_rec</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">prof_id</span> <span class="o">=</span> <span class="n">prof_id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_req</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_sched</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_rec</span> <span class="o">=</span> <span class="n">num_rec</span>
-
-
-<span class="k">class</span> <span class="nc">_EgtaOnlinePromise</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">Promise</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">que</span><span class="p">,</span> <span class="n">sched</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_val</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="o">=</span> <span class="n">que</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="n">sched</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">_exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="o">.</span><span class="n">_exception</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No value returned, likely due to an exception&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_val</span>
+<div class="viewcode-block" id="eosched"><a class="viewcode-back" href="../../egta.eosched.html#egta.eosched.eosched">[docs]</a><span class="k">def</span> <span class="nf">eosched</span><span class="p">(</span>
+        <span class="n">game</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">game_id</span><span class="p">,</span> <span class="n">sleep_time</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="p">,</span> <span class="n">max_scheduled</span><span class="p">,</span>
+        <span class="n">obs_memory</span><span class="p">,</span> <span class="n">obs_time</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">EgtaOnlineScheduler</span><span class="p">(</span>
+        <span class="n">game</span><span class="p">,</span> <span class="n">api</span><span class="p">,</span> <span class="n">game_id</span><span class="p">,</span> <span class="n">sleep_time</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="p">,</span> <span class="n">max_scheduled</span><span class="p">,</span></div>
+        <span class="n">obs_memory</span><span class="p">,</span> <span class="n">obs_time</span><span class="p">)</span>
 </pre></div>
 
           </div>
@@ -415,7 +287,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.31 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>

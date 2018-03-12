@@ -1,0 +1,185 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>egta.asyncgame module &#8212; Empirical Game-Theoretic Analysis 0.0.32 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="egta.bootstrap module" href="egta.bootstrap.html" />
+    <link rel="prev" title="egta package" href="egta.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.bootstrap.html" title="egta.bootstrap module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="egta.html" title="egta package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-egta.asyncgame">
+<span id="egta-asyncgame-module"></span><h1>egta.asyncgame module<a class="headerlink" href="#module-egta.asyncgame" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="egta.asyncgame.AsyncGame">
+<em class="property">class </em><code class="descclassname">egta.asyncgame.</code><code class="descname">AsyncGame</code><span class="sig-paren">(</span><em>role_names</em>, <em>strat_names</em>, <em>num_role_players</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#AsyncGame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.AsyncGame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gameanalysis.rsgame.GameLike</span></code></p>
+<p>An asynchronous game</p>
+<p>Supports asynchronous methods for ensuring particular payoff data</p>
+<dl class="method">
+<dt id="egta.asyncgame.AsyncGame.get_deviation_game">
+<code class="descname">get_deviation_game</code><span class="sig-paren">(</span><em>rest</em>, <em>role_index=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#AsyncGame.get_deviation_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.AsyncGame.get_deviation_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a game with payoff data for all deviations</p>
+<p>If role index is specified, only deviations from that role are
+necessary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="egta.asyncgame.AsyncGame.get_restricted_game">
+<code class="descname">get_restricted_game</code><span class="sig-paren">(</span><em>rest</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#AsyncGame.get_restricted_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.AsyncGame.get_restricted_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a complete restricted game</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="egta.asyncgame.CompleteAsyncGame">
+<em class="property">class </em><code class="descclassname">egta.asyncgame.</code><code class="descname">CompleteAsyncGame</code><span class="sig-paren">(</span><em>game</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#CompleteAsyncGame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.CompleteAsyncGame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#egta.asyncgame.AsyncGame" title="egta.asyncgame.AsyncGame"><code class="xref py py-class docutils literal notranslate"><span class="pre">egta.asyncgame.AsyncGame</span></code></a></p>
+<p>A wrapper for a complete RsGame</p>
+<dl class="method">
+<dt id="egta.asyncgame.CompleteAsyncGame.get_deviation_game">
+<code class="descname">get_deviation_game</code><span class="sig-paren">(</span><em>rest</em>, <em>role_index=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#CompleteAsyncGame.get_deviation_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.CompleteAsyncGame.get_deviation_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a game with payoff data for all deviations</p>
+<p>If role index is specified, only deviations from that role are
+necessary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="egta.asyncgame.CompleteAsyncGame.get_restricted_game">
+<code class="descname">get_restricted_game</code><span class="sig-paren">(</span><em>rest</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#CompleteAsyncGame.get_restricted_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.CompleteAsyncGame.get_restricted_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a complete restricted game</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="egta.asyncgame.MergedAsyncGame">
+<em class="property">class </em><code class="descclassname">egta.asyncgame.</code><code class="descname">MergedAsyncGame</code><span class="sig-paren">(</span><em>agame0</em>, <em>agame1</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#MergedAsyncGame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.MergedAsyncGame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#egta.asyncgame.AsyncGame" title="egta.asyncgame.AsyncGame"><code class="xref py py-class docutils literal notranslate"><span class="pre">egta.asyncgame.AsyncGame</span></code></a></p>
+<p>A lazy merging of two async games</p>
+<dl class="method">
+<dt id="egta.asyncgame.MergedAsyncGame.get_deviation_game">
+<code class="descname">get_deviation_game</code><span class="sig-paren">(</span><em>rest</em>, <em>role_index=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#MergedAsyncGame.get_deviation_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.MergedAsyncGame.get_deviation_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a game with payoff data for all deviations</p>
+<p>If role index is specified, only deviations from that role are
+necessary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="egta.asyncgame.MergedAsyncGame.get_restricted_game">
+<code class="descname">get_restricted_game</code><span class="sig-paren">(</span><em>rest</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#MergedAsyncGame.get_restricted_game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.MergedAsyncGame.get_restricted_game" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a complete restricted game</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="egta.asyncgame.merge">
+<code class="descclassname">egta.asyncgame.</code><code class="descname">merge</code><span class="sig-paren">(</span><em>agame0</em>, <em>agame1</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#merge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge two async games</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="egta.asyncgame.wrap">
+<code class="descclassname">egta.asyncgame.</code><code class="descname">wrap</code><span class="sig-paren">(</span><em>game</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/asyncgame.html#wrap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.asyncgame.wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrap a CompleteGame as an AsyncGame</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="egta.html"
+                        title="previous chapter">egta package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="egta.bootstrap.html"
+                        title="next chapter">egta.bootstrap module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/egta.asyncgame.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="egta.bootstrap.html" title="egta.bootstrap module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="egta.html" title="egta package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.1.
+    </div>
+  </body>
+</html>

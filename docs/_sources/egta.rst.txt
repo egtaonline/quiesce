@@ -6,6 +6,7 @@ Submodules
 
 .. toctree::
 
+   egta.asyncgame
    egta.bootstrap
    egta.canonsched
    egta.countsched

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.gamesched module &#8212; Empirical Game-Theoretic Analysis 0.0.31 documentation</title>
+    <title>egta.gamesched module &#8212; Empirical Game-Theoretic Analysis 0.0.32 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -33,7 +33,7 @@
         <li class="right" >
           <a href="egta.eosched.html" title="egta.eosched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.31 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -78,16 +78,10 @@ of the game size.</li>
 </tbody>
 </table>
 <dl class="method">
-<dt id="egta.gamesched.RsGameScheduler.game">
-<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler.game" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the game that this scheduler returns information about</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="egta.gamesched.RsGameScheduler.schedule">
-<code class="descname">schedule</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler.schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler.schedule" title="Permalink to this definition">¶</a></dt>
+<dt id="egta.gamesched.RsGameScheduler.sample_payoffs">
+<code class="descname">sample_payoffs</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#RsGameScheduler.sample_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.RsGameScheduler.sample_payoffs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Schedule a profile</p>
-<p>Return a promise for the payoff data</p>
+<p>Return a future for the payoff data</p>
 </dd></dl>
 
 </dd></dl>
@@ -122,19 +116,23 @@ e.g. all noise comes from the same distribution.</li>
 </tbody>
 </table>
 <dl class="method">
-<dt id="egta.gamesched.SampleGameScheduler.game">
-<code class="descname">game</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler.game"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler.game" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the game that this scheduler returns information about</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="egta.gamesched.SampleGameScheduler.schedule">
-<code class="descname">schedule</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler.schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler.schedule" title="Permalink to this definition">¶</a></dt>
+<dt id="egta.gamesched.SampleGameScheduler.sample_payoffs">
+<code class="descname">sample_payoffs</code><span class="sig-paren">(</span><em>profile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#SampleGameScheduler.sample_payoffs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.SampleGameScheduler.sample_payoffs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Schedule a profile</p>
-<p>Return a promise for the payoff data</p>
+<p>Return a future for the payoff data</p>
 </dd></dl>
 
 </dd></dl>
+
+<dl class="function">
+<dt id="egta.gamesched.gamesched">
+<code class="descclassname">egta.gamesched.</code><code class="descname">gamesched</code><span class="sig-paren">(</span><em>game</em>, <em>noise_dist=&lt;function &lt;lambda&gt;&gt;</em>, <em>param_dist=&lt;function &lt;lambda&gt;&gt;</em>, <em>size_ratio=200</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#gamesched"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.gamesched" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="egta.gamesched.samplegamesched">
+<code class="descclassname">egta.gamesched.</code><code class="descname">samplegamesched</code><span class="sig-paren">(</span><em>sgame</em>, <em>noise_dist=&lt;function &lt;lambda&gt;&gt;</em>, <em>param_dist=&lt;function &lt;lambda&gt;&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/gamesched.html#samplegamesched"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.gamesched.samplegamesched" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 
@@ -188,7 +186,7 @@ e.g. all noise comes from the same distribution.</li>
         <li class="right" >
           <a href="egta.eosched.html" title="egta.eosched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.31 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.0.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>
