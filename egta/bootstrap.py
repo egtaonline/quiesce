@@ -70,7 +70,7 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
     n = num
     while 0 < n:
         new_profs = sched.random_deviation_profiles(
-            min(num, chunk_size), mix).reshape((-1, mix.size))
+            min(n, chunk_size), mix).reshape((-1, mix.size))
         n -= chunk_size
         new_futures = [asyncio.ensure_future(sched.sample_payoffs(prof))
                        for prof in new_profs]
