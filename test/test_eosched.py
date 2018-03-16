@@ -68,10 +68,14 @@ async def test_basic_profile(egta_info):
     assert np.allclose(pays[profs == 0], 0)
 
 
+def _raise(ex):
+    raise ex
+
+
 @pytest.mark.asyncio
 async def test_exception_in_create(egta_info):
     server, egta, game, game_id = egta_info
-    server.throw_exception(TimeoutError)
+    server.custom_response(lambda: _raise(TimeoutError))
     with pytest.raises(TimeoutError):
         async with eosched.eosched(
                 game, egta, game_id, 0.1, 1, 25, 0, 0):
@@ -88,7 +92,7 @@ async def test_exception_in_get(egta_info):
         futures = asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
         await asyncio.sleep(0.1)
-        server.throw_exception(TimeoutError)
+        server.custom_response(lambda: _raise(TimeoutError))
         await asyncio.sleep(0.1)
         with pytest.raises(TimeoutError):
             await futures
@@ -102,7 +106,7 @@ async def test_exception_in_schedule(egta_info):
     async with eosched.eosched(
             game, egta, game_id, 0.1, 1, 25, 0, 0) as sched:
         # so that enough calls to get_requirements are made
-        server.throw_exception(TimeoutError)
+        server.custom_response(lambda: _raise(TimeoutError))
         await asyncio.sleep(0.1)
         with pytest.raises(TimeoutError):
             await sched.sample_payoffs(prof)
