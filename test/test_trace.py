@@ -100,3 +100,13 @@ async def test_sparse_trace():
     # Assert that trace didn't need many extra profiles
     assert save1.get_game().num_profiles == 12
     assert save2.get_game().num_profiles == 12
+
+
+@pytest.mark.asyncio
+async def test_merge_trace():
+    game0 = asyncgame.wrap(paygame.game(
+        2, 2, [[2, 0], [1, 1], [0, 2]], [[0, 0], [1, 1], [0, 0]]))
+    game1 = asyncgame.wrap(paygame.game(
+        2, 2, [[2, 0], [1, 1], [0, 2]], [[0, 0], [1, 1], [0, 3]]))
+    traces = await trace.trace_all_equilibria(game0, game1)
+    assert len(traces) == 1

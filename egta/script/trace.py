@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+from concurrent import futures
 
 from gameanalysis import mergegame
 from gameanalysis import regret
@@ -69,6 +70,11 @@ def add_parser(subparsers):
         '--one', action='store_true', help="""Guarantee that an equilibrium is
         found in every restricted game. This may take up to exponential
         time.""")
+    parser.add_argument(
+        '--procs', type=int, default=2, help="""Number of process to use. This
+        will speed up computation if doing computationally intensive things
+        simultaneously, i.e. nash finding or ode solving. (default:
+        %(default)d)""")
     utils.add_reductions(parser)
     utils.add_scheduler_epilog(parser)
     parser.run = run
@@ -98,12 +104,14 @@ async def run(args):
             get_point(t, eqm) for t, eqm in zip(ts, teqa)])
 
     async with sched0, sched1:
-        traces = await trace.trace_all_equilibria(
-            agame0, agame1, regret_thresh=args.regret_thresh,
-            dist_thresh=args.dist_thresh,
-            restricted_game_size=args.max_restrict_size,
-            num_equilibria=args.num_equilibria, num_backups=args.num_backups,
-            devs_by_role=args.dev_by_role, at_least_one=args.one)
+        with futures.ProcessPoolExecutor(args.procs) as executor:
+            traces = await trace.trace_all_equilibria(
+                agame0, agame1, regret_thresh=args.regret_thresh,
+                dist_thresh=args.dist_thresh,
+                restricted_game_size=args.max_restrict_size,
+                num_equilibria=args.num_equilibria,
+                num_backups=args.num_backups, devs_by_role=args.dev_by_role,
+                at_least_one=args.one, executor=executor)
         jtraces = await asyncio.gather(*[
             get_trace(ts, teqa) for ts, teqa in traces])
 
