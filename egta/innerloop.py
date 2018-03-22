@@ -2,7 +2,6 @@ import asyncio
 import functools
 import heapq
 import logging
-from concurrent import futures
 
 import numpy as np
 from gameanalysis import collect
@@ -16,13 +15,11 @@ from gameanalysis import restrict
 # payoff, that might mean we should warn, or at least explore something else.
 
 
-# FIXME Should nash_procs just be the executor instead? Although a thread
-# executor might make it fail?
 async def inner_loop(
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
         num_equilibria=1, num_backups=1, devs_by_role=False,
-        at_least_one=False, nash_procs=2):
+        at_least_one=False, executor=None):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -69,9 +66,11 @@ async def inner_loop(
         game.  This has the potential to run for a very long time as it may
         take exponential time. If your regret threshold is not set too log for
         your game, this is relatively reasonable though.
-    nash_procs : int, optional
-        The number of processes to use for finding Nash equilibria. Setting
-        None will result in using all of the available processes.
+    executor : Executor, optional
+        The executor to be used for Nash finding. The default setting will
+        allow async networking calls to continue to happen during long nash
+        finding, but buy using a process pool this can take advantage of
+        parallel computation.
     """
     init_role_dev = 0 if devs_by_role else None
 
@@ -175,49 +174,48 @@ async def inner_loop(
         agame.pure_restrictions() if initial_restrictions is None
         else np.asarray(initial_restrictions, bool))
 
-    with futures.ProcessPoolExecutor(nash_procs) as executor:
-        iteration = 0
-        while (len(equilibria) < num_equilibria
-               and (any(q for q in backups) or
-                    not next(iter(exp_restrictions)).all())):
-            if iteration == 1:
-                logging.warning(
-                    "%s: scheduling backup restrictions. This only happens "
-                    "when quiesce criteria could not be met with current "
-                    "maximum restriction size (%d). This probably means that "
-                    "the maximum restriction size should be increased. If "
-                    "this is happening frequently, increasing the number of "
-                    "backups taken at a time might be desired (currently %s).",
-                    agame, restricted_game_size, num_backups)
-            elif iteration > 1:
-                logging.info("%s: scheduling backup restrictions", agame)
+    iteration = 0
+    while (len(equilibria) < num_equilibria
+           and (any(q for q in backups) or
+                not next(iter(exp_restrictions)).all())):
+        if iteration == 1:
+            logging.warning(
+                "%s: scheduling backup restrictions. This only happens "
+                "when quiesce criteria could not be met with current "
+                "maximum restriction size (%d). This probably means that "
+                "the maximum restriction size should be increased. If "
+                "this is happening frequently, increasing the number of "
+                "backups taken at a time might be desired (currently %s).",
+                agame, restricted_game_size, num_backups)
+        elif iteration > 1:
+            logging.info("%s: scheduling backup restrictions", agame)
 
-            await asyncio.gather(*[
-                add_restriction(r) for r in restrictions])
+        await asyncio.gather(*[
+            add_restriction(r) for r in restrictions])
 
-            restrictions = collect.bitset(exp_restrictions)
-            for r, back in enumerate(backups):
-                unscheduled = num_backups
-                while unscheduled > 0 and back:
-                    rest = heapq.heappop(back)[-1]
-                    unscheduled -= restrictions.add(rest)
-                for _ in range(unscheduled):
-                    added = False
-                    for mask in restrictions:
-                        rmask = np.split(mask, agame.role_starts[1:])[r]
-                        if rmask.all():
-                            continue
-                        rest = mask.copy()
-                        # TODO We could randomize instead of taking the first
-                        # strategy, but this would remove reproducability
-                        s = np.split(rest, agame.role_starts[1:])[r].argmin()
-                        rest[agame.role_starts[r] + s] = True
-                        restrictions.add(rest)
-                        added = True
-                        break
-                    if not added:
-                        break
-            iteration += 1
+        restrictions = collect.bitset(exp_restrictions)
+        for r, back in enumerate(backups):
+            unscheduled = num_backups
+            while unscheduled > 0 and back:
+                rest = heapq.heappop(back)[-1]
+                unscheduled -= restrictions.add(rest)
+            for _ in range(unscheduled):
+                added = False
+                for mask in restrictions:
+                    rmask = np.split(mask, agame.role_starts[1:])[r]
+                    if rmask.all():
+                        continue
+                    rest = mask.copy()
+                    # TODO We could randomize instead of taking the first
+                    # strategy, but this would remove reproducability
+                    s = np.split(rest, agame.role_starts[1:])[r].argmin()
+                    rest[agame.role_starts[r] + s] = True
+                    restrictions.add(rest)
+                    added = True
+                    break
+                if not added:
+                    break
+        iteration += 1
 
     # Return equilibria
     if equilibria:
