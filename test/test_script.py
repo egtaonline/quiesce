@@ -1,3 +1,4 @@
+import contextlib
 import io
 import itertools
 import json
@@ -45,12 +46,12 @@ def stdin(inp):
 
 def stdout():
     """Patch stdout and return stringio"""
-    return mock.patch.object(sys, 'stdout', io.StringIO())
+    return contextlib.redirect_stdout(io.StringIO())
 
 
 def stderr():
     """Patch stderr and return stringio"""
-    return mock.patch.object(sys, 'stderr', io.StringIO())
+    return contextlib.redirect_stderr(io.StringIO())
 
 
 @pytest.fixture(scope='session')

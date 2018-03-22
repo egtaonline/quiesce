@@ -84,8 +84,8 @@ class MergedAsyncGame(AsyncGame):
                 self._t == other._t)
 
     def __str__(self):
-        return '{} {:g} - {:g} {}'.format(
-            self._agame0, 1 - self._t, self._t, self._agame1)
+        return '{} - {:g} - {}'.format(
+            self._agame0, self._t, self._agame1)
 
 
 def merge(agame0, agame1, t):

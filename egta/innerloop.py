@@ -97,7 +97,7 @@ async def inner_loop(
                 add_deviations(rest, eqm, init_role_dev) for eqm in eqa])
         else:
             logging.warning(
-                "%s: couldn't find equilibria in restricted game %s. This is "
+                "couldn't find equilibria in %s with restriction %s. This is "
                 "likely due to high variance in payoffs which means "
                 "quiesce should be re-run with more samples per profile. "
                 "This could also be fixed by performing a more expensive "
@@ -117,8 +117,8 @@ async def inner_loop(
                 reg = gains.max()
                 if equilibria.add(mix, reg):
                     logging.warning(
-                        "%s: found equilibrium %s with regret %f", agame,
-                        agame.mixture_to_repr(mix), reg)
+                        "found equilibrium %s in game %s with regret %f",
+                        agame.mixture_to_repr(mix), agame, reg)
             else:
                 await asyncio.gather(*[
                     queue_restrictions(rgains, ri, rest)
@@ -139,8 +139,8 @@ async def inner_loop(
                     reg = regret.mixture_regret(data, mix)
                     if equilibria.add(mix, reg):
                         logging.warning(
-                            "%s: found equilibrium %s with regret %f", agame,
-                            agame.mixture_to_repr(mix), reg)
+                            "found equilibrium %s in game %s with regret %f",
+                            agame.mixture_to_repr(mix), agame, reg)
             else:
                 await queue_restrictions(rgains, role_index, rest)
 
@@ -180,7 +180,7 @@ async def inner_loop(
                 not next(iter(exp_restrictions)).all())):
         if iteration == 1:
             logging.warning(
-                "%s: scheduling backup restrictions. This only happens "
+                "scheduling backup restrictions in game %s. This only happens "
                 "when quiesce criteria could not be met with current "
                 "maximum restriction size (%d). This probably means that "
                 "the maximum restriction size should be increased. If "
@@ -188,7 +188,7 @@ async def inner_loop(
                 "backups taken at a time might be desired (currently %s).",
                 agame, restricted_game_size, num_backups)
         elif iteration > 1:
-            logging.info("%s: scheduling backup restrictions", agame)
+            logging.info("scheduling backup restrictions in game %s", agame)
 
         await asyncio.gather(*[
             add_restriction(r) for r in restrictions])

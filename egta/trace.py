@@ -49,7 +49,7 @@ async def trace_all_equilibria(
         eqa = await innerloop.inner_loop(midgame, **innerloop_args)
 
         if not eqa.size:  # pragma: no cover
-            logging.warning("%s: found no equilibria for t: %g", midgame, mid)
+            logging.warning("found no equilibria in %s", midgame)
             return ()
 
         # XXX This shouldn't really be async as all data should be there, could
@@ -60,7 +60,7 @@ async def trace_all_equilibria(
         lupper = min(t[0] for t, _ in traces)
         ulower = max(t[-1] for t, _ in traces)
         logging.warning(
-            "%s: traced %g out to %g - %g", midgame, mid, lupper, ulower)
+            "traced %s out to %g - %g", midgame, lupper, ulower)
 
         lower_traces, upper_traces = await asyncio.gather(
             trace_between(lower, lupper), trace_between(ulower, upper))
