@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.innerloop &#8212; Empirical Game-Theoretic Analysis 0.0.38 documentation</title>
+    <title>egta.innerloop &#8212; Empirical Game-Theoretic Analysis 0.0.39 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.38 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.39 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -40,7 +40,6 @@
 <span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">import</span> <span class="nn">heapq</span>
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">concurrent</span> <span class="k">import</span> <span class="n">futures</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">collect</span>
@@ -54,13 +53,11 @@
 <span class="c1"># payoff, that might mean we should warn, or at least explore something else.</span>
 
 
-<span class="c1"># FIXME Should nash_procs just be the executor instead? Although a thread</span>
-<span class="c1"># executor might make it fail?</span>
 <div class="viewcode-block" id="inner_loop"><a class="viewcode-back" href="../../egta.innerloop.html#egta.innerloop.inner_loop">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">inner_loop</span><span class="p">(</span>
         <span class="n">agame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">initial_restrictions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">regret_thresh</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
         <span class="n">dist_thresh</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">support_thresh</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">restricted_game_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="n">num_equilibria</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_backups</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">devs_by_role</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">at_least_one</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nash_procs</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="n">at_least_one</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Inner loop a game using a scheduler</span>
 
 <span class="sd">    Parameters</span>
@@ -107,9 +104,11 @@
 <span class="sd">        game.  This has the potential to run for a very long time as it may</span>
 <span class="sd">        take exponential time. If your regret threshold is not set too log for</span>
 <span class="sd">        your game, this is relatively reasonable though.</span>
-<span class="sd">    nash_procs : int, optional</span>
-<span class="sd">        The number of processes to use for finding Nash equilibria. Setting</span>
-<span class="sd">        None will result in using all of the available processes.</span>
+<span class="sd">    executor : Executor, optional</span>
+<span class="sd">        The executor to be used for Nash finding. The default setting will</span>
+<span class="sd">        allow async networking calls to continue to happen during long nash</span>
+<span class="sd">        finding, but buy using a process pool this can take advantage of</span>
+<span class="sd">        parallel computation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">init_role_dev</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">devs_by_role</span> <span class="k">else</span> <span class="kc">None</span>
 
@@ -136,7 +135,7 @@
                 <span class="n">add_deviations</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">eqm</span><span class="p">,</span> <span class="n">init_role_dev</span><span class="p">)</span> <span class="k">for</span> <span class="n">eqm</span> <span class="ow">in</span> <span class="n">eqa</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: couldn&#39;t find equilibria in restricted game </span><span class="si">%s</span><span class="s2">. This is &quot;</span>
+                <span class="s2">&quot;couldn&#39;t find equilibria in </span><span class="si">%s</span><span class="s2"> with restriction </span><span class="si">%s</span><span class="s2">. This is &quot;</span>
                 <span class="s2">&quot;likely due to high variance in payoffs which means &quot;</span>
                 <span class="s2">&quot;quiesce should be re-run with more samples per profile. &quot;</span>
                 <span class="s2">&quot;This could also be fixed by performing a more expensive &quot;</span>
@@ -156,8 +155,8 @@
                 <span class="n">reg</span> <span class="o">=</span> <span class="n">gains</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">equilibria</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">reg</span><span class="p">):</span>
                     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: found equilibrium </span><span class="si">%s</span><span class="s2"> with regret </span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">agame</span><span class="p">,</span>
-                        <span class="n">agame</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span> <span class="n">reg</span><span class="p">)</span>
+                        <span class="s2">&quot;found equilibrium </span><span class="si">%s</span><span class="s2"> in game </span><span class="si">%s</span><span class="s2"> with regret </span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">agame</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span> <span class="n">agame</span><span class="p">,</span> <span class="n">reg</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="p">[</span>
                     <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">rgains</span><span class="p">,</span> <span class="n">ri</span><span class="p">,</span> <span class="n">rest</span><span class="p">)</span>
@@ -178,8 +177,8 @@
                     <span class="n">reg</span> <span class="o">=</span> <span class="n">regret</span><span class="o">.</span><span class="n">mixture_regret</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mix</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">equilibria</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mix</span><span class="p">,</span> <span class="n">reg</span><span class="p">):</span>
                         <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: found equilibrium </span><span class="si">%s</span><span class="s2"> with regret </span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">agame</span><span class="p">,</span>
-                            <span class="n">agame</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span> <span class="n">reg</span><span class="p">)</span>
+                            <span class="s2">&quot;found equilibrium </span><span class="si">%s</span><span class="s2"> in game </span><span class="si">%s</span><span class="s2"> with regret </span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">,</span>
+                            <span class="n">agame</span><span class="o">.</span><span class="n">mixture_to_repr</span><span class="p">(</span><span class="n">mix</span><span class="p">),</span> <span class="n">agame</span><span class="p">,</span> <span class="n">reg</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">await</span> <span class="n">queue_restrictions</span><span class="p">(</span><span class="n">rgains</span><span class="p">,</span> <span class="n">role_index</span><span class="p">,</span> <span class="n">rest</span><span class="p">)</span>
 
@@ -213,49 +212,48 @@
         <span class="n">agame</span><span class="o">.</span><span class="n">pure_restrictions</span><span class="p">()</span> <span class="k">if</span> <span class="n">initial_restrictions</span> <span class="ow">is</span> <span class="kc">None</span>
         <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">initial_restrictions</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
 
-    <span class="k">with</span> <span class="n">futures</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">nash_procs</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
-        <span class="n">iteration</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">equilibria</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">num_equilibria</span>
-               <span class="ow">and</span> <span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">q</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">backups</span><span class="p">)</span> <span class="ow">or</span>
-                    <span class="ow">not</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">exp_restrictions</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">())):</span>
-            <span class="k">if</span> <span class="n">iteration</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: scheduling backup restrictions. This only happens &quot;</span>
-                    <span class="s2">&quot;when quiesce criteria could not be met with current &quot;</span>
-                    <span class="s2">&quot;maximum restriction size (</span><span class="si">%d</span><span class="s2">). This probably means that &quot;</span>
-                    <span class="s2">&quot;the maximum restriction size should be increased. If &quot;</span>
-                    <span class="s2">&quot;this is happening frequently, increasing the number of &quot;</span>
-                    <span class="s2">&quot;backups taken at a time might be desired (currently </span><span class="si">%s</span><span class="s2">).&quot;</span><span class="p">,</span>
-                    <span class="n">agame</span><span class="p">,</span> <span class="n">restricted_game_size</span><span class="p">,</span> <span class="n">num_backups</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">iteration</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: scheduling backup restrictions&quot;</span><span class="p">,</span> <span class="n">agame</span><span class="p">)</span>
+    <span class="n">iteration</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">equilibria</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">num_equilibria</span>
+           <span class="ow">and</span> <span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">q</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">backups</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="ow">not</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">exp_restrictions</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">())):</span>
+        <span class="k">if</span> <span class="n">iteration</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;scheduling backup restrictions in game </span><span class="si">%s</span><span class="s2">. This only happens &quot;</span>
+                <span class="s2">&quot;when quiesce criteria could not be met with current &quot;</span>
+                <span class="s2">&quot;maximum restriction size (</span><span class="si">%d</span><span class="s2">). This probably means that &quot;</span>
+                <span class="s2">&quot;the maximum restriction size should be increased. If &quot;</span>
+                <span class="s2">&quot;this is happening frequently, increasing the number of &quot;</span>
+                <span class="s2">&quot;backups taken at a time might be desired (currently </span><span class="si">%s</span><span class="s2">).&quot;</span><span class="p">,</span>
+                <span class="n">agame</span><span class="p">,</span> <span class="n">restricted_game_size</span><span class="p">,</span> <span class="n">num_backups</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">iteration</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;scheduling backup restrictions in game </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">agame</span><span class="p">)</span>
 
-            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="p">[</span>
-                <span class="n">add_restriction</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">restrictions</span><span class="p">])</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="p">[</span>
+            <span class="n">add_restriction</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">restrictions</span><span class="p">])</span>
 
-            <span class="n">restrictions</span> <span class="o">=</span> <span class="n">collect</span><span class="o">.</span><span class="n">bitset</span><span class="p">(</span><span class="n">exp_restrictions</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">back</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">backups</span><span class="p">):</span>
-                <span class="n">unscheduled</span> <span class="o">=</span> <span class="n">num_backups</span>
-                <span class="k">while</span> <span class="n">unscheduled</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">back</span><span class="p">:</span>
-                    <span class="n">rest</span> <span class="o">=</span> <span class="n">heapq</span><span class="o">.</span><span class="n">heappop</span><span class="p">(</span><span class="n">back</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                    <span class="n">unscheduled</span> <span class="o">-=</span> <span class="n">restrictions</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">unscheduled</span><span class="p">):</span>
-                    <span class="n">added</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="k">for</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">restrictions</span><span class="p">:</span>
-                        <span class="n">rmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">r</span><span class="p">]</span>
-                        <span class="k">if</span> <span class="n">rmask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                            <span class="k">continue</span>
-                        <span class="n">rest</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-                        <span class="c1"># TODO We could randomize instead of taking the first</span>
-                        <span class="c1"># strategy, but this would remove reproducability</span>
-                        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
-                        <span class="n">rest</span><span class="p">[</span><span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="o">+</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-                        <span class="n">restrictions</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
-                        <span class="n">added</span> <span class="o">=</span> <span class="kc">True</span>
-                        <span class="k">break</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">added</span><span class="p">:</span>
-                        <span class="k">break</span>
-            <span class="n">iteration</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">restrictions</span> <span class="o">=</span> <span class="n">collect</span><span class="o">.</span><span class="n">bitset</span><span class="p">(</span><span class="n">exp_restrictions</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">back</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">backups</span><span class="p">):</span>
+            <span class="n">unscheduled</span> <span class="o">=</span> <span class="n">num_backups</span>
+            <span class="k">while</span> <span class="n">unscheduled</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">back</span><span class="p">:</span>
+                <span class="n">rest</span> <span class="o">=</span> <span class="n">heapq</span><span class="o">.</span><span class="n">heappop</span><span class="p">(</span><span class="n">back</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">unscheduled</span> <span class="o">-=</span> <span class="n">restrictions</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">unscheduled</span><span class="p">):</span>
+                <span class="n">added</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">for</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">restrictions</span><span class="p">:</span>
+                    <span class="n">rmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">r</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">rmask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                    <span class="n">rest</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="c1"># TODO We could randomize instead of taking the first</span>
+                    <span class="c1"># strategy, but this would remove reproducability</span>
+                    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])[</span><span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+                    <span class="n">rest</span><span class="p">[</span><span class="n">agame</span><span class="o">.</span><span class="n">role_starts</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="o">+</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">restrictions</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+                    <span class="n">added</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">added</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="n">iteration</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="c1"># Return equilibria</span>
     <span class="k">if</span> <span class="n">equilibria</span><span class="p">:</span>
@@ -294,7 +292,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.38 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.39 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
