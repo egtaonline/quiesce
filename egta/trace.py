@@ -50,7 +50,7 @@ async def trace_all_equilibria(
             return ()
         mid = (lower + upper) / 2
 
-        midgame = asyncgame.merge(agame0, agame1, mid)
+        midgame = asyncgame.mix(agame0, agame1, mid)
         eqa = await innerloop.inner_loop(midgame, **innerloop_args)
 
         if not eqa.size:  # pragma: no cover
@@ -101,6 +101,7 @@ def _trace_distance(trace1, trace2, interp):
     return np.diff(ts).dot(errs[:-1] + errs[1:]) / 2 / (tmax - tmin)
 
 
+# FIXME Don't use arbitrary interp, use trace_interp
 def _merge_traces(traces, thresh, interp):
     """Merge a list of traces
 

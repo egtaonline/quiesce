@@ -4,8 +4,8 @@ import json
 import logging
 from concurrent import futures
 
-from gameanalysis import mergegame
 from gameanalysis import regret
+from gameanalysis import rsgame
 
 from egta import canonsched
 from egta import schedgame
@@ -93,7 +93,7 @@ async def run(args):
         game0 = await agame0.get_deviation_game(supp)
         game1 = await agame1.get_deviation_game(supp)
         reg = regret.mixture_regret(
-            mergegame.merge(game0, game1, t), eqm)
+            rsgame.mix(game0, game1, t), eqm)
         return {
             't': float(t),
             'equilibrium': sched0.mixture_to_json(eqm),

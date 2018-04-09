@@ -46,9 +46,9 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
         logging.info(
             "%s: scheduling restriction %s", self,
             self.restriction_to_repr(rest))
-        game = await self._get_game(self._rprofs(rest))
+        game = (await self._get_game(self._rprofs(rest))).restrict(rest)
         return _ReductionGame(
-            game.restrict(rest), self._red, self._rgame.num_role_players)
+            game, self._red.reduce_game(game, self._rgame.num_role_players))
 
     async def get_deviation_game(self, rest, role_index=None):
         logging.info(
@@ -60,7 +60,8 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
             self, rest, self._rgame.num_role_players, role_index)
         rprofs = self._rprofs(rest)
         game = await self._get_game(np.concatenate([rprofs, dprofs]))
-        return _ReductionGame(game, self._red, self._rgame.num_role_players)
+        return _ReductionGame(
+            game, self._red.reduce_game(game, self._rgame.num_role_players))
 
     def __str__(self):
         return str(self._sched)
@@ -80,12 +81,11 @@ class _ReductionGame(rsgame.RsGame):
     """A game with only reduced profiles
 
     This is a wrapper so reduced games look full."""
-    def __init__(self, game, reduction, red_players):
+    def __init__(self, game, rgame):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._game = game
-        self._rgame = reduction.reduce_game(game, red_players)
-        self._red = reduction
+        self._rgame = rgame
 
     @property
     def num_complete_profiles(self):
@@ -106,7 +106,7 @@ class _ReductionGame(rsgame.RsGame):
             mix, jacobian=jacobian, **kwargs)
 
     def get_payoffs(self, profiles):
-        self._game.get_payoffs(profiles)
+        return self._game.get_payoffs(profiles)
 
     def max_strat_payoffs(self):
         return self._game.max_strat_payoffs()
@@ -114,16 +114,20 @@ class _ReductionGame(rsgame.RsGame):
     def min_strat_payoffs(self):
         return self._game.min_strat_payoffs()
 
-    # FIXME These could be made more efficient by just taking the reduced game
-    # at input and normalizing it here, however, this is a preliminary
-    # implementation, and so not worth the efficiency.
-    def normalize(self):
+    def _add_constant(self, const):
+        return _ReductionGame(self._game + const, self._rgame + const)
+
+    def _multiply_constant(self, const):
+        return _ReductionGame(self._game * const, self._rgame * const)
+
+    def _add_game(self, othr):
+        utils.check(isinstance(othr, _ReductionGame), 'no efficient add')
         return _ReductionGame(
-            self._game.normalize(), self._red, self._rgame.num_role_players)
+            self._game + othr._game, self._rgame + othr._rgame)
 
     def restrict(self, rest):
         return _ReductionGame(
-            self._game.restrict(rest), self._red, self._rgame.num_role_players)
+            self._game.restrict(rest), self._rgame.restrict(rest))
 
     def __contains__(self, profile):
         return profile in self._game

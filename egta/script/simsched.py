@@ -17,7 +17,7 @@ async def create_scheduler(
         is writing a simple shell wrapper and then executing `bash
         wrapper.sh`. (required)"""=None,
         buff: """Maximum line buffer to prevent deadlock with the subprocess.
-        This default is fine unless you know what you're doing."""='4096',
+        This default is fine unless you know what you're doing."""='65536',
         **_):
     """Get payoffs from a command line simulator. The simulator will get passed
     a new compressed simulation spec file on each line of stdin, and is

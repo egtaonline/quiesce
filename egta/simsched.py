@@ -37,7 +37,7 @@ class SimulationScheduler(profsched.Scheduler):
         will prevent unnecessary blocking.
     """
 
-    def __init__(self, game, config, command, buff_size=4096):
+    def __init__(self, game, config, command, buff_size=65536):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._game = paygame.game_copy(rsgame.emptygame_copy(game))

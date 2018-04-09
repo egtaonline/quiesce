@@ -13,7 +13,8 @@ from egta import savesched
 @pytest.mark.asyncio
 async def test_basic_profile():
     sgame = gamegen.samplegame([4, 3], [3, 4])
-    profs = utils.unique_axis(sgame.random_profiles(20))
+    profs = utils.axis_from_elem(np.unique(utils.axis_to_elem(
+        sgame.random_profiles(20))))
 
     save = savesched.savesched(gamesched.samplegamesched(sgame))
     sched = countsched.countsched(save, 10)

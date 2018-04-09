@@ -3,6 +3,7 @@ import pytest
 from gameanalysis import gamegen
 from gameanalysis import paygame
 from gameanalysis import rsgame
+from gameanalysis import utils
 from gameanalysis.reduction import deviation_preserving as dpr
 
 from egta import asyncgame
@@ -45,8 +46,7 @@ async def test_innerloop_game(players, strats):
     eqas = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqas)
     eqag = await innerloop.inner_loop(asyncgame.wrap(game))
-    equality = np.isclose(eqas, eqag[:, None], atol=1e-3).all(2)
-    assert equality.any(1).all() and equality.any(0).all()
+    assert utils.allclose_perm(eqas, eqag, atol=1e-3, rtol=1e3)
 
 
 @pytest.mark.asyncio

@@ -22,6 +22,7 @@ async def test_basic_profile():
         sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
+    assert str(sched) == repr(game)
 
 
 @pytest.mark.asyncio
@@ -36,6 +37,7 @@ async def test_basic_profile_sample():
         sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
+    assert str(sched) == repr(sgame)
 
 
 @pytest.mark.asyncio

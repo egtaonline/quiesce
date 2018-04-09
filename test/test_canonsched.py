@@ -13,7 +13,9 @@ from egta import gamesched
 ])
 async def test_basic_profile(players, strats):
     game = gamegen.game(players, strats)
-    sched = canonsched.canon(gamesched.gamesched(game))
+    basesched = gamesched.gamesched(game)
+    sched = canonsched.canon(basesched)
     assert np.all(sched.num_role_strats > 1)
     pay = await sched.sample_payoffs(sched.random_profile())
     assert pay.size == sched.num_strats
+    assert str(sched) == str(basesched)

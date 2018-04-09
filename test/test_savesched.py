@@ -14,7 +14,9 @@ async def test_basic_profile(_):
     sgame = gamegen.samplegame([4, 3], [3, 4], 0)
     profs = sgame.all_profiles()
 
-    sched = savesched.savesched(gamesched.samplegamesched(sgame))
+    basesched = gamesched.samplegamesched(sgame)
+    sched = savesched.savesched(basesched)
+    assert str(sched) == str(basesched)
     assert rsgame.emptygame_copy(sgame) == rsgame.emptygame_copy(sched)
     await asyncio.gather(*[sched.sample_payoffs(p) for p in profs[:10]])
     sched.get_game()

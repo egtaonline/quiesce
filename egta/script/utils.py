@@ -97,7 +97,7 @@ per observation.""".split())))
                 continue
             start = '    ' + pname
             desc = ''
-            if param.annotation is not inspect._empty:
+            if param.annotation is not inspect._empty:  # pragma: no branch
                 desc += param.annotation
             if param.default is not None:
                 desc += ' (default: {})'.format(param.default)

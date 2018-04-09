@@ -38,8 +38,9 @@ class RsGameScheduler(profsched.Scheduler):
         of the game size.
     """
 
-    def __init__(self, game, noise_dist=lambda: 0, param_dist=lambda: (),
-                 size_ratio=200):
+    def __init__(  # pragma: no branch # noqa
+            self, game, noise_dist=lambda: 0, param_dist=lambda: (),
+            size_ratio=200):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._noise_dist = noise_dist
@@ -96,7 +97,8 @@ class SampleGameScheduler(profsched.Scheduler):
         e.g. all noise comes from the same distribution.
     """
 
-    def __init__(self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
+    def __init__(  # pragma: no branch # noqa
+            self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
         assert hasattr(sgame, 'get_sample_payoffs'), "sgame not a sample game"
         super().__init__(
             sgame.role_names, sgame.strat_names, sgame.num_role_players)

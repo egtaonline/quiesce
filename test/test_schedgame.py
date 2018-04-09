@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from gameanalysis import gamegen
+from gameanalysis import utils
 
 from egta import gamesched
 from egta import schedgame
@@ -24,8 +25,9 @@ async def test_random_caching(players, strats, _):
     mixes /= np.add.reduceat(mixes, game.role_starts, 1).repeat(
         game.num_role_strats, 1)
     mix1, mix2 = mixes
-    sched = gamesched.SampleGameScheduler(game)
+    sched = gamesched.samplegamesched(game)
     sgame = schedgame.schedgame(sched)
+    assert str(sgame) == str(sched)
 
     rgame11 = await sgame.get_restricted_game(rest1)
     rgame21 = await sgame.get_restricted_game(rest2)
@@ -41,6 +43,34 @@ async def test_random_caching(players, strats, _):
     devs22 = await sgame.get_deviation_game(rest2)
     assert devs11 == devs12
     assert devs21 == devs22
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('players,strats', sizes)
+@pytest.mark.parametrize('_', range(20))
+async def test_random_redgame(players, strats, _):
+    game = gamegen.samplegame(players, strats)
+    rest = game.random_restriction()
+    sched = gamesched.samplegamesched(game)
+    sgame = schedgame.schedgame(sched)
+
+    devgame1 = await sgame.get_deviation_game(rest)
+    prof = devgame1.profiles()[np.all(
+        (devgame1.profiles() == 0) | ~np.isnan(devgame1.payoffs()),
+        1).nonzero()[0][0]]
+    assert prof in devgame1
+    assert (devgame1.num_complete_profiles <= devgame1.num_profiles <=
+            devgame1.num_all_profiles)
+
+    devgame2 = await sgame.get_deviation_game(rest)
+    assert hash(devgame1) == hash(devgame2)
+    assert devgame1 == devgame2
+    assert devgame1 + devgame2 == devgame2 + devgame1
+    assert np.allclose(devgame1.get_payoffs(prof),
+                       devgame2.get_payoffs(prof))
+
+    rrest = devgame1.random_restriction()
+    assert devgame1.restrict(rrest) == devgame2.restrict(rrest)
 
 
 @pytest.mark.asyncio

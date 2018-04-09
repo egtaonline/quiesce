@@ -74,8 +74,7 @@ async def inner_loop(
     """
     init_role_dev = 0 if devs_by_role else None
 
-    exp_restrictions = collect.bitset()
-    exp_restrictions.add(np.zeros(agame.num_strats, bool))
+    exp_restrictions = collect.bitset(agame.num_strats)
     backups = [[] for _ in range(agame.num_roles)]
     equilibria = collect.mcces(dist_thresh)
     loop = asyncio.get_event_loop()
@@ -193,7 +192,7 @@ async def inner_loop(
         await asyncio.gather(*[
             add_restriction(r) for r in restrictions])
 
-        restrictions = collect.bitset(exp_restrictions)
+        restrictions = collect.bitset(agame.num_strats, exp_restrictions)
         for r, back in enumerate(backups):
             unscheduled = num_backups
             while unscheduled > 0 and back:
