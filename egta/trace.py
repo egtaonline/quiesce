@@ -1,3 +1,4 @@
+"""Module for tracing continuous equilibria"""
 import asyncio
 import functools
 import itertools
@@ -32,23 +33,25 @@ async def trace_all_equilibria(
         The executor to run computation intensive operations in.
     """
     utils.check(
-        rsgame.emptygame_copy(agame0) == rsgame.emptygame_copy(agame1),
+        rsgame.empty_copy(agame0) == rsgame.empty_copy(agame1),
         'games must have same structure')
     loop = asyncio.get_event_loop()
     trace_args = dict(regret_thresh=regret_thresh)
     innerloop_args.update(
         trace_args, executor=executor, dist_thresh=dist_thresh)
 
-    async def trace_eqm(eqm, t):
+    async def trace_eqm(eqm, time):
+        """Trace and equilibrium out from time"""
         supp = eqm > 0
         game0, game1 = await asyncio.gather(
             agame0.get_deviation_game(supp),
             agame1.get_deviation_game(supp))
         return await loop.run_in_executor(
             executor, functools.partial(
-                trace.trace_equilibria, game0, game1, t, eqm, **trace_args))
+                trace.trace_equilibria, game0, game1, time, eqm, **trace_args))
 
     async def trace_between(lower, upper):
+        """Trace between times lower and upper"""
         if upper <= lower:
             return ()
         mid = (lower + upper) / 2
@@ -85,23 +88,24 @@ def _trace_distance(trace1, trace2, interp):
 
     This uses interpolation to estimate each trace at arbitrary points in time
     and then computes the average time-weighted norm between the traces."""
-    t1, eqa1 = trace1
-    t2, eqa2 = trace2
-    if t1[-1] < t2[0] or t2[-1] < t1[0]:
+    time1, eqa1 = trace1
+    time2, eqa2 = trace2
+    if time1[-1] < time2[0] or time2[-1] < time1[0]:
         return np.inf
 
-    tmin = max(t1[0], t2[0])
-    tmax = min(t1[-1], t2[-1])
+    tmin = max(time1[0], time2[0])
+    tmax = min(time1[-1], time2[-1])
 
     # XXX This sorted merge could be more efficient
-    ts = np.concatenate([
-        t1[(tmin <= t1) & (t1 <= tmax)], t2[(tmin <= t2) & (t2 <= tmax)]])
-    ts.sort()
+    times = np.concatenate([
+        time1[(tmin <= time1) & (time1 <= tmax)],
+        time2[(tmin <= time2) & (time2 <= tmax)]])
+    times.sort()
 
-    eqa1i = interpolate.interp1d(t1, eqa1, interp, 0)(ts)
-    eqa2i = interpolate.interp1d(t2, eqa2, interp, 0)(ts)
+    eqa1i = interpolate.interp1d(time1, eqa1, interp, 0)(times)
+    eqa2i = interpolate.interp1d(time2, eqa2, interp, 0)(times)
     errs = np.linalg.norm(eqa1i - eqa2i, axis=1)
-    return np.diff(ts).dot(errs[:-1] + errs[1:]) / 2 / (tmax - tmin)
+    return np.diff(times).dot(errs[:-1] + errs[1:]) / 2 / (tmax - tmin)
 
 
 # FIXME Don't use arbitrary interp, use trace_interp
@@ -126,12 +130,12 @@ def _merge_traces(traces, thresh, interp):
     num, comps = csgraph.connected_components(distances <= thresh, False)
     new_traces = []
     for i in range(num):
-        ts = np.concatenate([
+        times = np.concatenate([
             t for (t, _), m in zip(traces, comps == i) if m])
         eqa = np.concatenate([
             eqms for (_, eqms), m in zip(traces, comps == i) if m])
-        inds = np.argsort(ts)
-        new_traces.append((ts[inds], eqa[inds]))
+        inds = np.argsort(times)
+        new_traces.append((times[inds], eqa[inds]))
     # FIXME These merged traces are noisy due to bounds in regret. Ideally we'd
     # do some smoothing or something... locally weighted linear regression?
     return new_traces

@@ -1,3 +1,4 @@
+"""module for bootstrapping regret and surplus"""
 import asyncio
 
 import numpy as np
@@ -56,6 +57,7 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
     futures = []
 
     async def update():
+        """update"""
         nonlocal i
         fiter = iter(futures)
         for _ in range(len(futures) // sched.num_strats):
@@ -68,11 +70,11 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
             np.add(samps[:, None] * devs / num, boot_devs, boot_devs)
             i += 1
 
-    n = num
-    while 0 < n:
+    left = num
+    while left > 0:
         new_profs = sched.random_deviation_profiles(
-            min(n, chunk_size), mix).reshape((-1, mix.size))
-        n -= chunk_size
+            min(left, chunk_size), mix).reshape((-1, mix.size))
+        left -= chunk_size
         new_futures = [asyncio.ensure_future(sched.sample_payoffs(prof))
                        for prof in new_profs]
         await update()

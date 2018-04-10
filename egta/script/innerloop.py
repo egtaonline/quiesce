@@ -12,6 +12,7 @@ from egta.script import utils
 
 
 def add_parser(subparsers):
+    """Create innerloop parser"""
     parser = subparsers.add_parser(
         'quiesce', help="""Compute equilibria using the quiesce procedure""",
         description="""Samples profiles from small restricted strategy sets,
@@ -70,11 +71,13 @@ def add_parser(subparsers):
 
 
 async def run(args):
+    """Entry point for cli"""
     sched = await utils.parse_scheduler(args.scheduler)
     red, red_players = utils.parse_reduction(sched, args)
     agame = schedgame.schedgame(sched, red, red_players)
 
     async def get_regret(eqm):
+        """Gets the regret of an equilibrium"""
         game = await agame.get_deviation_game(eqm > 0)
         return float(regret.mixture_regret(game, eqm))
 

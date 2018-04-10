@@ -1,3 +1,4 @@
+"""Test tracing"""
 import asyncio
 
 import numpy as np
@@ -13,26 +14,16 @@ from egta import savesched
 from egta import asyncgame
 from egta import schedgame
 from egta import trace
-
-
-games = [
-    ([1], [2]),
-    ([2], [2]),
-    ([2, 1], [1, 2]),
-    ([1, 2], [2, 1]),
-    ([2, 2], [2, 2]),
-    ([3, 2], [2, 3]),
-    ([1, 1, 1], [2, 2, 2]),
-]
+from test import utils # pylint: disable=wrong-import-order
 
 
 def verify_complete_traces(traces):
     """Verify that traces are in order and complete"""
-    t = 0.0
+    time = 0.0
     for (first, *_, last), _ in traces:
-        assert first <= t
-        t = max(t, last)
-    assert t == 1.0
+        assert first <= time
+        time = max(time, last)
+    assert time == 1.0
 
 
 # These sometimes take a really long time because of at_least_one and many
@@ -40,9 +31,10 @@ def verify_complete_traces(traces):
 @pytest.mark.asyncio
 @timeout_decorator.timeout(20)
 @pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', utils.GAMES)
 @pytest.mark.parametrize('_', range(5))
 async def test_random_trace_game(players, strats, _):
+    """Test tracing for random games"""
     agame1 = asyncgame.wrap(gamegen.game(players, strats))
     agame2 = asyncgame.wrap(gamegen.game(players, strats))
     traces = await trace.trace_all_equilibria(
@@ -55,9 +47,10 @@ async def test_random_trace_game(players, strats, _):
 @pytest.mark.asyncio
 @timeout_decorator.timeout(20)
 @pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', utils.GAMES)
 @pytest.mark.parametrize('_', range(5))
 async def test_random_trace_sched(players, strats, _):
+    """Test tracing for random schedulers"""
     sched1 = gamesched.gamesched(gamegen.game(players, strats))
     sched2 = gamesched.gamesched(gamegen.game(players, strats))
     traces = await trace.trace_all_equilibria(
@@ -69,7 +62,7 @@ async def test_random_trace_sched(players, strats, _):
 @pytest.mark.asyncio
 async def test_sparse_trace():
     """Test that tracing sparsely samples profiles"""
-    base = rsgame.emptygame(4, 3)
+    base = rsgame.empty(4, 3)
     game1 = paygame.game_replace(
         base, base.all_profiles(), (base.all_profiles() > 0) * [1, 0, 0])
     game2 = paygame.game_replace(
@@ -88,14 +81,14 @@ async def test_sparse_trace():
     assert save1.get_game().num_profiles == 11
     assert save2.get_game().num_profiles == 11
 
-    ((s1, *_, e1), _), ((s2, *_, e2), _) = await trace.trace_all_equilibria(
-        sgame1, sgame2)
+    ((st1, *_, en1), _), ((st2, *_, en2), _) = ( # pylint: disable=too-many-star-expressions
+        await trace.trace_all_equilibria(sgame1, sgame2))
 
     # Assert that trace found the expected equilibria
-    assert np.isclose(s1, 0)
-    assert np.isclose(e1, 1 / 3, atol=1e-3)
-    assert np.isclose(s2, 1 / 3, atol=1e-3)
-    assert np.isclose(e2, 1)
+    assert np.isclose(st1, 0)
+    assert np.isclose(en1, 1 / 3, atol=1e-3)
+    assert np.isclose(st2, 1 / 3, atol=1e-3)
+    assert np.isclose(en2, 1)
 
     # Assert that trace didn't need many extra profiles
     assert save1.get_game().num_profiles == 12
@@ -104,6 +97,7 @@ async def test_sparse_trace():
 
 @pytest.mark.asyncio
 async def test_merge_trace():
+    """Test that traces are merged"""
     game0 = asyncgame.wrap(paygame.game(
         2, 2, [[2, 0], [1, 1], [0, 2]], [[0, 0], [1, 1], [0, 0]]))
     game1 = asyncgame.wrap(paygame.game(

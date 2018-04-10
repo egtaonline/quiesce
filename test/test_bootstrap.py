@@ -1,3 +1,4 @@
+"""Test bootstrap"""
 import numpy as np
 import pytest
 from gameanalysis import gamegen
@@ -6,7 +7,7 @@ from egta import bootstrap
 from egta import gamesched
 
 
-sizes = [
+SIZES = [
     [[2], [2]],
     [[2, 2], [2, 2]],
     [[3, 2], [2, 3]],
@@ -15,8 +16,9 @@ sizes = [
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', sizes)
+@pytest.mark.parametrize('players,strats', SIZES)
 async def test_random_mean_reg(players, strats):
+    """Test that no bootstraps works"""
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
     sched = gamesched.gamesched(game)
@@ -26,8 +28,9 @@ async def test_random_mean_reg(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', sizes)
+@pytest.mark.parametrize('players,strats', SIZES)
 async def test_random_boot_reg(players, strats):
+    """Test that bootstrap works for random mixtures"""
     game = gamegen.game(players, strats)
     mix = game.random_mixture()
     devs = game.deviation_payoffs(mix)
@@ -42,8 +45,9 @@ async def test_random_boot_reg(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', sizes)
+@pytest.mark.parametrize('players,strats', SIZES)
 async def test_random_pure_boot_reg(players, strats):
+    """Test that bootstrap works for pure mixtures"""
     game = gamegen.game(players, strats)
     sched = gamesched.gamesched(game)
     for mix in game.pure_mixtures():

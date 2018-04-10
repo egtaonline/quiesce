@@ -1,3 +1,4 @@
+"""Creation script for simulation scheduler"""
 import json
 import sys
 
@@ -10,15 +11,15 @@ from egta import simsched
 async def create_scheduler(
         game: """A file with the description of the game to generate profiles
         from. Only the basic game structure is necessary. `-` is interpreted as
-        stdin."""='-',
+        stdin.""" = '-',
         conf: """A file with the specific configuration to load. `-` is
-        interpreted as stdin. (default: {})"""=None,
+        interpreted as stdin. (default: {})""" = None,
         command: """The command to run. This is space delimited, heavily
         restricting what can actually be passed. Currently the best work around
         is writing a simple shell wrapper and then executing `bash
-        wrapper.sh`. (required)"""=None,
+        wrapper.sh`. (required)""" = None,
         buff: """Maximum line buffer to prevent deadlock with the subprocess.
-        This default is fine unless you know what you're doing."""='65536',
+        This default is fine unless you know what you're doing.""" = '65536',
         **_):
     """Get payoffs from a command line simulator. The simulator will get passed
     a new compressed simulation spec file on each line of stdin, and is
@@ -30,16 +31,16 @@ async def create_scheduler(
     if game == '-':
         rsgame = gamereader.load(sys.stdin)
     else:
-        with open(game) as f:
-            rsgame = gamereader.load(f)
+        with open(game) as fil:
+            rsgame = gamereader.load(fil)
 
     if conf is None:
         config = {}
     elif conf == '-':
         config = json.load(sys.stdin)
     else:
-        with open(conf) as f:
-            config = json.load(f)
+        with open(conf) as fil:
+            config = json.load(fil)
 
     return simsched.simsched(
         rsgame, config, command.split(), buff_size=buff_size)

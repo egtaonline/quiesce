@@ -1,3 +1,4 @@
+"""Bootstrap command line module"""
 import argparse
 import json
 import logging
@@ -9,6 +10,7 @@ from egta.script import utils
 
 
 def add_parser(subparsers):
+    """Create bootstrap parser"""
     parser = subparsers.add_parser(
         'bootstrap', aliases=['boot'], help="""Compute the regret and surplus
         of a mixture""", description="""Samples profiles to compute a sample
@@ -54,7 +56,8 @@ def add_parser(subparsers):
     return parser
 
 
-async def run(args):
+async def run(args): # pylint: disable=too-many-locals
+    """Bootstrap entry point"""
     sched = await utils.parse_scheduler(args.scheduler)
     if not args.percentile:
         args.boots = 0
@@ -102,8 +105,8 @@ async def run(args):
 
         if args.percentile:
             result = {'mean': result}
-            for p, surp, reg in zip(args.percentile, surp_percs, reg_percs):
-                result['{:g}'.format(p)] = {'surplus': surp, 'regret': reg}
+            for per, surp, reg in zip(args.percentile, surp_percs, reg_percs):
+                result['{:g}'.format(per)] = {'surplus': surp, 'regret': reg}
     else:
         mean_dev = '{}: {}'.format(
             sched.role_names[ind_reg_means],
@@ -122,16 +125,16 @@ async def run(args):
         if args.percentile or args.standard:
             result = {'mean': result}
 
-        for p, surp, reg, role_surps, role_regs in zip(
+        for per, surp, reg, role_surps, role_regs in zip(
                 args.percentile, surp_percs, reg_percs,
                 np.percentile(role_surp_boots, args.percentile, 0),
                 np.percentile(role_reg_boots, args.percentile, 0)):
             perc = {'total': {'surplus': surp,
                               'regret': reg}}
-            for role, surp, reg in zip(sched.role_names, role_surps,
-                                       role_regs):
-                perc[role] = {'surplus': surp, 'regret': reg}
-            result['{:g}'.format(p)] = perc
+            for role, surplus, regret in zip(
+                    sched.role_names, role_surps, role_regs):
+                perc[role] = {'surplus': surplus, 'regret': regret}
+            result['{:g}'.format(per)] = perc
 
     json.dump(result, args.output)
     args.output.write('\n')

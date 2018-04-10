@@ -50,7 +50,8 @@ for mod_name in MOCK_MODULES:
 sys.path.insert(0, path.abspath('..'))
 
 # Run api-doc automatically
-apidoc.main(['-efo', '.', path.join('..', 'egta')])
+apidoc.main(['-efo', '.', path.join('..', 'egta'),
+             path.join('..', 'egta', 'script')])
 
 # -- General configuration ------------------------------------------------
 

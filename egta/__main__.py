@@ -2,10 +2,10 @@
 import asyncio
 import argparse
 import logging
+from logging import handlers
 import smtplib
 import sys
 import traceback
-from logging import handlers
 
 from egta.script import bootstrap
 from egta.script import brute
@@ -16,7 +16,8 @@ from egta.script import trace
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
 
-async def amain(*argv):
+async def amain(*argv): # pylint: disable=too-many-locals
+    """Async entry point for arbitrary command line arguments"""
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
         method and a profile scheduler must be specified. Each element
@@ -99,6 +100,7 @@ async def amain(*argv):
 
 
 def main():  # pragma: no cover
+    """Entry point for egta cli"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(amain(*sys.argv[1:]))

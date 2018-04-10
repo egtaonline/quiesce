@@ -1,3 +1,4 @@
+"""Module for a scheduler that saves all profile data"""
 import numpy as np
 from gameanalysis import rsgame
 from gameanalysis import paygame
@@ -20,7 +21,7 @@ class SaveScheduler(profsched.Scheduler):
         super().__init__(
             sched.role_names, sched.strat_names, sched.num_role_players)
         self._sched = sched
-        self._game = paygame.samplegame_copy(rsgame.emptygame_copy(self))
+        self._game = paygame.samplegame_copy(rsgame.empty_copy(self))
         self._profiles = []
         self._payoffs = []
 
@@ -31,6 +32,7 @@ class SaveScheduler(profsched.Scheduler):
         return payoff
 
     def get_game(self):
+        """Get the game with the observed data"""
         if self._profiles:
             new_profs = np.concatenate([
                 self._game.flat_profiles(),
@@ -49,4 +51,5 @@ class SaveScheduler(profsched.Scheduler):
 
 
 def savesched(sched):
+    """Create a save scheduler"""
     return SaveScheduler(sched)

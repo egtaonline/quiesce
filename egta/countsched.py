@@ -1,3 +1,4 @@
+"""Module for a scheduler that summarizes several samples"""
 import asyncio
 
 import numpy as np
@@ -38,4 +39,5 @@ class CountScheduler(profsched.Scheduler):
 
 
 def countsched(sched, count):
+    """create a count scheduler"""
     return CountScheduler(sched, count)

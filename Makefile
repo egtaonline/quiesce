@@ -1,5 +1,5 @@
 PYTEST_ARGS =
-FILES = egta test setup.py
+PYLINT_ARGS =
 PYTHON = python3
 
 help:
@@ -7,9 +7,7 @@ help:
 	@echo
 	@echo "setup    - setup for development"
 	@echo "ubuntu-reqs - install required files on ubuntu (requires root)"
-	@echo "todo     - check for todo flags"
 	@echo "check    - check for comformance to pep8 standards"
-	@echo "format   - autoformat python files"
 	@echo "test     - run fast tests with coverage"
 	@echo "test-all - run all tests with coverage"
 	@echo "publish  - publish package to pypi"
@@ -31,14 +29,8 @@ test:
 ubuntu-reqs:
 	sudo apt-get install libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev
 
-todo:
-	grep -nrIF -e TODO -e XXX -e FIXME * --exclude-dir=docs --exclude-dir=sphinx --exclude-dir=lib --exclude-dir=lib64 --exclude=Makefile --color=always
-
 check:
-	bin/flake8 $(FILES)
-
-format:
-	bin/autopep8 -ri $(FILES)
+	bin/pylint $(PYLINT_ARGS) egta test
 
 publish:
 	rm -rf dist
@@ -49,9 +41,10 @@ docs:
 	bin/python setup.py build_sphinx -b html
 
 clean:
-	rm -rf bin include lib lib64 man share pyvenv.cfg dist egta.egg-info
+	rm -rf build bin include lib lib64 man share pyvenv.cfg dist egta.egg-info __pycache__ pip-selfcheck.json
 
 travis: PYTEST_ARGS += -v -n2
+travis: PYLINT_ARGS += -d fixme -j 2
 travis: check test
 
 .PHONY: setup test-all test ubuntu-reqs todo check format publish clean travis docs

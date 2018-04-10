@@ -1,3 +1,4 @@
+"""Utilities for command line modules"""
 import argparse
 import inspect
 import itertools
@@ -16,6 +17,7 @@ from egta.script import zipsched
 
 
 def add_reductions(parser):
+    """Add reduction options to a parser"""
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
         '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
@@ -26,6 +28,7 @@ def add_reductions(parser):
 
 
 def parse_reduction(game, args):
+    """Parse a reduction string"""
     if args.dpr is not None:
         red_players = game.role_from_repr(args.dpr, dtype=int)
         red = reduction.deviation_preserving
@@ -38,7 +41,7 @@ def parse_reduction(game, args):
     return red, red_players
 
 
-types = {
+_TYPES = {
     'zip': zipsched.create_scheduler,
     'sim': simsched.create_scheduler,
     'game': gamesched.create_scheduler,
@@ -47,9 +50,10 @@ types = {
 
 
 async def parse_scheduler(string):
+    """Return a scheduler for a string specification"""
     stype, args, *_ = itertools.chain(string.split(':', 1), [''])
     args = dict(s.split(':', 1) for s in args.split(',') if s)
-    base = await types[stype](**args)
+    base = await _TYPES[stype](**args)
     if 'save' in args:
         base = SaveWrapper(base, args['save'])
     count = int(args.get('count', '1'))
@@ -59,6 +63,7 @@ async def parse_scheduler(string):
 
 
 def add_scheduler_epilog(parser, help_indent=15):
+    """Epilog for scheduler format"""
     width, _ = shutil.get_terminal_size((80, 20))
     indent = ' ' * help_indent
     parser.formatter_class = argparse.RawDescriptionHelpFormatter
@@ -78,7 +83,7 @@ Represents an egtaonline scheduler for game 827 with 2048 MB and 600 seconds
 per observation.""".split())))
     epilog.append('')
     for name, func in itertools.chain(
-            [('<global>', _global)], sorted(types.items())):
+            [('<global>', _global)], sorted(_TYPES.items())):
         start = '  ' + name
         desc = inspect.getdoc(func) or ''
         desc = ' '.join(desc.split())
@@ -97,7 +102,7 @@ per observation.""".split())))
                 continue
             start = '    ' + pname
             desc = ''
-            if param.annotation is not inspect._empty:  # pragma: no branch
+            if param.annotation is not inspect._empty:  # pragma: no branch pylint: disable=protected-access
                 desc += param.annotation
             if param.default is not None:
                 desc += ' (default: {})'.format(param.default)
@@ -116,15 +121,17 @@ per observation.""".split())))
 
 
 def _global(
+        # pylint: disable-msg=unused-argument
         count: """The number of samples to compute for one payoff
-        observations."""='1',
+        observations.""" = '1',
         save: """A file to save all sampled profile data to as a sample
-        game."""=None):
+        game.""" = None):
     """Global parameters that apply to all schedulers."""
     pass  # pragma: no cover
 
 
 class SaveWrapper(savesched.SaveScheduler):
+    """Make save scheduler an async context manager"""
     def __init__(self, sched, dest):
         super().__init__(sched)
         self._dest = dest
@@ -134,12 +141,13 @@ class SaveWrapper(savesched.SaveScheduler):
         return self
 
     async def __aexit__(self, *args):
-        with open(self._dest, 'w') as f:
-            json.dump(self.get_game().to_json(), f)
+        with open(self._dest, 'w') as fil:
+            json.dump(self.get_game().to_json(), fil)
         await self._sched.__aexit__(*args)
 
 
 class CountWrapper(countsched.CountScheduler):
+    """Make count scheduler an async context manager"""
     async def __aenter__(self):
         await self._sched.__aenter__()
         return self

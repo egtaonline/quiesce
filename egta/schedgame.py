@@ -1,3 +1,4 @@
+"""Module for handling async games defined by schedulers"""
 import asyncio
 import logging
 
@@ -12,16 +13,18 @@ from egta import asyncgame
 
 
 class ReductionSchedulerGame(asyncgame.AsyncGame):
+    """A scheduler game that implicitly has a reduction"""
     def __init__(self, sched, red, red_players):
         super().__init__(sched.role_names, sched.strat_names,
                          sched.num_role_players)
         self._sched = sched
-        self._rgame = rsgame.emptygame_copy(
-            red.reduce_game(rsgame.emptygame_copy(self), red_players))
+        self._rgame = rsgame.empty_copy(
+            red.reduce_game(rsgame.empty_copy(self), red_players))
         self._red = red
         self._profiles = {}
 
     async def _get_game(self, profs):
+        """Get a game from the profiles to sample"""
         futures = []
         for prof in profs:
             hprof = utils.hash_array(prof)
@@ -36,9 +39,10 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
         return paygame.game_replace(self, profs, pays)
 
     def _rprofs(self, rest):
+        """Get the restricted profiles for a restriction"""
         return restrict.translate(
             self._red.expand_profiles(
-                rsgame.emptygame_copy(self).restrict(rest),
+                rsgame.empty_copy(self).restrict(rest),
                 self._rgame.restrict(rest).all_profiles()),
             rest)
 
@@ -68,6 +72,7 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
 
 
 def schedgame(sched, red=idr, red_players=None):
+    """Create a scheduler game"""
     return ReductionSchedulerGame(sched, red, red_players)
 
 
@@ -77,7 +82,7 @@ def schedgame(sched, red=idr, red_players=None):
 # restrictions checks that profiles are in the game, instead of whether
 # deviation data exists... Which is accurate, but not what we would want for
 # these style of reduced games.
-class _ReductionGame(rsgame.RsGame):
+class _ReductionGame(rsgame._RsGame): # pylint: disable=protected-access
     """A game with only reduced profiles
 
     This is a wrapper so reduced games look full."""
@@ -101,9 +106,9 @@ class _ReductionGame(rsgame.RsGame):
     def payoffs(self):
         return self._game.payoffs()
 
-    def deviation_payoffs(self, mix, *, jacobian=False, **kwargs):
+    def deviation_payoffs(self, mixture, *, jacobian=False, **kwargs):
         return self._rgame.deviation_payoffs(
-            mix, jacobian=jacobian, **kwargs)
+            mixture, jacobian=jacobian, **kwargs)
 
     def get_payoffs(self, profiles):
         return self._game.get_payoffs(profiles)
@@ -114,20 +119,21 @@ class _ReductionGame(rsgame.RsGame):
     def min_strat_payoffs(self):
         return self._game.min_strat_payoffs()
 
-    def _add_constant(self, const):
-        return _ReductionGame(self._game + const, self._rgame + const)
+    def _add_constant(self, constant):
+        return _ReductionGame(self._game + constant, self._rgame + constant)
 
-    def _multiply_constant(self, const):
-        return _ReductionGame(self._game * const, self._rgame * const)
+    def _multiply_constant(self, constant):
+        return _ReductionGame(self._game * constant, self._rgame * constant)
 
     def _add_game(self, othr):
         utils.check(isinstance(othr, _ReductionGame), 'no efficient add')
         return _ReductionGame(
-            self._game + othr._game, self._rgame + othr._rgame)
+            self._game + othr._game, self._rgame + othr._rgame) # pylint: disable=protected-access
 
-    def restrict(self, rest):
+    def restrict(self, restriction):
         return _ReductionGame(
-            self._game.restrict(rest), self._rgame.restrict(rest))
+            self._game.restrict(restriction),
+            self._rgame.restrict(restriction))
 
     def __contains__(self, profile):
         return profile in self._game
@@ -136,7 +142,8 @@ class _ReductionGame(rsgame.RsGame):
     def __hash__(self):
         return hash((super().__hash__(), self._game, self._rgame))
 
-    def __eq__(self, other):
-        return (super().__eq__(other) and
-                self._game == other._game and
-                self._rgame == other._rgame)
+    def __eq__(self, othr):
+        # pylint: disable-msg=protected-access
+        return (super().__eq__(othr) and
+                self._game == othr._game and
+                self._rgame == othr._rgame)

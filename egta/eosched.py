@@ -1,3 +1,4 @@
+"""Module for scheduling profiles through egtaonline"""
 import asyncio
 import contextlib
 import logging
@@ -10,7 +11,7 @@ from egta import profsched
 from egta import utils as eu
 
 
-class EgtaOnlineScheduler(profsched.Scheduler):
+class EgtaOnlineScheduler(profsched.AOpenableScheduler): # pylint: disable=too-many-instance-attributes
     """A profile scheduler that schedules through egta online
 
     Parameters
@@ -41,12 +42,13 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         samples, too long and it will take longer to schedule jobs on flux.
     """
 
-    def __init__(self, game, api, game_id, sleep_time, simultaneous_obs,
-                 max_scheduled, obs_memory, obs_time):
+    def __init__( # pylint: disable=too-many-arguments
+            self, game, api, game_id, sleep_time, simultaneous_obs,
+            max_scheduled, obs_memory, obs_time):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._api = api
-        self._game = paygame.samplegame_copy(rsgame.emptygame_copy(game))
+        self._game = paygame.samplegame_copy(rsgame.empty_copy(game))
         self._game_id = game_id
 
         self._sleep_time = sleep_time
@@ -64,6 +66,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             max_scheduled * simultaneous_obs)
 
     def _check_fetcher(self):
+        """Check if background coroutine has failed"""
         if self._fetcher.done() and self._fetcher.exception() is not None:
             raise self._fetcher.exception()
 
@@ -93,8 +96,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._check_fetcher()
         return pay
 
-    async def _fetch(self):
-        # TODO Make requests async
+    async def _fetch(self): # pylint: disable=too-many-locals
+        """Fetch current scheduling status"""
         try:
             while True:
                 logging.info('query scheduler %d for game %d',
@@ -122,8 +125,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     received[0] += num
                     obs = obs[:num].copy()
                     obs.setflags(write=False)
-                    for o in obs:
-                        pays.put_nowait(o)
+                    for obser in obs:
+                        pays.put_nowait(obser)
                 await asyncio.sleep(self._sleep_time)
         except Exception as ex:
             for _, (received,), (claimed,), _, pays in self._profiles.values():
@@ -131,14 +134,14 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                     pays.put_nowait(None)
             raise ex
 
-    async def open(self):
+    async def aopen(self):  # pylint: disable=too-many-locals
+        """Open the eosched"""
         gu.check(not self._is_open, 'already open')
         try:
             game = await self._api.get_game(self._game_id)
             obs = await game.get_observations()
             gu.check(
-                rsgame.emptygame_copy(self._game) ==
-                rsgame.emptygame_json(obs),
+                rsgame.empty_copy(self._game) == rsgame.empty_json(obs),
                 "egtaonline game didn't match specified game")
             conf = dict(obs.get('configuration', ()) or ())
             profiles = obs.get('profiles', ()) or ()
@@ -174,11 +177,12 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             self._fetcher = asyncio.ensure_future(self._fetch())
             self._is_open = True
         except Exception as ex:
-            await self.close()
+            await self.aclose()
             raise ex
         return self
 
-    async def close(self):
+    async def aclose(self):
+        """Close the eosched"""
         if self._fetcher is not None:
             self._fetcher.cancel()
             with contextlib.suppress(Exception):
@@ -201,20 +205,14 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         self._profiles.clear()
         self._prof_ids.clear()
 
-    async def __aenter__(self):
-        await self.open()
-        return self
-
-    async def __aexit__(self, *args):
-        await self.close()
-
     def __str__(self):
         return str(self._game_id)
 
 
-def eosched(
+def eosched( # pylint: disable=too-many-arguments
         game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
         obs_memory, obs_time):
+    """Create an egtaonline scheduler"""
     return EgtaOnlineScheduler(
         game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
         obs_memory, obs_time)

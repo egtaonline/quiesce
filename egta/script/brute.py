@@ -1,3 +1,4 @@
+"""Module for brute force command line"""
 import argparse
 import json
 import logging
@@ -12,6 +13,7 @@ from egta.script import utils
 
 
 def add_parser(subparsers):
+    """Create brute force parser"""
     parser = subparsers.add_parser(
         'brute', help="""Compute equilibria by sampling all profiles""",
         description="""Samples profiles from the entire game, and then runs
@@ -52,6 +54,7 @@ def add_parser(subparsers):
 
 
 async def run(args):
+    """Brute force entry point"""
     sched = await utils.parse_scheduler(args.scheduler)
     red, red_players = utils.parse_reduction(sched, args)
 

@@ -1,3 +1,4 @@
+"""Tests for count schedulers"""
 import asyncio
 import pytest
 
@@ -12,6 +13,7 @@ from egta import savesched
 
 @pytest.mark.asyncio
 async def test_basic_profile():
+    """Test that basic profiles are sampled twice"""
     sgame = gamegen.samplegame([4, 3], [3, 4])
     profs = utils.axis_from_elem(np.unique(utils.axis_to_elem(
         sgame.random_profiles(20))))

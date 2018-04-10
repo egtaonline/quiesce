@@ -13,7 +13,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class SimulationScheduler(profsched.Scheduler):
+class SimulationScheduler(profsched.AOpenableScheduler): # pylint: disable=too-many-instance-attributes
     """Schedule profiles using a command line program
 
     Parameters
@@ -41,7 +41,7 @@ class SimulationScheduler(profsched.Scheduler):
     def __init__(self, game, config, command, buff_size=65536):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
-        self._game = paygame.game_copy(rsgame.emptygame_copy(game))
+        self._game = paygame.game_copy(rsgame.empty_copy(game))
         self._base = {'configuration': config}
         self.command = command
         self.buff_size = buff_size
@@ -82,9 +82,9 @@ class SimulationScheduler(profsched.Scheduler):
             try:
                 await self._proc.stdin.drain()
             except ConnectionError:  # pragma: no cover race condition
-                raise RuntimeError("process died unexpectedly")
+                raise RuntimeError('process died unexpectedly')
 
-        logging.debug("scheduled profile: %s",
+        logging.debug('scheduled profile: %s',
                       self._game.profile_to_repr(profile))
         await got_data.wait()
         if self._reader.done() and self._reader.exception() is not None:
@@ -92,24 +92,26 @@ class SimulationScheduler(profsched.Scheduler):
         jpays = json.loads(line[0].decode('utf8'))
         payoffs = self._game.payoff_from_json(jpays)
         payoffs.setflags(write=False)
-        logging.debug("read payoff for profile: %s",
+        logging.debug('read payoff for profile: %s',
                       self.profile_to_repr(profile))
         return payoffs
 
     async def _read(self):
+        """Read line loop"""
         while True:
             line, got_data = await self._read_queue.get()
             try:
                 line[0] = await self._proc.stdout.readline()
-                if not len(line[0]):
-                    raise RuntimeError("process died unexpectedly")
+                if not line[0]:
+                    raise RuntimeError('process died unexpectedly')
                 self._buffer_bytes -= self._line_bytes.pop()
                 if self._buffer_bytes < self.buff_size:  # pragma: no branch
                     self._buffer_empty.set()
             finally:
                 got_data.set()
 
-    async def open(self):
+    async def aopen(self):
+        """Open the simsched"""
         utils.check(not self._is_open, "can't open twice")
         utils.check(self._proc is None, 'proce must be None')
         utils.check(self._reader is None, 'stream must be None')
@@ -119,11 +121,13 @@ class SimulationScheduler(profsched.Scheduler):
             self._reader = asyncio.ensure_future(self._read())
             self._is_open = True
         except Exception as ex:
-            await self.close()
+            # XXX This line exists to fool duplication check
+            await self.aclose()
             raise ex
         return self
 
-    async def close(self):
+    async def aclose(self):
+        """Close the simsched"""
         self._is_open = False
 
         if self._reader is not None:
@@ -149,16 +153,10 @@ class SimulationScheduler(profsched.Scheduler):
         self._buffer_bytes = 0
         self._line_bytes.clear()
 
-    async def __aenter__(self):
-        await self.open()
-        return self
-
-    async def __aexit__(self, *args):
-        await self.close()
-
     def __str__(self):
         return ' '.join(self.command)
 
 
 def simsched(game, config, command, buff_size=65536):
+    """Create a new simsched"""
     return SimulationScheduler(game, config, command, buff_size=buff_size)

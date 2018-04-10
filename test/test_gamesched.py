@@ -1,9 +1,9 @@
+"""Test game scheduler"""
 import asyncio
 
 import numpy as np
 import numpy.random as rand
 import pytest
-from gameanalysis import agggen
 from gameanalysis import gamegen
 from gameanalysis import rsgame
 
@@ -12,12 +12,12 @@ from egta import gamesched
 
 @pytest.mark.asyncio
 async def test_basic_profile():
+    """Test basic profile"""
     game = gamegen.game([4, 3], [3, 4])
     profs = game.random_profiles(20)
 
     sched = gamesched.gamesched(game)
-    assert (rsgame.emptygame_copy(sched) ==
-            rsgame.emptygame_copy(game))
+    assert rsgame.empty_copy(sched) == rsgame.empty_copy(game)
     paylist = await asyncio.gather(*[
         sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
@@ -27,12 +27,12 @@ async def test_basic_profile():
 
 @pytest.mark.asyncio
 async def test_basic_profile_sample():
+    """Test basic profile in sample game"""
     sgame = gamegen.samplegame([4, 3], [3, 4])
     profs = sgame.random_profiles(20)
 
     sched = gamesched.samplegamesched(sgame)
-    assert (rsgame.emptygame_copy(sched) ==
-            rsgame.emptygame_copy(sgame))
+    assert rsgame.empty_copy(sched) == rsgame.empty_copy(sgame)
     paylist = await asyncio.gather(*[
         sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
@@ -42,6 +42,7 @@ async def test_basic_profile_sample():
 
 @pytest.mark.asyncio
 async def test_duplicate_profile_sample():
+    """Test duplicate profile in sample game"""
     sgame = gamegen.samplegame([4, 3], [3, 4], 0)
     profs = sgame.random_profiles(20)
 
@@ -57,7 +58,8 @@ async def test_duplicate_profile_sample():
 
 @pytest.mark.asyncio
 async def test_basic_profile_aggfn():
-    agame = agggen.normal_aggfn([4, 3], [3, 4], 5)
+    """Test using an action graph game"""
+    agame = gamegen.normal_aggfn([4, 3], [3, 4], 5)
     profs = agame.random_profiles(20)
 
     sched = gamesched.gamesched(agame)
@@ -68,6 +70,7 @@ async def test_basic_profile_aggfn():
 
 @pytest.mark.asyncio
 async def test_noise_profile():
+    """Test adding noise"""
     sgame = gamegen.samplegame([4, 3], [3, 4])
     profs = sgame.random_profiles(20)
 
@@ -81,6 +84,7 @@ async def test_noise_profile():
 
 @pytest.mark.asyncio
 async def test_duplicate_prof():
+    """Test that duplicate profiles can be scheduled"""
     game = gamegen.game([4, 3], [3, 4])
     profs = game.random_profiles(20)
 

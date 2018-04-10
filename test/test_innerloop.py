@@ -1,3 +1,4 @@
+"""Test inner loop"""
 import numpy as np
 import pytest
 from gameanalysis import gamegen
@@ -10,28 +11,20 @@ from egta import asyncgame
 from egta import innerloop
 from egta import gamesched
 from egta import schedgame
-
-
-games = [
-    ([1], [2]),
-    ([2], [2]),
-    ([2, 1], [1, 2]),
-    ([1, 2], [2, 1]),
-    ([2, 2], [2, 2]),
-    ([3, 2], [2, 3]),
-    ([1, 1, 1], [2, 2, 2]),
-]
+from test import utils as tu # pylint: disable=wrong-import-order
 
 
 def verify_dist_thresh(eqa, thresh=0.1):
+    """Verify that all equilibria are different by at least thresh"""
     for i, eqm in enumerate(eqa[:-1], 1):
         assert np.all(thresh ** 2 <= np.sum((eqm - eqa[i:]) ** 2, 1))
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 @pytest.mark.parametrize('_', range(1))
 async def test_innerloop_simple(players, strats, _):
+    """Test that inner loop works for a simple setup"""
     sgame = gamegen.samplegame(players, strats)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(schedgame.schedgame(sched))
@@ -39,8 +32,9 @@ async def test_innerloop_simple(players, strats, _):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 async def test_innerloop_game(players, strats):
+    """Test that inner loop works for a game"""
     game = gamegen.samplegame(players, strats)
     sched = gamesched.gamesched(game)
     eqas = await innerloop.inner_loop(schedgame.schedgame(sched))
@@ -50,11 +44,12 @@ async def test_innerloop_game(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 async def test_innerloop_dpr(players, strats):
-    redgame = rsgame.emptygame(players, strats)
-    fullgame = rsgame.emptygame(redgame.num_role_players ** 2,
-                                redgame.num_role_strats)
+    """Test that inner loop handles dpr"""
+    redgame = rsgame.empty(players, strats)
+    fullgame = rsgame.empty(
+        redgame.num_role_players ** 2, redgame.num_role_strats)
     profs = dpr.expand_profiles(fullgame, redgame.all_profiles())
     pays = np.random.random(profs.shape)
     pays[profs == 0] = 0
@@ -66,8 +61,9 @@ async def test_innerloop_dpr(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 async def test_innerloop_by_role_simple(players, strats):
+    """Test that inner loop works by role"""
     sgame = gamegen.samplegame(players, strats)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
@@ -81,6 +77,7 @@ async def test_innerloop_by_role_simple(players, strats):
 @pytest.mark.parametrize('players,strats',
                          [[[2, 3], [3, 2]], [[4, 3], [3, 4]]])
 async def test_innerloop_failures(players, strats, count, when):
+    """Test that inner loop handles exceptions during scheduling"""
     game = gamegen.game(players, strats)
     sched = ExceptionScheduler(game, count, when)
     sgame = schedgame.schedgame(sched)
@@ -91,6 +88,7 @@ async def test_innerloop_failures(players, strats, count, when):
 @pytest.mark.asyncio
 @pytest.mark.parametrize('eq_prob', [x / 10 for x in range(11)])
 async def test_innerloop_known_eq(eq_prob):
+    """Test that inner loop finds known equilibria"""
     game = gamegen.sym_2p2s_known_eq(eq_prob)
     sched = gamesched.gamesched(game)
     eqa = await innerloop.inner_loop(
@@ -102,9 +100,10 @@ async def test_innerloop_known_eq(eq_prob):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 @pytest.mark.parametrize('num', [1, 2])
 async def test_innerloop_num_eqa(players, strats, num):
+    """Test that inner loop returns alternate number of equilibria"""
     sgame = gamegen.samplegame(players, strats)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
@@ -157,7 +156,7 @@ async def test_nash_failure():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', games)
+@pytest.mark.parametrize('players,strats', tu.GAMES)
 @pytest.mark.parametrize('_', range(5))
 async def test_at_least_one(players, strats, _):
     """inner loop should always find one equilibrium with at_least one"""

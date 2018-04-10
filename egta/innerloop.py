@@ -1,3 +1,4 @@
+"""module for doing innerloop procedures"""
 import asyncio
 import functools
 import heapq
@@ -15,7 +16,7 @@ from gameanalysis import restrict
 # payoff, that might mean we should warn, or at least explore something else.
 
 
-async def inner_loop(
+async def inner_loop( # pylint: disable=too-many-locals
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
         num_equilibria=1, num_backups=1, devs_by_role=False,
@@ -80,6 +81,7 @@ async def inner_loop(
     loop = asyncio.get_event_loop()
 
     async def add_restriction(rest):
+        """Adds a restriction to be evaluated"""
         if not exp_restrictions.add(rest):
             return  # already explored
         if agame.is_pure_restriction(rest):
@@ -91,7 +93,8 @@ async def inner_loop(
             nash.mixed_nash, data, regret_thresh=regret_thresh,
             dist_thresh=dist_thresh, at_least_one=at_least_one))
         if reqa.size:
-            eqa = restrict.translate(data.trim_mixture_support(reqa), rest)
+            eqa = restrict.translate(data.trim_mixture_support(
+                reqa, thresh=support_thresh), rest)
             await asyncio.gather(*[
                 add_deviations(rest, eqm, init_role_dev) for eqm in eqa])
         else:
@@ -104,6 +107,7 @@ async def inner_loop(
                 agame, agame.restriction_to_repr(rest))
 
     async def add_deviations(rest, mix, role_index):
+        """Add deviations to be evaluated"""
         # We need the restriction here, since trimming support may increase
         # regret of strategies in the initial restriction
         data = await agame.get_deviation_game(mix > 0, role_index)
@@ -122,7 +126,7 @@ async def inner_loop(
                 await asyncio.gather(*[
                     queue_restrictions(rgains, ri, rest)
                     for ri, rgains in enumerate(np.split(
-                            gains, agame.role_starts[1:]))])
+                        gains, agame.role_starts[1:]))])
 
         else:  # Set role index
             rgains = np.split(gains, agame.role_starts[1:])[role_index]
@@ -144,28 +148,29 @@ async def inner_loop(
                 await queue_restrictions(rgains, role_index, rest)
 
     async def queue_restrictions(role_gains, role_index, rest):
+        """Queue new restrictions appropriately"""
         role_rest = np.split(rest, agame.role_starts[1:])[role_index]
         if role_rest.all():
             return  # Can't deviate
 
         rest_size = rest.sum()
-        rs = agame.role_starts[role_index]
+        role_start = agame.role_starts[role_index]
 
-        br = np.nanargmax(np.where(role_rest, np.nan, role_gains))
-        if (role_gains[br] > regret_thresh
+        best_resp = np.nanargmax(np.where(role_rest, np.nan, role_gains))
+        if (role_gains[best_resp] > regret_thresh
                 and rest_size < restricted_game_size):
             br_sub = rest.copy()
-            br_sub[rs + br] = True
+            br_sub[role_start + best_resp] = True
             await add_restriction(br_sub)
         else:
-            br = None  # Add best response to backup
+            best_resp = None  # Add best response to backup
 
         back = backups[role_index]
-        for si, (gain, r) in enumerate(zip(role_gains, role_rest)):
-            if si == br or r or gain <= 0:
+        for strat_ind, (gain, role) in enumerate(zip(role_gains, role_rest)):
+            if strat_ind == best_resp or role or gain <= 0:
                 continue
             sub = rest.copy()
-            sub[rs + si] = True
+            sub[role_start + strat_ind] = True
             # XXX Tie id to deterministic random source
             heapq.heappush(back, (-gain, id(sub), sub))  # id for tie-breaking
 
@@ -193,7 +198,7 @@ async def inner_loop(
             add_restriction(r) for r in restrictions])
 
         restrictions = collect.bitset(agame.num_strats, exp_restrictions)
-        for r, back in enumerate(backups):
+        for role, back in enumerate(backups):
             unscheduled = num_backups
             while unscheduled > 0 and back:
                 rest = heapq.heappop(back)[-1]
@@ -201,14 +206,14 @@ async def inner_loop(
             for _ in range(unscheduled):
                 added = False
                 for mask in restrictions:
-                    rmask = np.split(mask, agame.role_starts[1:])[r]
+                    rmask = np.split(mask, agame.role_starts[1:])[role]
                     if rmask.all():
                         continue
                     rest = mask.copy()
                     # TODO We could randomize instead of taking the first
                     # strategy, but this would remove reproducability
-                    s = np.split(rest, agame.role_starts[1:])[r].argmin()
-                    rest[agame.role_starts[r] + s] = True
+                    strat = np.split(rest, agame.role_starts[1:])[role].argmin()
+                    rest[agame.role_starts[role] + strat] = True
                     restrictions.add(rest)
                     added = True
                     break
@@ -217,7 +222,7 @@ async def inner_loop(
         iteration += 1
 
     # Return equilibria
-    if equilibria:
+    if equilibria: # pylint: disable=no-else-return
         return np.stack([eqm for eqm, _ in equilibria])
     else:
         return np.empty((0, agame.num_strats))  # pragma: no cover

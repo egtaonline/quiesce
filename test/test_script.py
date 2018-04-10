@@ -1,3 +1,4 @@
+"""Tests for cli"""
 import contextlib
 import io
 import itertools
@@ -21,8 +22,8 @@ from gameanalysis import utils
 from egta import __main__ as main
 
 
-base = path.dirname(path.realpath(__file__))
-DIR = base
+BASE = path.dirname(path.realpath(__file__))
+DIR = BASE
 EGTA = path.join(DIR, '..', 'bin', 'egta')
 SIM_DIR = path.join(DIR, '..', 'cdasim')
 
@@ -33,7 +34,7 @@ async def run(*args):
         await main.amain(*args)
     except SystemExit as ex:
         return not int(str(ex))
-    except Exception:
+    except Exception: # pylint: disable=broad-except
         traceback.print_exc()
         return False
     return True
@@ -54,28 +55,31 @@ def stderr():
     return contextlib.redirect_stderr(io.StringIO())
 
 
-@pytest.fixture(scope='session')
-def game_info(tmpdir_factory):
+# FIXME I should be able to have all of these fixtures be independent
+@pytest.fixture(scope='session', name='game_info')
+def fix_game_info(tmpdir_factory):
+    """Create info for handling a data game"""
     game_file = str(tmpdir_factory.mktemp('games').join('game.json'))
     game = gamegen.game([3, 2], [2, 3])
-    with open(game_file, 'w') as f:
-        json.dump(game.to_json(), f)
+    with open(game_file, 'w') as fil:
+        json.dump(game.to_json(), fil)
     return game, 'game:game:{}'.format(game_file)
 
 
-@pytest.fixture(scope='session')
-def sim_game_info(tmpdir_factory):
-    sim_dir = path.join(base, '..', 'cdasim')
+@pytest.fixture(scope='session', name='sim_game_info')
+def fix_sim_game_info(tmpdir_factory):
+    """Create info for running a sim game"""
+    sim_dir = path.join(BASE, '..', 'cdasim')
     game_file = path.join(sim_dir, 'small_game.json')
-    sim = [path.join(base, '..', 'bin', 'python'),
+    sim = [path.join(BASE, '..', 'bin', 'python'),
            path.join(sim_dir, 'sim.py'), '1', '--single']
     zip_file = path.join(sim_dir, 'cdasim.zip')
-    with open(game_file) as f:
-        jgame = json.load(f)
+    with open(game_file) as fil:
+        jgame = json.load(fil)
     conf_file = str(tmpdir_factory.mktemp('conf').join('conf.json'))
-    with open(conf_file, 'w') as f:
-        json.dump(jgame['configuration'], f)
-    game = rsgame.emptygame_copy(gamereader.loadj(jgame))
+    with open(conf_file, 'w') as fil:
+        json.dump(jgame['configuration'], fil)
+    game = rsgame.empty_copy(gamereader.loadj(jgame))
     simsched = 'sim:game:{},conf:{},command:{}'.format(
         game_file, conf_file, ' '.join(sim))
     zipsched = 'zip:game:{},zipf:{}'.format(game_file, zip_file)
@@ -83,6 +87,7 @@ def sim_game_info(tmpdir_factory):
 
 
 def assert_term(sleep1, sleep2, *args):
+    """Assert that command handles sigterm"""
     proc = subprocess.Popen((EGTA,) + args)
     try:
         proc.wait(sleep1)
@@ -104,6 +109,7 @@ def assert_term(sleep1, sleep2, *args):
 
 @pytest.mark.asyncio
 async def test_help():
+    """Test help works"""
     assert not await run()
     assert not await run('--fail')
     with stderr() as err:
@@ -125,6 +131,7 @@ async def test_help():
     ['--hr', 'r0:2,r1:2'],
 ])
 async def test_brute_game(game_info, red):
+    """Test brute game"""
     game, sched = game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -135,6 +142,7 @@ async def test_brute_game(game_info, red):
 
 @pytest.mark.asyncio
 async def test_brute_game_tag(game_info):
+    """Test brute game with tag"""
     game, sched = game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -145,6 +153,7 @@ async def test_brute_game_tag(game_info):
 
 @pytest.mark.asyncio
 async def test_brute_game_restriction(game_info):
+    """Test brute game with restriction"""
     game, sched = game_info
     rest = json.dumps(game.restriction_to_json(game.random_restriction()))
     with stdin(rest), stdout() as out, stderr() as err:
@@ -155,12 +164,14 @@ async def test_brute_game_restriction(game_info):
 
 
 def test_brute_game_term(game_info):
+    """Test brute game handles sigterm"""
     _, sched = game_info
     assert_term(0.5, 0.5, 'brute', sched + ',count:2')
 
 
 @pytest.mark.asyncio
 async def test_prof_data(game_info, tmpdir):
+    """Test game scheduler"""
     game, sched = game_info
     prof_file = str(tmpdir.join('profs.json'))
     with stdout() as out, stderr() as err:
@@ -168,13 +179,14 @@ async def test_prof_data(game_info, tmpdir):
             'brute', sched + ',sample:,save:' + prof_file), err.getvalue()
         for eqm in json.loads(out.getvalue()):
             game.mixture_from_json(eqm['equilibrium'])
-    with open(prof_file) as f:
-        prof_game = gamereader.load(f)
-    assert rsgame.emptygame_copy(game) == rsgame.emptygame_copy(prof_game)
+    with open(prof_file) as fil:
+        prof_game = gamereader.load(fil)
+    assert rsgame.empty_copy(game) == rsgame.empty_copy(prof_game)
 
 
 @pytest.mark.asyncio
 async def test_sim(sim_game_info):
+    """Test sim sched"""
     game, sched, _ = sim_game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -186,6 +198,7 @@ async def test_sim(sim_game_info):
 
 @pytest.mark.asyncio
 async def test_sim_in(sim_game_info):
+    """Test sim with stdin"""
     game, sched, _ = sim_game_info
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
@@ -197,6 +210,7 @@ async def test_sim_in(sim_game_info):
 
 @pytest.mark.asyncio
 async def test_zip(sim_game_info):
+    """Test zip scheduler"""
     game, _, sched = sim_game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -207,7 +221,8 @@ async def test_zip(sim_game_info):
 
 
 @pytest.mark.asyncio
-async def test_zip_in(sim_game_info, tmpdir):
+async def test_zip_in(sim_game_info):
+    """Test zip with stdin"""
     game, _, sched = sim_game_info
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
@@ -219,6 +234,7 @@ async def test_zip_in(sim_game_info, tmpdir):
 
 @pytest.mark.asyncio
 async def test_zip_conf_in(sim_game_info):
+    """Test zip with configuration in stdin"""
     game, _, sched = sim_game_info
     conf = json.dumps({'max_value': 2})
     with stdin(conf), stdout() as out, stderr() as err:
@@ -231,10 +247,11 @@ async def test_zip_conf_in(sim_game_info):
 
 @pytest.mark.asyncio
 async def test_zip_conf_file(sim_game_info, tmpdir):
+    """Test zipsched with conf file"""
     game, _, sched = sim_game_info
     conf_file = str(tmpdir.join('conf.json'))
-    with open(conf_file, 'w') as f:
-        json.dump({'max_value': 2}, f)
+    with open(conf_file, 'w') as fil:
+        json.dump({'max_value': 2}, fil)
     with stdout() as out, stderr() as err:
         assert await run(
             'brute', sched + ',conf:' + conf_file, '--dpr',
@@ -244,19 +261,21 @@ async def test_zip_conf_file(sim_game_info, tmpdir):
 
 
 def test_brute_sim_term(sim_game_info):
+    """Test brute sim sigterm"""
     _, sched, _ = sim_game_info
     assert_term(0.5, 0.5, 'brute', sched)
 
 
 @pytest.mark.asyncio
 async def test_sim_delayed_fail(tmpdir):
-    game = rsgame.emptygame(4, 3)
+    """Test delayed simulation fail"""
+    game = rsgame.empty(4, 3)
     game_file = str(tmpdir.join('game.json'))
-    with open(game_file, 'w') as f:
-        json.dump(game.to_json(), f)
+    with open(game_file, 'w') as fil:
+        json.dump(game.to_json(), fil)
     script = str(tmpdir.join('script.sh'))
-    with open(script, 'w') as f:
-        f.write('sleep 1 && false')
+    with open(script, 'w') as fil:
+        fil.write('sleep 1 && false')
     sched = 'sim:game:{},command:bash {}'.format(game_file, script)
     with stdin(json.dumps({})):
         assert not await run(
@@ -265,15 +284,16 @@ async def test_sim_delayed_fail(tmpdir):
 
 @pytest.mark.asyncio
 async def test_sim_conf(sim_game_info, tmpdir):
+    """Test sim with configuration"""
     game, sched, _ = sim_game_info
     conf_file = str(tmpdir.join('conf.json'))
-    with open(conf_file, 'w') as f:
+    with open(conf_file, 'w') as fil:
         json.dump({
             'markup': 'standard',
             'max_value': 1,
             'arrivals': 'simple',
             'market': 'call',
-        }, f)
+        }, fil)
     with stdout() as out, stderr() as err:
         assert await run(
             'brute', '--dpr', 'buyers:2;sellers:2', sched + ',conf:' +
@@ -283,7 +303,8 @@ async def test_sim_conf(sim_game_info, tmpdir):
 
 
 @pytest.mark.asyncio
-async def test_sim_conf_in(sim_game_info, tmpdir):
+async def test_sim_conf_in(sim_game_info):
+    """Test sim with configuration in stdin"""
     game, sched, _ = sim_game_info
     conf = json.dumps({
         'markup': 'standard',
@@ -301,6 +322,7 @@ async def test_sim_conf_in(sim_game_info, tmpdir):
 
 @pytest.mark.asyncio
 async def test_innerloop(game_info):
+    """Test basic inner loop"""
     game, sched = game_info
     with stdout() as out, stderr() as err:
         assert await run('quiesce', sched), err.getvalue()
@@ -309,17 +331,20 @@ async def test_innerloop(game_info):
 
 
 def test_innerloop_game_term(game_info):
+    """Test that inner loop game handles sigterm"""
     _, sched = game_info
     assert_term(0.5, 0.5, 'quiesce', sched)
 
 
 def test_innerloop_sim_term(sim_game_info):
+    """Test that inner loop sim handles sigterm"""
     _, sched, _ = sim_game_info
     assert_term(0.5, 0.5, 'quiesce', sched)
 
 
 @pytest.mark.asyncio
 async def test_innerloop_dpr(game_info):
+    """Test inner loop with deviation preserving reduction"""
     game, sched = game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -330,6 +355,7 @@ async def test_innerloop_dpr(game_info):
 
 @pytest.mark.asyncio
 async def test_innerloop_hr(game_info):
+    """Test inner loop with hierarchical reduction"""
     game, sched = game_info
     with stdout() as out, stderr() as err:
         assert await run(
@@ -339,6 +365,7 @@ async def test_innerloop_hr(game_info):
 
 
 async def get_eosched(server, game, name):
+    """Get an eo sched"""
     async with api.api() as egta:
         sim = await egta.get_simulator(server.create_simulator(
             name, '1', delay_dist=lambda: random.random() / 100))
@@ -352,7 +379,8 @@ async def get_eosched(server, game, name):
 
 @pytest.mark.asyncio
 async def test_brute_egta_game(game_info):
-    game, game_file = game_info
+    """Test brute game with egta sched"""
+    game, _ = game_info
     async with mockserver.server() as server:
         sched = await get_eosched(server, game, 'game')
         with stdout() as out, stderr() as err:
@@ -364,6 +392,7 @@ async def test_brute_egta_game(game_info):
 
 
 def verify_trace_json(game, traces):
+    """Verify traced json"""
     for trace in traces:
         for point in trace:
             assert point.keys() == {'regret', 'equilibrium', 't'}
@@ -378,15 +407,16 @@ def verify_trace_json(game, traces):
     ['--hr', 'buyers:2,sellers:2'],
 ])
 async def test_trace(sim_game_info, tmpdir, red):
+    """Test tracing"""
     game, sched, _ = sim_game_info
     conf_file = str(tmpdir.join('conf.json'))
-    with open(conf_file, 'w') as f:
+    with open(conf_file, 'w') as fil:
         json.dump({
             'markup': 'standard',
             'max_value': 1,
             'arrivals': 'simple',
             'market': 'call',
-        }, f)
+        }, fil)
     prof_data = str(tmpdir.join('data.json'))
     with stdout() as out, stderr() as err:
         assert await run(
@@ -394,9 +424,9 @@ async def test_trace(sim_game_info, tmpdir, red):
             conf_file, *red), err.getvalue()
     traces = json.loads(out.getvalue())
     verify_trace_json(game, traces)
-    with open(prof_data) as f:
-        data = gamereader.load(f)
-    assert game == rsgame.emptygame_copy(data)
+    with open(prof_data) as fil:
+        data = gamereader.load(fil)
+    assert game == rsgame.empty_copy(data)
 
 
 def add_singleton_role(game, index, role_name, strat_name, num_players):
@@ -406,12 +436,13 @@ def add_singleton_role(game, index, role_name, strat_name, num_players):
     strat_names = list(game.strat_names)
     strat_names.insert(index, [strat_name])
     role_players = np.insert(game.num_role_players, index, num_players)
-    return rsgame.emptygame_names(role_names, role_players, strat_names)
+    return rsgame.empty_names(role_names, role_players, strat_names)
 
 
 @pytest.mark.asyncio
 async def test_trace_norm():
-    base_game = rsgame.emptygame([3, 2], [2, 3])
+    """Test tracing"""
+    base_game = rsgame.empty([3, 2], [2, 3])
     async with mockserver.server() as server:
         game0 = add_singleton_role(base_game, 0, 'a', 'sx', 1)
         sched0 = await get_eosched(server, game0, 'game0')
@@ -425,10 +456,11 @@ async def test_trace_norm():
 
 @pytest.mark.asyncio
 async def test_boot_game(game_info, tmpdir):
+    """Test bootstrapping a game"""
     game, sched = game_info
     mix_file = str(tmpdir.join('mix.json'))
-    with open(mix_file, 'w') as f:
-        json.dump(game.mixture_to_json(game.random_mixture()), f)
+    with open(mix_file, 'w') as fil:
+        json.dump(game.mixture_to_json(game.random_mixture()), fil)
     with stdout() as out, stderr() as err:
         assert await run(
             'boot', sched, mix_file, '10'), err.getvalue()
@@ -440,10 +472,11 @@ async def test_boot_game(game_info, tmpdir):
 
 @pytest.mark.asyncio
 async def test_boot_symmetric(tmpdir):
+    """Test bootstrapping a symmetric game"""
     game = gamegen.game(4, 3)
     mix_file = str(tmpdir.join('mix.json'))
-    with open(mix_file, 'w') as f:
-        json.dump(game.mixture_to_json(game.random_mixture()), f)
+    with open(mix_file, 'w') as fil:
+        json.dump(game.mixture_to_json(game.random_mixture()), fil)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
             'boot', 'game', mix_file, '10'), err.getvalue()
@@ -453,10 +486,11 @@ async def test_boot_symmetric(tmpdir):
 
 @pytest.mark.asyncio
 async def test_boot_symmetric_percs(tmpdir):
+    """Test bootstrapping a symmetric game with percentiles"""
     game = gamegen.game(4, 3)
     mix_file = str(tmpdir.join('mix.json'))
-    with open(mix_file, 'w') as f:
-        json.dump(game.mixture_to_json(game.random_mixture()), f)
+    with open(mix_file, 'w') as fil:
+        json.dump(game.mixture_to_json(game.random_mixture()), fil)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
             'boot', 'game', mix_file, '10', '-p95'), err.getvalue()
@@ -468,6 +502,7 @@ async def test_boot_symmetric_percs(tmpdir):
 
 @pytest.mark.asyncio
 async def test_boot_game_percs(game_info):
+    """Test bootstrapping a game with percentiles"""
     game, sched = game_info
     mix = json.dumps(game.mixture_to_json(game.random_mixture()))
     with stdin(mix), stdout() as out, stderr() as err:
@@ -486,6 +521,7 @@ async def test_boot_game_percs(game_info):
 
 @pytest.mark.asyncio
 async def test_boot_sim(sim_game_info):
+    """Test bootstrapping a sim scheduler"""
     game, sched, _ = sim_game_info
     mix = json.dumps(game.mixture_to_json(game.random_mixture()))
     with stdin(mix), stdout() as out, stderr() as err:

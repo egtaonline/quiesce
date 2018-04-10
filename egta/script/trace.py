@@ -14,6 +14,7 @@ from egta.script import utils
 
 
 def add_parser(subparsers):
+    """Create parser for tracing"""
     parser = subparsers.add_parser(
         'trace', help="""Compute trace of equilibria between two games""",
         description="""Computes traces of equilibria as the probability of
@@ -81,27 +82,30 @@ def add_parser(subparsers):
     return parser
 
 
-async def run(args):
+async def run(args): # pylint: disable=too-many-locals
+    """Command line entry point for tracing"""
     sched0 = CanonWrapper(await utils.parse_scheduler(args.sched0))
     sched1 = CanonWrapper(await utils.parse_scheduler(args.sched1))
     red, red_players = utils.parse_reduction(sched0, args)
     agame0 = schedgame.schedgame(sched0, red, red_players)
     agame1 = schedgame.schedgame(sched1, red, red_players)
 
-    async def get_point(t, eqm):
+    async def get_point(prob, eqm):
+        """Get the point in a trace for an equilibrium"""
         supp = eqm > 0
         game0 = await agame0.get_deviation_game(supp)
         game1 = await agame1.get_deviation_game(supp)
         reg = regret.mixture_regret(
-            rsgame.mix(game0, game1, t), eqm)
+            rsgame.mix(game0, game1, prob), eqm)
         return {
-            't': float(t),
+            't': float(prob),
             'equilibrium': sched0.mixture_to_json(eqm),
             'regret': float(reg)}
 
-    async def get_trace(ts, teqa):
+    async def get_trace(probs, peqa):
+        """Get the trace for probabilities and equilibria"""
         return await asyncio.gather(*[
-            get_point(t, eqm) for t, eqm in zip(ts, teqa)])
+            get_point(p, eqm) for p, eqm in zip(probs, peqa)])
 
     async with sched0, sched1:
         with futures.ProcessPoolExecutor(args.procs) as executor:
@@ -136,6 +140,7 @@ async def run(args):
 
 
 class CanonWrapper(canonsched.CanonScheduler):
+    """Async context manager for canon scheduler"""
     async def __aenter__(self):
         await self._sched.__aenter__()
         return self

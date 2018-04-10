@@ -15,7 +15,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class ZipScheduler(profsched.Scheduler):
+class ZipScheduler(profsched.OpenableScheduler): # pylint: disable=too-many-instance-attributes
     """Schedule profiles using am EGTA Online zip file
 
     Parameters
@@ -35,7 +35,7 @@ class ZipScheduler(profsched.Scheduler):
     def __init__(self, game, conf, zipf, *, max_procs=4, simultaneous_obs=1):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
-        self._game = paygame.game_copy(rsgame.emptygame_copy(game))
+        self._game = paygame.game_copy(rsgame.empty_copy(game))
         self.conf = conf
         self.zipf = zipf
 
@@ -75,8 +75,8 @@ class ZipScheduler(profsched.Scheduler):
             self._base['assignment'] = self._game.profile_to_assignment(
                 profile)
             with open(os.path.join(direc, 'simulation_spec.json'),
-                      'w') as f:
-                json.dump(self._base, f)
+                      'w') as fil:
+                json.dump(self._base, fil)
             logging.debug(
                 'scheduled %d profile%s: %s', self._count,
                 '' if self._count == 1 else 's', self.profile_to_repr(profile))
@@ -100,8 +100,8 @@ class ZipScheduler(profsched.Scheduler):
                 utils.check(
                     obs_file is not None,
                     "simulation didn't write enough observation files")
-                with open(os.path.join(direc, obs_file)) as f:
-                    pay = self._game.payoff_from_json(json.load(f))
+                with open(os.path.join(direc, obs_file)) as fil:
+                    pay = self._game.payoff_from_json(json.load(fil))
                     pay.setflags(write=False)
                     queue.put_nowait(pay)
             obs_file = next(obs_files, None)
@@ -110,25 +110,26 @@ class ZipScheduler(profsched.Scheduler):
                 'simulation wrote too many observation files')
             shutil.rmtree(direc)
             pay = queue.get_nowait()
-            logging.debug("read payoff for profile: %s",
+            logging.debug('read payoff for profile: %s',
                           self.profile_to_repr(profile))
             return pay
 
     def open(self):
+        """Open the zip scheduler"""
         utils.check(not self._is_open, "can't be open")
         try:
             self._num = 0
             self._sim_dir = tempfile.TemporaryDirectory()
             self._prof_dir = tempfile.TemporaryDirectory()
-            with zipfile.ZipFile(self.zipf) as zf:
-                zf.extractall(self._sim_dir.name)
+            with zipfile.ZipFile(self.zipf) as zfil:
+                zfil.extractall(self._sim_dir.name)
             sim_files = os.listdir(self._sim_dir.name)
             utils.check(len(sim_files) == 1, 'improper zip format')
             self._sim_root = os.path.join(self._sim_dir.name, sim_files[0])
             os.chmod(os.path.join(self._sim_root, 'script', 'batch'), 0o700)
 
-            with open(os.path.join(self._sim_root, 'defaults.json')) as f:
-                self._base['configuration'] = json.load(f).get(
+            with open(os.path.join(self._sim_root, 'defaults.json')) as fil:
+                self._base['configuration'] = json.load(fil).get(
                     'configuration', {})
             self._base['configuration'].update(self.conf)
 
@@ -138,22 +139,17 @@ class ZipScheduler(profsched.Scheduler):
             raise ex
 
     def close(self):
+        """Close the zip scheduler"""
         self._is_open = False
         self._sim_dir.cleanup()
         self._prof_dir.cleanup()
-
-    def __enter__(self):
-        self.open()
-        return self
-
-    def __exit__(self, *args):
-        self.close()
 
     def __str__(self):
         return self.zipf
 
 
 def zipsched(game, conf, zipf, *, max_procs=4, simultaneous_obs=1):
+    """Create a zip scheduler"""
     return ZipScheduler(
         game, conf, zipf, max_procs=max_procs,
         simultaneous_obs=simultaneous_obs)

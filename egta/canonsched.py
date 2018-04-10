@@ -1,3 +1,4 @@
+"""Module for creating a canonical scheduler"""
 import numpy as np
 
 from egta import profsched
@@ -34,4 +35,5 @@ class CanonScheduler(profsched.Scheduler):
 
 
 def canon(sched):
+    """Create a canon scheduler"""
     return CanonScheduler(sched)
