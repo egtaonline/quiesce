@@ -68,7 +68,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             raise self._fetcher.exception()
 
     async def sample_payoffs(self, profile):
-        assert self._is_open, "not open"
+        gu.check(self._is_open, 'not open')
         self._check_fetcher()
         hprof = gu.hash_array(profile)
         data = self._profiles.setdefault(
@@ -97,10 +97,10 @@ class EgtaOnlineScheduler(profsched.Scheduler):
         # TODO Make requests async
         try:
             while True:
-                logging.info("query scheduler %d for game %d",
+                logging.info('query scheduler %d for game %d',
                              self._sched['id'], self._game_id)
                 info = await self._sched.get_requirements()
-                assert info['active'], "scheduler was deactivated"
+                gu.check(info['active'], 'scheduler was deactivated')
                 reqs = info['scheduling_requirements']
                 for req in reqs:
                     prof_id = req['id']
@@ -132,13 +132,14 @@ class EgtaOnlineScheduler(profsched.Scheduler):
             raise ex
 
     async def open(self):
-        assert not self._is_open, "already open"
+        gu.check(not self._is_open, 'already open')
         try:
             game = await self._api.get_game(self._game_id)
             obs = await game.get_observations()
-            assert (rsgame.emptygame_copy(self._game) ==
-                    rsgame.emptygame_json(obs)), \
-                "egtaonline game didn't match specified game"
+            gu.check(
+                rsgame.emptygame_copy(self._game) ==
+                rsgame.emptygame_json(obs),
+                "egtaonline game didn't match specified game")
             conf = dict(obs.get('configuration', ()) or ())
             profiles = obs.get('profiles', ()) or ()
 
@@ -159,7 +160,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 self._profiles[hprof] = data
                 self._prof_ids[pid] = data
             logging.info(
-                "found %d existing profiles with %d payoffs in game %d",
+                'found %d existing profiles with %d payoffs in game %d',
                 num_profs, num_pays, self._game_id)
 
             # Create and start scheduler
@@ -167,8 +168,8 @@ class EgtaOnlineScheduler(profsched.Scheduler):
                 'egta_' + eu.random_string(20), True, self._obs_memory,
                 self._obs_time, self._simult_obs, 1, conf)
             logging.warning(
-                "created scheduler %d for running simulations of game %d: "
-                "https://%s/generic_schedulers/%d", self._sched['id'],
+                'created scheduler %d for running simulations of game %d: '
+                'https://%s/generic_schedulers/%d', self._sched['id'],
                 self._game_id, self._api.domain, self._sched['id'])
             self._fetcher = asyncio.ensure_future(self._fetch())
             self._is_open = True
@@ -186,7 +187,7 @@ class EgtaOnlineScheduler(profsched.Scheduler):
 
         if self._sched is not None:
             await self._sched.deactivate()
-            logging.info("deactivated scheduler %d for game %d",
+            logging.info('deactivated scheduler %d for game %d',
                          self._sched['id'], self._game_id)
             self._sched = None
 

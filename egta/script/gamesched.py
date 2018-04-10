@@ -7,7 +7,7 @@ from egta import gamesched
 
 
 async def create_scheduler(
-        game: "A file with the game data. `-` is interpreted as stdin."='-',
+        game: 'A file with the game data. `-` is interpreted as stdin.'='-',
         sample: """Treat the game as a sample game. This doesn't require a value,
         just a trialing colon."""=None, **_):
     """A scheduler that samples payoff data from an existing game. If sample is

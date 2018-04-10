@@ -76,7 +76,7 @@ async def run(args):
         reg_info.append((gains[bri],) + sched.role_strat_names[bri])
 
     logging.error(
-        "brute sampling finished finding %d equilibria:\n%s",
+        'brute sampling finished finding %d equilibria:\n%s',
         eqa.shape[0], '\n'.join(
             '{:d}) {} with regret {:g} to {} {}'.format(
                 i, sched.mixture_to_repr(eqm), reg, role, strat)

@@ -99,9 +99,10 @@ class SampleGameScheduler(profsched.Scheduler):
 
     def __init__(  # pragma: no branch # noqa
             self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
-        assert hasattr(sgame, 'get_sample_payoffs'), "sgame not a sample game"
         super().__init__(
             sgame.role_names, sgame.strat_names, sgame.num_role_players)
+        utils.check(
+            hasattr(sgame, 'get_sample_payoffs'), 'sgame not a sample game')
         self._noise_dist = noise_dist
         self._param_dist = param_dist
         self._sgame = sgame

@@ -2,6 +2,7 @@ import json
 import sys
 
 from gameanalysis import gamereader
+from gameanalysis import utils
 
 from egta import simsched
 
@@ -23,7 +24,7 @@ async def create_scheduler(
     a new compressed simulation spec file on each line of stdin, and is
     expected to write a standard observation file to each line of stdout in the
     same order."""
-    assert command is not None, '"command" must be specified'
+    utils.check(command is not None, '"command" must be specified')
     buff_size = int(buff)
 
     if game == '-':

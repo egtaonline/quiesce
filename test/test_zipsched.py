@@ -93,7 +93,7 @@ async def test_get_fail(conf, game):
 
     with zipsched.zipsched(game, conf, zipf) as sched:
         future = sched.sample_payoffs(prof)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             await future
 
 
@@ -112,5 +112,5 @@ async def test_no_obs(conf, game):
 
     with zipsched.zipsched(game, conf, zipf) as sched:
         future = sched.sample_payoffs(prof)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             await future

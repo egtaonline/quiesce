@@ -89,12 +89,12 @@ def assert_term(sleep1, sleep2, *args):
         # proc.wait should throw exception and pass i.e. process is still
         # running after sleep1
         proc.kill()  # pragma: no cover
-        assert False, "process finished during first sleep"  # pragma: no cover
+        assert False, 'process finished during first sleep'  # pragma: no cover
     except subprocess.TimeoutExpired:
         pass
     proc.terminate()
     try:
-        assert proc.wait(sleep2), "process succeeded after termination"
+        assert proc.wait(sleep2), 'process succeeded after termination'
     except subprocess.TimeoutExpired:  # pragma: no cover
         # proc.terminate should terminate process before sleep2 is reached, so
         # we should never trigger except

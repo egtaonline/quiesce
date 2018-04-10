@@ -86,12 +86,13 @@ async def run(args):
     reg_percs = np.percentile(reg_boots, args.percentile)
     surp_percs = np.percentile(surp_boots, args.percentile)
 
-    logging.error("bootstrap regret finished with regret %g and surplus %g%s",
-                  reg_means, surp_means, '' if not args.percentile else
-                  ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
-                  '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
-                            for p, r, s
-                            in zip(args.percentile, reg_percs, surp_percs)))
+    logging.error(
+        'bootstrap regret finished with regret %g and surplus %g%s',
+        reg_means, surp_means, '' if not args.percentile else
+        ':\nPerc   Regret    Surplus\n----  --------  --------\n' +
+        '\n'.join('{: 3g}%  {: 8.4g}  {: 8.4g}'.format(p, r, s)
+                  for p, r, s
+                  in zip(args.percentile, reg_percs, surp_percs)))
 
     # format output
     if sched.is_symmetric() and not args.standard:

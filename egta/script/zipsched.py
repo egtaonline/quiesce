@@ -2,6 +2,7 @@ import json
 import sys
 
 from gameanalysis import gamereader
+from gameanalysis import utils
 
 from egta import zipsched
 
@@ -21,7 +22,7 @@ async def create_scheduler(
     """Get payoffs from an egtaonline style simulator. This won't be as
     efficient as using `sim`, but requires no modifications from an existing
     egtaonline scheduler."""
-    assert zipf is not None, '"zipf" must be specified'
+    utils.check(zipf is not None, '`zipf` must be specified')
     max_procs = int(procs)
     count = int(count)
 

@@ -44,7 +44,7 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
 
     async def get_restricted_game(self, rest):
         logging.info(
-            "%s: scheduling restriction %s", self,
+            '%s: scheduling restriction %s', self,
             self.restriction_to_repr(rest))
         game = (await self._get_game(self._rprofs(rest))).restrict(rest)
         return _ReductionGame(
@@ -52,7 +52,7 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
 
     async def get_deviation_game(self, rest, role_index=None):
         logging.info(
-            "%s: scheduling deviations from %s%s", self,
+            '%s: scheduling deviations from %s%s', self,
             self.restriction_to_repr(rest),
             '' if role_index is None else ' by role ' +
             self.role_names[role_index])

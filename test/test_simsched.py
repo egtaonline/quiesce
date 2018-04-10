@@ -135,7 +135,7 @@ async def test_buffer_blocking(conf, game):
     prof = game.random_profile()
     cmd = ['python3', 'cdasim/sim.py', '--single', '1']
 
-    async with simsched.simsched(game, conf, cmd) as sched:
+    async with simsched.simsched(game, conf, cmd, buff_size=4096) as sched:
         await sched.sample_payoffs(prof)
         bprof = json.dumps(sched._base, separators=(',', ':')).encode('utf8')
         # number we have to write to blow out buffer

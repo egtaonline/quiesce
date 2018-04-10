@@ -127,8 +127,8 @@ async def run(args):
             spans.append([start['t'], end['t']])
 
     logging.error(
-        "tracing finished finding %d traces covering %s, with maximum regret "
-        "%g", len(jtraces),
+        'tracing finished finding %d traces covering %s, with maximum regret '
+        '%g', len(jtraces),
         ' U '.join('[{:g}, {:g}]'.format(s, e) for s, e in spans[1:]), max_reg)
 
     json.dump(jtraces, args.output)

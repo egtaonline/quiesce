@@ -3,6 +3,7 @@ import asyncio
 
 import numpy as np
 from gameanalysis import rsgame
+from gameanalysis import utils
 
 
 class AsyncGame(rsgame.GameLike):
@@ -49,7 +50,7 @@ class CompleteAsyncGame(AsyncGame):
 
 def wrap(game):
     """Wrap a CompleteGame as an AsyncGame"""
-    assert game.is_complete(), "must use a complete game"
+    utils.check(game.is_complete(), 'must use a complete game')
     return CompleteAsyncGame(game)
 
 
@@ -90,5 +91,7 @@ class MixedAsyncGame(AsyncGame):
 
 def mix(agame0, agame1, t):
     """Mix two async games"""
-    assert rsgame.emptygame_copy(agame0) == rsgame.emptygame_copy(agame1)
+    utils.check(
+        rsgame.emptygame_copy(agame0) == rsgame.emptygame_copy(agame1),
+        'games must have identically structure')
     return MixedAsyncGame(agame0, agame1, t)

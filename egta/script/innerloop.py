@@ -91,7 +91,7 @@ async def run(args):
             get_regret(eqm) for eqm in eqa])
 
     logging.error(
-        "quiesce finished finding %d equilibria:\n%s",
+        'quiesce finished finding %d equilibria:\n%s',
         eqa.shape[0], '\n'.join(
             '{:d}) {} with regret {:g}'.format(
                 i, sched.mixture_to_repr(eqm), reg)

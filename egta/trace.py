@@ -8,6 +8,7 @@ from scipy import interpolate
 from scipy.sparse import csgraph
 from gameanalysis import rsgame
 from gameanalysis import trace
+from gameanalysis import utils
 
 from egta import asyncgame
 from egta import innerloop
@@ -30,7 +31,9 @@ async def trace_all_equilibria(
     exectutor : Executor, optional
         The executor to run computation intensive operations in.
     """
-    assert rsgame.emptygame_copy(agame0) == rsgame.emptygame_copy(agame1)
+    utils.check(
+        rsgame.emptygame_copy(agame0) == rsgame.emptygame_copy(agame1),
+        'games must have same structure')
     loop = asyncio.get_event_loop()
     trace_args = dict(regret_thresh=regret_thresh)
     innerloop_args.update(
@@ -54,7 +57,7 @@ async def trace_all_equilibria(
         eqa = await innerloop.inner_loop(midgame, **innerloop_args)
 
         if not eqa.size:  # pragma: no cover
-            logging.warning("found no equilibria in %s", midgame)
+            logging.warning('found no equilibria in %s', midgame)
             return ()
 
         # XXX This shouldn't really be async as all data should be there, could
@@ -65,7 +68,7 @@ async def trace_all_equilibria(
         lupper = min(t[0] for t, _ in traces)
         ulower = max(t[-1] for t, _ in traces)
         logging.warning(
-            "traced %s out to %g - %g", midgame, lupper, ulower)
+            'traced %s out to %g - %g', midgame, lupper, ulower)
 
         lower_traces, upper_traces = await asyncio.gather(
             trace_between(lower, lupper), trace_between(ulower, upper))

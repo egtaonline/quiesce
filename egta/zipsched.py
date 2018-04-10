@@ -52,7 +52,7 @@ class ZipScheduler(profsched.Scheduler):
 
     # FIXME Is it possible to do file ops async
     async def sample_payoffs(self, profile):
-        assert self._is_open, "must enter scheduler"
+        utils.check(self._is_open, 'must enter scheduler')
         hprof = utils.hash_array(profile)
         counter, queue = self._extra_profs.get(hprof, (None, None))
         if counter is not None:
@@ -61,7 +61,7 @@ class ZipScheduler(profsched.Scheduler):
                 self._extra_profs.pop(hprof)
             pay = await queue.get()
             logging.debug(
-                "read payoff for profile: %s", self.profile_to_repr(profile))
+                'read payoff for profile: %s', self.profile_to_repr(profile))
             return pay
 
         else:
@@ -78,7 +78,7 @@ class ZipScheduler(profsched.Scheduler):
                       'w') as f:
                 json.dump(self._base, f)
             logging.debug(
-                "scheduled %d profile%s: %s", self._count,
+                'scheduled %d profile%s: %s', self._count,
                 '' if self._count == 1 else 's', self.profile_to_repr(profile))
 
             # Limit simultaneous processes
@@ -88,23 +88,26 @@ class ZipScheduler(profsched.Scheduler):
                                         direc, self._count),
                     cwd=self._sim_root, stderr=asyncio.subprocess.PIPE)
                 _, err = await proc.communicate()
-            assert proc.returncode == 0, \
-                "process failed with returncode {:d} and stderr {}".format(
-                    proc.returncode, err)
+            utils.check(
+                proc.returncode == 0,
+                'process failed with returncode {:d} and stderr {}',
+                proc.returncode, err)
             obs_files = (
                 f for f in os.listdir(direc)
                 if 'observation' in f and f.endswith('.json'))
             for _ in range(self._count):
                 obs_file = next(obs_files, None)
-                assert obs_file is not None, \
-                    "simulation didn't write enough observation files"
+                utils.check(
+                    obs_file is not None,
+                    "simulation didn't write enough observation files")
                 with open(os.path.join(direc, obs_file)) as f:
                     pay = self._game.payoff_from_json(json.load(f))
                     pay.setflags(write=False)
                     queue.put_nowait(pay)
             obs_file = next(obs_files, None)
-            assert obs_file is None, \
-                "simulation wrote too many observation files"
+            utils.check(
+                obs_file is None,
+                'simulation wrote too many observation files')
             shutil.rmtree(direc)
             pay = queue.get_nowait()
             logging.debug("read payoff for profile: %s",
@@ -112,7 +115,7 @@ class ZipScheduler(profsched.Scheduler):
             return pay
 
     def open(self):
-        assert not self._is_open
+        utils.check(not self._is_open, "can't be open")
         try:
             self._num = 0
             self._sim_dir = tempfile.TemporaryDirectory()
@@ -120,7 +123,7 @@ class ZipScheduler(profsched.Scheduler):
             with zipfile.ZipFile(self.zipf) as zf:
                 zf.extractall(self._sim_dir.name)
             sim_files = os.listdir(self._sim_dir.name)
-            assert len(sim_files) == 1, "improper zip format"
+            utils.check(len(sim_files) == 1, 'improper zip format')
             self._sim_root = os.path.join(self._sim_dir.name, sim_files[0])
             os.chmod(os.path.join(self._sim_root, 'script', 'batch'), 0o700)
 

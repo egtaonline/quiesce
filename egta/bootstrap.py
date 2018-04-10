@@ -1,6 +1,7 @@
 import asyncio
 
 import numpy as np
+from gameanalysis import utils
 
 
 async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
@@ -40,7 +41,7 @@ async def deviation_payoffs(sched, mix, num, *, boots=0, chunk_size=None):
     boot_gains : ndarray (boots, num_strats)
         The deviation payoffs for each bootstrap sample.
     """
-    assert num > 0, "can't schedule zero samples"
+    utils.check(num > 0, "can't schedule zero samples")
     mix = np.asarray(mix, float)
     chunk_size = chunk_size or boots * 10 or 1000
     devs = np.empty(mix.size)

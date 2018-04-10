@@ -1,6 +1,7 @@
 import asyncio
 
 import numpy as np
+from gameanalysis import utils
 
 from egta import profsched
 
@@ -20,7 +21,7 @@ class CountScheduler(profsched.Scheduler):
     def __init__(self, sched, count):
         super().__init__(
             sched.role_names, sched.strat_names, sched.num_role_players)
-        assert count > 0, "count must be positive {:d}".format(count)
+        utils.check(count > 0, 'count must be positive {:d}', count)
         self._sched = sched
         self._count = count
 

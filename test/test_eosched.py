@@ -154,5 +154,5 @@ async def test_scheduler_deactivate(game):
             # Deactivate scheduler
             for esched in await egta.get_generic_schedulers():
                 await esched.deactivate()
-            with pytest.raises(AssertionError):
+            with pytest.raises(ValueError):
                 await sched.sample_payoffs(game.random_profile())

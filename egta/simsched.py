@@ -8,6 +8,7 @@ import subprocess
 
 from gameanalysis import paygame
 from gameanalysis import rsgame
+from gameanalysis import utils
 
 from egta import profsched
 
@@ -57,13 +58,14 @@ class SimulationScheduler(profsched.Scheduler):
         self._buffer_empty.set()
 
     async def sample_payoffs(self, profile):
-        assert self._is_open, "not open"
+        utils.check(self._is_open, 'not open')
 
         self._base['assignment'] = self._game.profile_to_json(profile)
         bprof = json.dumps(self._base, separators=(',', ':')).encode('utf8')
         size = len(bprof) + 1
-        assert size < self.buff_size, \
-            "profile could not be written to buffer without blocking"
+        utils.check(
+            size < self.buff_size,
+            'profile could not be written to buffer without blocking')
         async with self._write_lock:
             self._buffer_bytes += size
             self._line_bytes.appendleft(size)
@@ -108,9 +110,9 @@ class SimulationScheduler(profsched.Scheduler):
                 got_data.set()
 
     async def open(self):
-        assert not self._is_open, "can't open twice"
-        assert self._proc is None
-        assert self._reader is None
+        utils.check(not self._is_open, "can't open twice")
+        utils.check(self._proc is None, 'proce must be None')
+        utils.check(self._reader is None, 'stream must be None')
         try:
             self._proc = await asyncio.create_subprocess_exec(
                 *self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -158,5 +160,5 @@ class SimulationScheduler(profsched.Scheduler):
         return ' '.join(self.command)
 
 
-def simsched(game, config, command, buff_size=4096):
+def simsched(game, config, command, buff_size=65536):
     return SimulationScheduler(game, config, command, buff_size=buff_size)
