@@ -23,6 +23,16 @@ class _ReductionSchedulerGame(asyncgame._AsyncGame): # pylint: disable=protected
         self._red = red
         self._profiles = {}
 
+    def get_game(self):
+        profs = []
+        pays = []
+        for hprof, fpay in self._profiles.items():
+            if fpay.done():
+                profs.append(hprof.array)
+                pays.append(fpay.result())
+        return self._wrap(paygame.game_replace(
+            self, np.stack(profs), np.stack(pays)))
+
     async def _get_game(self, profs):
         """Get a game from the profiles to sample"""
         futures = []
@@ -46,13 +56,17 @@ class _ReductionSchedulerGame(asyncgame._AsyncGame): # pylint: disable=protected
                 self._rgame.restrict(rest).all_profiles()),
             rest)
 
+    def _wrap(self, game):
+        """Wraps a game so it has reduced deviation payoffs"""
+        return _ReductionGame(
+            game, self._red.reduce_game(game, self._rgame.num_role_players))
+
     async def get_restricted_game(self, rest):
         logging.info(
             '%s: scheduling restriction %s', self,
             self.restriction_to_repr(rest))
         game = (await self._get_game(self._rprofs(rest))).restrict(rest)
-        return _ReductionGame(
-            game, self._red.reduce_game(game, self._rgame.num_role_players))
+        return self._wrap(game)
 
     async def get_deviation_game(self, rest, role_index=None):
         logging.info(
@@ -64,8 +78,7 @@ class _ReductionSchedulerGame(asyncgame._AsyncGame): # pylint: disable=protected
             self, rest, self._rgame.num_role_players, role_index)
         rprofs = self._rprofs(rest)
         game = await self._get_game(np.concatenate([rprofs, dprofs]))
-        return _ReductionGame(
-            game, self._red.reduce_game(game, self._rgame.num_role_players))
+        return self._wrap(game)
 
     def __str__(self):
         return str(self._sched)

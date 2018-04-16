@@ -13,6 +13,11 @@ class _AsyncGame(rsgame._GameLike): # pylint: disable=protected-access
     Supports asynchronous methods for ensuring particular payoff data"""
 
     @abc.abstractmethod
+    def get_game(self):
+        """Return all data available"""
+        pass  # pragma: no cover
+
+    @abc.abstractmethod
     async def get_restricted_game(self, rest):
         """Return a complete restricted game"""
         pass  # pragma: no cover
@@ -32,6 +37,9 @@ class _CompleteAsyncGame(_AsyncGame):
         super().__init__(
             game.role_names, game.strat_names, game.num_role_players)
         self._game = game
+
+    def get_game(self):
+        return self._game
 
     async def get_restricted_game(self, rest):
         return self._game.restrict(rest)
@@ -63,6 +71,10 @@ class _MixedAsyncGame(_AsyncGame):
         self._agame0 = agame0
         self._agame1 = agame1
         self._prob = prob
+
+    def get_game(self):
+        return rsgame.mix(
+            self._agame0.get_game(), self._agame1.get_game(), self._prob)
 
     async def get_restricted_game(self, rest):
         game0, game1 = await asyncio.gather(

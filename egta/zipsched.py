@@ -50,7 +50,6 @@ class _ZipScheduler(profsched._OpenableScheduler): # pylint: disable=too-many-in
         self._num = 0
         self._procs = asyncio.Semaphore(max_procs)
 
-    # FIXME Is it possible to do file ops async
     async def sample_payoffs(self, profile):
         utils.check(self._is_open, 'must enter scheduler')
         hprof = utils.hash_array(profile)

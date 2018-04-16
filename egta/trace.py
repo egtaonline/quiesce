@@ -5,7 +5,6 @@ import itertools
 import logging
 
 import numpy as np
-from scipy import interpolate
 from scipy.sparse import csgraph
 from gameanalysis import rsgame
 from gameanalysis import trace
@@ -15,10 +14,9 @@ from egta import asyncgame
 from egta import innerloop
 
 
-# TODO Expose max step
 async def trace_all_equilibria(
-        agame0, agame1, *, regret_thresh=1e-3, dist_thresh=0.1, executor=None,
-        **innerloop_args):
+        agame0, agame1, *, regret_thresh=1e-3, dist_thresh=0.1, max_step=0.1,
+        executor=None, **innerloop_args):
     """Trace out all equilibria between all games
 
     Parameters
@@ -36,19 +34,25 @@ async def trace_all_equilibria(
         rsgame.empty_copy(agame0) == rsgame.empty_copy(agame1),
         'games must have same structure')
     loop = asyncio.get_event_loop()
-    trace_args = dict(regret_thresh=regret_thresh)
+    trace_args = dict(regret_thresh=regret_thresh, max_step=max_step)
     innerloop_args.update(
-        trace_args, executor=executor, dist_thresh=dist_thresh)
+        executor=executor, regret_thresh=regret_thresh,
+        dist_thresh=dist_thresh)
 
-    async def trace_eqm(eqm, time):
-        """Trace and equilibrium out from time"""
-        supp = eqm > 0
-        game0, game1 = await asyncio.gather(
-            agame0.get_deviation_game(supp),
-            agame1.get_deviation_game(supp))
-        return await loop.run_in_executor(
-            executor, functools.partial(
-                trace.trace_equilibria, game0, game1, time, eqm, **trace_args))
+    async def trace_eqm(eqm, prob):
+        """Trace and equilibrium out from prob"""
+        game0 = agame0.get_game()
+        game1 = agame1.get_game()
+        (pr0, eqa0), (pr1, eqa1) = await asyncio.gather(
+            loop.run_in_executor(executor, functools.partial(
+                trace.trace_equilibrium, game0, game1, prob, eqm, 0,
+                **trace_args)),
+            loop.run_in_executor(executor, functools.partial(
+                trace.trace_equilibrium, game0, game1, prob, eqm, 1,
+                **trace_args)))
+        return (
+            np.concatenate([pr0[::-1], pr1[1:]]),
+            np.concatenate([eqa0[::-1], eqa1[1:]]))
 
     async def trace_between(lower, upper):
         """Trace between times lower and upper"""
@@ -63,8 +67,6 @@ async def trace_all_equilibria(
             logging.warning('found no equilibria in %s', midgame)
             return ()
 
-        # XXX This shouldn't really be async as all data should be there, could
-        # potentially add a get_nowait to async game
         traces = await asyncio.gather(*[
             trace_eqm(eqm, mid) for eqm in eqa])
 
@@ -79,11 +81,14 @@ async def trace_all_equilibria(
         return itertools.chain(lower_traces, traces, upper_traces)
 
     traces = list(await trace_between(0.0, 1.0))
-    traces = _merge_traces(traces, dist_thresh, 'linear')
+    traces = _merge_traces(
+        agame0.get_game(), agame1.get_game(), traces, dist_thresh, trace_args)
+    # FIXME Smooth these out by interpolating between eqa on either side and
+    # keeping new value if it has lower regret
     return sorted(traces, key=lambda tr: (tr[0][0], tr[0][-1]))
 
 
-def _trace_distance(trace1, trace2, interp):
+def _trace_distance(game0, game1, trace1, trace2, trace_args):
     """Compute the distance between traces
 
     This uses interpolation to estimate each trace at arbitrary points in time
@@ -102,14 +107,15 @@ def _trace_distance(trace1, trace2, interp):
         time2[(tmin <= time2) & (time2 <= tmax)]])
     times.sort()
 
-    eqa1i = interpolate.interp1d(time1, eqa1, interp, 0)(times)
-    eqa2i = interpolate.interp1d(time2, eqa2, interp, 0)(times)
+    eqa1i = trace.trace_interpolate(
+        game0, game1, time1, eqa1, times, **trace_args)
+    eqa2i = trace.trace_interpolate(
+        game0, game1, time2, eqa2, times, **trace_args)
     errs = np.linalg.norm(eqa1i - eqa2i, axis=1)
     return np.diff(times).dot(errs[:-1] + errs[1:]) / 2 / (tmax - tmin)
 
 
-# FIXME Don't use arbitrary interp, use trace_interp
-def _merge_traces(traces, thresh, interp):
+def _merge_traces(game0, game1, traces, thresh, trace_args): # pylint: disable=too-many-locals
     """Merge a list of traces
 
     Parameters
@@ -126,7 +132,7 @@ def _merge_traces(traces, thresh, interp):
     for i, trace1 in enumerate(traces):
         for j, trace2 in enumerate(traces[:i]):
             distances[i, j] = distances[j, i] = _trace_distance(
-                trace1, trace2, interp)
+                game0, game1, trace1, trace2, trace_args)
     num, comps = csgraph.connected_components(distances <= thresh, False)
     new_traces = []
     for i in range(num):
@@ -136,6 +142,4 @@ def _merge_traces(traces, thresh, interp):
             eqms for (_, eqms), m in zip(traces, comps == i) if m])
         inds = np.argsort(times)
         new_traces.append((times[inds], eqa[inds]))
-    # FIXME These merged traces are noisy due to bounds in regret. Ideally we'd
-    # do some smoothing or something... locally weighted linear regression?
     return new_traces
