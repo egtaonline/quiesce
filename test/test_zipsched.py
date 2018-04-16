@@ -86,7 +86,7 @@ async def test_simultaneous_obs(conf, game, count):
 
     with zipsched.zipsched(
         game, conf, zipf, simultaneous_obs=count) as sched:
-        sched = countsched.CountScheduler(sched, count)
+        sched = countsched.countsched(sched, count)
         awaited = await asyncio.gather(*[
             sched.sample_payoffs(p) for p in profs])
 

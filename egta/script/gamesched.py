@@ -26,7 +26,7 @@ async def create_scheduler(
         return Rgs(rsgame)
 
 
-class Sgs(gamesched.SampleGameScheduler):
+class Sgs(gamesched._SampleGameScheduler): # pylint: disable=protected-access
     """Async context manager SampleGameScheduler"""
     async def __aenter__(self):
         return self
@@ -35,7 +35,7 @@ class Sgs(gamesched.SampleGameScheduler):
         pass
 
 
-class Rgs(gamesched.RsGameScheduler):
+class Rgs(gamesched._RsGameScheduler): # pylint: disable=protected-access
     """Async context manager RsGameScheduler"""
     async def __aenter__(self):
         return self

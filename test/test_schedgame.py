@@ -76,7 +76,7 @@ async def test_random_redgame(players, strats, _):
 async def test_random_complete_dev(players, strats, _):
     """Test the deviations are complete in random games"""
     game = gamegen.samplegame(players, strats)
-    sched = gamesched.SampleGameScheduler(game)
+    sched = gamesched.samplegamesched(game)
     sgame = schedgame.schedgame(sched)
     mix = sgame.random_sparse_mixture()
     supp = mix > 0
@@ -100,7 +100,7 @@ async def test_random_complete_dev(players, strats, _):
 async def test_random_normalize(players, strats, _):
     """Test normalizing random games"""
     game = gamegen.samplegame(players, strats)
-    sched = gamesched.SampleGameScheduler(game)
+    sched = gamesched.samplegamesched(game)
     sgame = schedgame.schedgame(sched)
     rgame = await sgame.get_restricted_game(np.ones(game.num_strats, bool))
     ngame = rgame.normalize()

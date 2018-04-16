@@ -55,7 +55,7 @@ async def test_basic_profile(game):
         # Schedule two at a time, in two batches
         async with eosched.eosched(
             game, egta, egame['id'], 0.1, 2, 10, 0, 0) as base_sched:
-            sched = countsched.CountScheduler(base_sched, 2)
+            sched = countsched.countsched(base_sched, 2)
             awaited = await asyncio.gather(*[
                 sched.sample_payoffs(p) for p in profs])
         pays = np.stack(awaited)
@@ -64,7 +64,7 @@ async def test_basic_profile(game):
         # Try again now that everything should be scheduled
         async with eosched.eosched(
             game, egta, egame['id'], 0.1, 2, 10, 0, 0) as base_sched:
-            sched = countsched.CountScheduler(base_sched, 2)
+            sched = countsched.countsched(base_sched, 2)
             awaited = await asyncio.gather(*[
                 sched.sample_payoffs(p) for p in profs])
         pays = np.stack(awaited)

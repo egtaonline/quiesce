@@ -12,7 +12,7 @@ from gameanalysis.reduction import identity as idr
 from egta import asyncgame
 
 
-class ReductionSchedulerGame(asyncgame.AsyncGame):
+class _ReductionSchedulerGame(asyncgame._AsyncGame): # pylint: disable=protected-access
     """A scheduler game that implicitly has a reduction"""
     def __init__(self, sched, red, red_players):
         super().__init__(sched.role_names, sched.strat_names,
@@ -73,7 +73,7 @@ class ReductionSchedulerGame(asyncgame.AsyncGame):
 
 def schedgame(sched, red=idr, red_players=None):
     """Create a scheduler game"""
-    return ReductionSchedulerGame(sched, red, red_players)
+    return _ReductionSchedulerGame(sched, red, red_players)
 
 
 # TODO This should be moved to game analysis, when the appropriate contract can

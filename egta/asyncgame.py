@@ -7,7 +7,7 @@ from gameanalysis import rsgame
 from gameanalysis import utils
 
 
-class AsyncGame(rsgame._GameLike): # pylint: disable=protected-access
+class _AsyncGame(rsgame._GameLike): # pylint: disable=protected-access
     """An asynchronous game
 
     Supports asynchronous methods for ensuring particular payoff data"""
@@ -26,7 +26,7 @@ class AsyncGame(rsgame._GameLike): # pylint: disable=protected-access
         pass  # pragma: no cover
 
 
-class CompleteAsyncGame(AsyncGame):
+class _CompleteAsyncGame(_AsyncGame):
     """A wrapper for a complete RsGame"""
     def __init__(self, game):
         super().__init__(
@@ -52,10 +52,10 @@ class CompleteAsyncGame(AsyncGame):
 def wrap(game):
     """Wrap a CompleteGame as an AsyncGame"""
     utils.check(game.is_complete(), 'must use a complete game')
-    return CompleteAsyncGame(game)
+    return _CompleteAsyncGame(game)
 
 
-class MixedAsyncGame(AsyncGame):
+class _MixedAsyncGame(_AsyncGame):
     """A lazy merging of two async games"""
     def __init__(self, agame0, agame1, prob):
         super().__init__(
@@ -103,4 +103,4 @@ def mix(agame0, agame1, prob):
     utils.check(
         rsgame.empty_copy(agame0) == rsgame.empty_copy(agame1),
         'games must have identically structure')
-    return MixedAsyncGame(agame0, agame1, prob)
+    return _MixedAsyncGame(agame0, agame1, prob)

@@ -139,7 +139,7 @@ async def run(args): # pylint: disable=too-many-locals
     args.output.write('\n')
 
 
-class CanonWrapper(canonsched.CanonScheduler):
+class CanonWrapper(canonsched._CanonScheduler): # pylint: disable=protected-access
     """Async context manager for canon scheduler"""
     async def __aenter__(self):
         await self._sched.__aenter__()

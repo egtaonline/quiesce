@@ -3,9 +3,8 @@ import abc
 
 from gameanalysis import rsgame
 
-# FIXME Make all classes protected
 
-class Scheduler(rsgame._GameLike): # pylint: disable=protected-access
+class _Scheduler(rsgame._GameLike): # pylint: disable=protected-access
     """A profile scheduler
 
     It must be a context manager for its resources."""
@@ -18,7 +17,7 @@ class Scheduler(rsgame._GameLike): # pylint: disable=protected-access
         pass  # pragma: no cover
 
 
-class OpenableScheduler(Scheduler):
+class _OpenableScheduler(_Scheduler):
     """Scheduler that is opened"""
     @abc.abstractmethod
     def open(self):
@@ -38,7 +37,7 @@ class OpenableScheduler(Scheduler):
         self.close()
 
 
-class AOpenableScheduler(Scheduler):
+class _AOpenableScheduler(_Scheduler):
     """Scheduler that is asynchronously opened"""
     @abc.abstractmethod
     async def aopen(self):

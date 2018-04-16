@@ -4,7 +4,7 @@ import numpy as np
 from egta import profsched
 
 
-class CanonScheduler(profsched.Scheduler):
+class _CanonScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """A scheduler that removes single strategy roles
 
     Parameters
@@ -36,4 +36,4 @@ class CanonScheduler(profsched.Scheduler):
 
 def canon(sched):
     """Create a canon scheduler"""
-    return CanonScheduler(sched)
+    return _CanonScheduler(sched)

@@ -7,7 +7,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class CountScheduler(profsched.Scheduler):
+class _CountScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """A scheduler that wraps each profile in the mean of n profiles
 
     Parameters
@@ -40,4 +40,4 @@ class CountScheduler(profsched.Scheduler):
 
 def countsched(sched, count):
     """create a count scheduler"""
-    return CountScheduler(sched, count)
+    return _CountScheduler(sched, count)

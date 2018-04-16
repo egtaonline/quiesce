@@ -38,7 +38,7 @@ async def create_scheduler( # pylint: disable=too-many-arguments
     return ApiWrapper(game, egta, game_id, sleep, count, max_sims, mem, time)
 
 
-class ApiWrapper(eosched.EgtaOnlineScheduler):
+class ApiWrapper(eosched._EgtaOnlineScheduler): # pylint: disable=protected-access
     """Wrapper for egtaonline api to open on open of scheduler"""
     def __init__(self, game, eoapi, *args, **kwargs):
         super().__init__(game, eoapi, *args, **kwargs)

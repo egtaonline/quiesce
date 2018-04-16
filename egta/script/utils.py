@@ -130,7 +130,7 @@ def _global(
     pass  # pragma: no cover
 
 
-class SaveWrapper(savesched.SaveScheduler):
+class SaveWrapper(savesched._SaveScheduler): # pylint: disable=protected-access
     """Make save scheduler an async context manager"""
     def __init__(self, sched, dest):
         super().__init__(sched)
@@ -146,7 +146,7 @@ class SaveWrapper(savesched.SaveScheduler):
         await self._sched.__aexit__(*args)
 
 
-class CountWrapper(countsched.CountScheduler):
+class CountWrapper(countsched._CountScheduler): # pylint: disable=protected-access
     """Make count scheduler an async context manager"""
     async def __aenter__(self):
         await self._sched.__aenter__()

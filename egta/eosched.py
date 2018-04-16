@@ -11,7 +11,7 @@ from egta import profsched
 from egta import utils as eu
 
 
-class EgtaOnlineScheduler(profsched.AOpenableScheduler): # pylint: disable=too-many-instance-attributes
+class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too-many-instance-attributes,protected-access
     """A profile scheduler that schedules through egta online
 
     Parameters
@@ -213,6 +213,6 @@ def eosched( # pylint: disable=too-many-arguments
         game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
         obs_memory, obs_time):
     """Create an egtaonline scheduler"""
-    return EgtaOnlineScheduler(
+    return _EgtaOnlineScheduler(
         game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
         obs_memory, obs_time)

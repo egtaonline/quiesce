@@ -10,7 +10,7 @@ from egta import profsched
 # TODO Add common random seed for deterministic runs.
 
 
-class RsGameScheduler(profsched.Scheduler):
+class _RsGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """Schedule profiles by adding noise to a game
 
     This scheduler will generate random parameters to assign to each profile.
@@ -69,12 +69,12 @@ class RsGameScheduler(profsched.Scheduler):
 def gamesched(
         game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200):
     """Create a game scheduler"""
-    return RsGameScheduler(
+    return _RsGameScheduler(
         game, noise_dist=noise_dist, param_dist=param_dist,
         size_ratio=size_ratio)
 
 
-class SampleGameScheduler(profsched.Scheduler):
+class _SampleGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """Schedule profiles by adding noise to a sample game
 
     This scheduler will generate random parameters to assign to each profile.
@@ -130,5 +130,5 @@ class SampleGameScheduler(profsched.Scheduler):
 
 def samplegamesched(sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
     """Create a samplegame scheduler"""
-    return SampleGameScheduler(
+    return _SampleGameScheduler(
         sgame, noise_dist=noise_dist, param_dist=param_dist)

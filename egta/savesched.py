@@ -6,7 +6,7 @@ from gameanalysis import paygame
 from egta import profsched
 
 
-class SaveScheduler(profsched.Scheduler):
+class _SaveScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """A scheduler that saves all of the payoff data for output later
 
     Parameters
@@ -52,4 +52,4 @@ class SaveScheduler(profsched.Scheduler):
 
 def savesched(sched):
     """Create a save scheduler"""
-    return SaveScheduler(sched)
+    return _SaveScheduler(sched)

@@ -45,7 +45,7 @@ async def create_scheduler(
         rsgame, config, zipf, max_procs=max_procs, simultaneous_obs=count)
 
 
-class ZipSched(zipsched.ZipScheduler):
+class ZipSched(zipsched._ZipScheduler): # pylint: disable=protected-access
     """Zip scheduler that is also async context manager"""
     async def __aenter__(self):
         return self.__enter__()

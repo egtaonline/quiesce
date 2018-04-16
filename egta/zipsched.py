@@ -15,7 +15,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class ZipScheduler(profsched.OpenableScheduler): # pylint: disable=too-many-instance-attributes
+class _ZipScheduler(profsched._OpenableScheduler): # pylint: disable=too-many-instance-attributes,protected-access
     """Schedule profiles using am EGTA Online zip file
 
     Parameters
@@ -150,6 +150,6 @@ class ZipScheduler(profsched.OpenableScheduler): # pylint: disable=too-many-inst
 
 def zipsched(game, conf, zipf, *, max_procs=4, simultaneous_obs=1):
     """Create a zip scheduler"""
-    return ZipScheduler(
+    return _ZipScheduler(
         game, conf, zipf, max_procs=max_procs,
         simultaneous_obs=simultaneous_obs)

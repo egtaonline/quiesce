@@ -13,7 +13,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class SimulationScheduler(profsched.AOpenableScheduler): # pylint: disable=too-many-instance-attributes
+class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too-many-instance-attributes,protected-access
     """Schedule profiles using a command line program
 
     Parameters
@@ -159,4 +159,4 @@ class SimulationScheduler(profsched.AOpenableScheduler): # pylint: disable=too-m
 
 def simsched(game, config, command, buff_size=65536):
     """Create a new simsched"""
-    return SimulationScheduler(game, config, command, buff_size=buff_size)
+    return _SimulationScheduler(game, config, command, buff_size=buff_size)

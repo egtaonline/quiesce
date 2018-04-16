@@ -170,7 +170,7 @@ class SchedulerException(Exception):
     pass
 
 
-class ExceptionScheduler(gamesched.RsGameScheduler):
+class ExceptionScheduler(gamesched._RsGameScheduler): # pylint: disable=protected-access
     """Scheduler that allows triggering exeptions on command"""
 
     def __init__(self, game, error_after, call_type):
