@@ -6,6 +6,7 @@ import logging
 
 import numpy as np
 from scipy.sparse import csgraph
+from gameanalysis import regret
 from gameanalysis import rsgame
 from gameanalysis import trace
 from gameanalysis import utils
@@ -14,7 +15,7 @@ from egta import asyncgame
 from egta import innerloop
 
 
-async def trace_all_equilibria(
+async def trace_all_equilibria( # pylint: disable=too-many-locals
         agame0, agame1, *, regret_thresh=1e-3, dist_thresh=0.1, max_step=0.1,
         executor=None, **innerloop_args):
     """Trace out all equilibria between all games
@@ -81,10 +82,11 @@ async def trace_all_equilibria(
         return itertools.chain(lower_traces, traces, upper_traces)
 
     traces = list(await trace_between(0.0, 1.0))
-    traces = _merge_traces(
-        agame0.get_game(), agame1.get_game(), traces, dist_thresh, trace_args)
-    # FIXME Smooth these out by interpolating between eqa on either side and
-    # keeping new value if it has lower regret
+    game0, game1 = agame0.get_game(), agame1.get_game()
+    traces = _merge_traces(game0, game1, traces, dist_thresh, trace_args)
+    for probs, eqa in traces:
+        _smooth_trace(game0, game1, probs, eqa, trace_args)
+        _smooth_trace(game0, game1, probs[::-1], eqa[::-1], trace_args)
     return sorted(traces, key=lambda tr: (tr[0][0], tr[0][-1]))
 
 
@@ -143,3 +145,22 @@ def _merge_traces(game0, game1, traces, thresh, trace_args): # pylint: disable=t
         inds = np.argsort(times)
         new_traces.append((times[inds], eqa[inds]))
     return new_traces
+
+
+def _smooth_trace(game0, game1, probs, eqa, trace_args):
+    """Smooth the equilibria in a trace in place
+
+    Smoothing attempts to trace out from one time to an adjacent time. If the
+    new point has lower regret, it's taken instead. This onle goes one
+    direction, so it should be repeated for reversed views.
+    """
+    for (pfrom, pto), (eqmfrom, eqmto) in zip(
+            utils.subsequences(probs), utils.subsequences(eqa)):
+        (*_, pres), (*_, eqmres) = trace.trace_equilibrium( # pylint: disable=too-many-star-expressions
+            game0, game1, pfrom, eqmfrom, pto, **trace_args)
+        if np.isclose(pres, pto):
+            mixgame = rsgame.mix(game0, game1, pto)
+            regto = regret.mixture_regret(mixgame, eqmto)
+            regres = regret.mixture_regret(mixgame, eqmres)
+            if regres < regto:
+                np.copyto(eqmto, eqmres)
