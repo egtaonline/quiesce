@@ -7,6 +7,7 @@ from gameanalysis import utils
 from egta import profsched
 
 
+# FIXME Add delay dist for testing unscheduled payoffs
 # TODO Add common random seed for deterministic runs.
 
 

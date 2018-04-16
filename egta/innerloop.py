@@ -171,7 +171,6 @@ async def inner_loop( # pylint: disable=too-many-locals
                 continue
             sub = rest.copy()
             sub[role_start + strat_ind] = True
-            # XXX Tie id to deterministic random source
             heapq.heappush(back, (-gain, id(sub), sub))  # id for tie-breaking
 
     restrictions = (

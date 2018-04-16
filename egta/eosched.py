@@ -79,7 +79,6 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         scheduled, _, claimed, prof_id, pays = data
         claimed[0] += 1
         if scheduled[0] < claimed[0]:
-            # TODO make requests async
             scheduled[0] += self._simult_obs
             async with self._sched_lock:
                 for _ in range(self._simult_obs):
@@ -112,9 +111,6 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
                         continue
                     egta_prof = await self._api.get_profile(prof_id)
                     jobs = await egta_prof.get_observations()
-                    # TODO Is this still necessary
-                    # valid = all(o['symmetry_groups'] is not None for o
-                    #             in jobs['observations'])
                     obs = self._game.samplepay_from_json(jobs)
                     num = obs.shape[0] - received[0]
                     # Only un-schedule the amount different than what you
