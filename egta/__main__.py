@@ -28,8 +28,8 @@ async def amain(*argv): # pylint: disable=too-many-locals
 
     # Standard arguments
     parser.add_argument(
-        '--version', '-V', action='version', version=egta.__version__,
-        help="""print version and exit""")
+        '--version', '-V', action='version',
+        version='%(prog)s {}'.format(egta.__version__))
     parser.add_argument(
         '--output', '-o', metavar='<output-file>', type=argparse.FileType('w'),
         default=sys.stdout, help="""The file to write the output to. (default:
