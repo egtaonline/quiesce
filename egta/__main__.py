@@ -7,6 +7,7 @@ import smtplib
 import sys
 import traceback
 
+import egta
 from egta.script import bootstrap
 from egta.script import brute
 from egta.script import innerloop
@@ -26,6 +27,9 @@ async def amain(*argv): # pylint: disable=too-many-locals
         to the game profile scheduler.""")
 
     # Standard arguments
+    parser.add_argument(
+        '--version', '-V', action='version', version=egta.__version__,
+        help="""print version and exit""")
     parser.add_argument(
         '--output', '-o', metavar='<output-file>', type=argparse.FileType('w'),
         default=sys.stdout, help="""The file to write the output to. (default:
