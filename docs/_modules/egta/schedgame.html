@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.schedgame &#8212; Empirical Game-Theoretic Analysis 0.0.40 documentation</title>
+    <title>egta.schedgame &#8212; Empirical Game-Theoretic Analysis 0.1.0 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.40 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.1.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -36,7 +36,8 @@
           <div class="body" role="main">
             
   <h1>Source code for egta.schedgame</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span></span><span class="sd">&quot;&quot;&quot;Module for handling async games defined by schedulers&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -49,17 +50,29 @@
 <span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">asyncgame</span>
 
 
-<div class="viewcode-block" id="ReductionSchedulerGame"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.ReductionSchedulerGame">[docs]</a><span class="k">class</span> <span class="nc">ReductionSchedulerGame</span><span class="p">(</span><span class="n">asyncgame</span><span class="o">.</span><span class="n">AsyncGame</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_ReductionSchedulerGame</span><span class="p">(</span><span class="n">asyncgame</span><span class="o">.</span><span class="n">_AsyncGame</span><span class="p">):</span> <span class="c1"># pylint: disable=protected-access</span>
+    <span class="sd">&quot;&quot;&quot;A scheduler game that implicitly has a reduction&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="p">,</span> <span class="n">red_players</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sched</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">sched</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span>
                          <span class="n">sched</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sched</span> <span class="o">=</span> <span class="n">sched</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">=</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span>
-            <span class="n">red</span><span class="o">.</span><span class="n">reduce_game</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">red_players</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">=</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span>
+            <span class="n">red</span><span class="o">.</span><span class="n">reduce_game</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">red_players</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_red</span> <span class="o">=</span> <span class="n">red</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span> <span class="o">=</span> <span class="p">{}</span>
 
+    <span class="k">def</span> <span class="nf">get_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">profs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">pays</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">hprof</span><span class="p">,</span> <span class="n">fpay</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_profiles</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">fpay</span><span class="o">.</span><span class="n">done</span><span class="p">():</span>
+                <span class="n">profs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hprof</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+                <span class="n">pays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fpay</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap</span><span class="p">(</span><span class="n">paygame</span><span class="o">.</span><span class="n">game_replace</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">profs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">pays</span><span class="p">)))</span>
+
     <span class="k">async</span> <span class="k">def</span> <span class="nf">_get_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a game from the profiles to sample&quot;&quot;&quot;</span>
         <span class="n">futures</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">prof</span> <span class="ow">in</span> <span class="n">profs</span><span class="p">:</span>
             <span class="n">hprof</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">prof</span><span class="p">)</span>
@@ -74,38 +87,44 @@
         <span class="k">return</span> <span class="n">paygame</span><span class="o">.</span><span class="n">game_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profs</span><span class="p">,</span> <span class="n">pays</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_rprofs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the restricted profiles for a restriction&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">restrict</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="o">.</span><span class="n">expand_profiles</span><span class="p">(</span>
-                <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span>
+                <span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span><span class="o">.</span><span class="n">all_profiles</span><span class="p">()),</span>
             <span class="n">rest</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ReductionSchedulerGame.get_restricted_game"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.ReductionSchedulerGame.get_restricted_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: scheduling restriction </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">restriction_to_repr</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
-        <span class="n">game</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_game</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rprofs</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span></div>
-            <span class="n">game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_wrap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Wraps a game so it has reduced deviation payoffs&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span>
+            <span class="n">game</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="o">.</span><span class="n">reduce_game</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">))</span>
 
-<div class="viewcode-block" id="ReductionSchedulerGame.get_deviation_game"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.ReductionSchedulerGame.get_deviation_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: scheduling deviations from </span><span class="si">%s%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span>
+            <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: scheduling restriction </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">restriction_to_repr</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
+        <span class="n">game</span> <span class="o">=</span> <span class="p">(</span><span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_game</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rprofs</span><span class="p">(</span><span class="n">rest</span><span class="p">)))</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: scheduling deviations from </span><span class="si">%s%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">restriction_to_repr</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span>
             <span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">role_index</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39; by role &#39;</span> <span class="o">+</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">role_names</span><span class="p">[</span><span class="n">role_index</span><span class="p">])</span>
         <span class="n">dprofs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="o">.</span><span class="n">expand_deviation_profiles</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">,</span> <span class="n">role_index</span><span class="p">)</span>
         <span class="n">rprofs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rprofs</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
-        <span class="n">game</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_game</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">rprofs</span><span class="p">,</span> <span class="n">dprofs</span><span class="p">]))</span></div>
-        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
+        <span class="n">game</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_game</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">rprofs</span><span class="p">,</span> <span class="n">dprofs</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sched</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="schedgame"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.schedgame">[docs]</a><span class="k">def</span> <span class="nf">schedgame</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="o">=</span><span class="n">idr</span><span class="p">,</span> <span class="n">red_players</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></div>
-    <span class="k">return</span> <span class="n">ReductionSchedulerGame</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="p">,</span> <span class="n">red_players</span><span class="p">)</span>
+<div class="viewcode-block" id="schedgame"><a class="viewcode-back" href="../../egta.schedgame.html#egta.schedgame.schedgame">[docs]</a><span class="k">def</span> <span class="nf">schedgame</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="o">=</span><span class="n">idr</span><span class="p">,</span> <span class="n">red_players</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a scheduler game&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_ReductionSchedulerGame</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">red</span><span class="p">,</span> <span class="n">red_players</span><span class="p">)</span></div>
 
 
 <span class="c1"># TODO This should be moved to game analysis, when the appropriate contract can</span>
@@ -114,16 +133,15 @@
 <span class="c1"># restrictions checks that profiles are in the game, instead of whether</span>
 <span class="c1"># deviation data exists... Which is accurate, but not what we would want for</span>
 <span class="c1"># these style of reduced games.</span>
-<span class="k">class</span> <span class="nc">_ReductionGame</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">RsGame</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_ReductionGame</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">_RsGame</span><span class="p">):</span> <span class="c1"># pylint: disable=protected-access</span>
     <span class="sd">&quot;&quot;&quot;A game with only reduced profiles</span>
 
 <span class="sd">    This is a wrapper so reduced games look full.&quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">reduction</span><span class="p">,</span> <span class="n">red_players</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">rgame</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">=</span> <span class="n">game</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">=</span> <span class="n">reduction</span><span class="o">.</span><span class="n">reduce_game</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="n">red_players</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_red</span> <span class="o">=</span> <span class="n">reduction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">=</span> <span class="n">rgame</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">num_complete_profiles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -139,12 +157,12 @@
     <span class="k">def</span> <span class="nf">payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">payoffs</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">deviation_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">jacobian</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">deviation_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mixture</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">jacobian</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">deviation_payoffs</span><span class="p">(</span>
-            <span class="n">mix</span><span class="p">,</span> <span class="n">jacobian</span><span class="o">=</span><span class="n">jacobian</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">mixture</span><span class="p">,</span> <span class="n">jacobian</span><span class="o">=</span><span class="n">jacobian</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">get_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profiles</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">get_payoffs</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">get_payoffs</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">max_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">max_strat_payoffs</span><span class="p">()</span>
@@ -152,16 +170,21 @@
     <span class="k">def</span> <span class="nf">min_strat_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">min_strat_payoffs</span><span class="p">()</span>
 
-    <span class="c1"># FIXME These could be made more efficient by just taking the reduced game</span>
-    <span class="c1"># at input and normalizing it here, however, this is a preliminary</span>
-    <span class="c1"># implementation, and so not worth the efficiency.</span>
-    <span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">normalize</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_add_constant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constant</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">+</span> <span class="n">constant</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">+</span> <span class="n">constant</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_multiply_constant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constant</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">*</span> <span class="n">constant</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">*</span> <span class="n">constant</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">othr</span><span class="p">):</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">othr</span><span class="p">,</span> <span class="n">_ReductionGame</span><span class="p">),</span> <span class="s1">&#39;no efficient add&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_red</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">+</span> <span class="n">othr</span><span class="o">.</span><span class="n">_game</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">+</span> <span class="n">othr</span><span class="o">.</span><span class="n">_rgame</span><span class="p">)</span> <span class="c1"># pylint: disable=protected-access</span>
+
+    <span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">restriction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_ReductionGame</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">restriction</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">restriction</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">profile</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span>
@@ -170,10 +193,11 @@
     <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_game</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_rgame</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">othr</span><span class="p">):</span>
+        <span class="c1"># pylint: disable-msg=protected-access</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">othr</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_game</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_rgame</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_rgame</span><span class="p">)</span>
 </pre></div>
 
           </div>
@@ -206,13 +230,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.40 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.1.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.2.
     </div>
   </body>
 </html>

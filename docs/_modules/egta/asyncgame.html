@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.asyncgame &#8212; Empirical Game-Theoretic Analysis 0.0.40 documentation</title>
+    <title>egta.asyncgame &#8212; Empirical Game-Theoretic Analysis 0.1.0 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
@@ -25,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.40 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.1.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -36,100 +36,124 @@
           <div class="body" role="main">
             
   <h1>Source code for egta.asyncgame</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">abc</span>
+<span></span><span class="sd">&quot;&quot;&quot;module for games that require asynchronous profile access&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">abc</span>
 <span class="kn">import</span> <span class="nn">asyncio</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
-<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">mergegame</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">utils</span>
 
 
-<div class="viewcode-block" id="AsyncGame"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.AsyncGame">[docs]</a><span class="k">class</span> <span class="nc">AsyncGame</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">GameLike</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_AsyncGame</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">_GameLike</span><span class="p">):</span> <span class="c1"># pylint: disable=protected-access</span>
     <span class="sd">&quot;&quot;&quot;An asynchronous game</span>
 
 <span class="sd">    Supports asynchronous methods for ensuring particular payoff data&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="AsyncGame.get_restricted_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.AsyncGame.get_restricted_game">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return a complete restricted game&quot;&quot;&quot;</span></div>
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all data available&quot;&quot;&quot;</span>
         <span class="k">pass</span>  <span class="c1"># pragma: no cover</span>
 
-<div class="viewcode-block" id="AsyncGame.get_deviation_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.AsyncGame.get_deviation_game">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a complete restricted game&quot;&quot;&quot;</span>
+        <span class="k">pass</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return a game with payoff data for all deviations</span>
 
 <span class="sd">        If role index is specified, only deviations from that role are</span>
-<span class="sd">        necessary.&quot;&quot;&quot;</span></div></div>
+<span class="sd">        necessary.&quot;&quot;&quot;</span>
         <span class="k">pass</span>  <span class="c1"># pragma: no cover</span>
 
 
-<div class="viewcode-block" id="CompleteAsyncGame"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.CompleteAsyncGame">[docs]</a><span class="k">class</span> <span class="nc">CompleteAsyncGame</span><span class="p">(</span><span class="n">AsyncGame</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_CompleteAsyncGame</span><span class="p">(</span><span class="n">_AsyncGame</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A wrapper for a complete RsGame&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">=</span> <span class="n">game</span>
 
-<div class="viewcode-block" id="CompleteAsyncGame.get_restricted_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.CompleteAsyncGame.get_restricted_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span></div>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
-
-<div class="viewcode-block" id="CompleteAsyncGame.get_deviation_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.CompleteAsyncGame.get_deviation_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></div>
+    <span class="k">def</span> <span class="nf">get_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span>
 
-    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">()</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_game</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_game</span> <span class="c1"># pylint: disable=protected-access</span>
 
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></div>
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="wrap"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.wrap">[docs]</a><span class="k">def</span> <span class="nf">wrap</span><span class="p">(</span><span class="n">game</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Wrap a CompleteGame as an AsyncGame&quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">game</span><span class="o">.</span><span class="n">is_complete</span><span class="p">(),</span> <span class="s2">&quot;must use a complete game&quot;</span></div>
-    <span class="k">return</span> <span class="n">CompleteAsyncGame</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">is_complete</span><span class="p">(),</span> <span class="s1">&#39;must use a complete game&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_CompleteAsyncGame</span><span class="p">(</span><span class="n">game</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="MergedAsyncGame"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.MergedAsyncGame">[docs]</a><span class="k">class</span> <span class="nc">MergedAsyncGame</span><span class="p">(</span><span class="n">AsyncGame</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_MixedAsyncGame</span><span class="p">(</span><span class="n">_AsyncGame</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A lazy merging of two async games&quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">prob</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">agame0</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">agame0</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">agame0</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span> <span class="o">=</span> <span class="n">agame0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span> <span class="o">=</span> <span class="n">agame1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_t</span> <span class="o">=</span> <span class="n">t</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prob</span> <span class="o">=</span> <span class="n">prob</span>
 
-<div class="viewcode-block" id="MergedAsyncGame.get_restricted_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.MergedAsyncGame.get_restricted_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">mix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="o">.</span><span class="n">get_game</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="o">.</span><span class="n">get_game</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_restricted_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
         <span class="n">game0</span><span class="p">,</span> <span class="n">game1</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="o">.</span><span class="n">get_restricted_game</span><span class="p">(</span><span class="n">rest</span><span class="p">),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="o">.</span><span class="n">get_restricted_game</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span></div>
-        <span class="k">return</span> <span class="n">mergegame</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">game0</span><span class="p">,</span> <span class="n">game1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="o">.</span><span class="n">get_restricted_game</span><span class="p">(</span><span class="n">rest</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">mix</span><span class="p">(</span><span class="n">game0</span><span class="p">,</span> <span class="n">game1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MergedAsyncGame.get_deviation_game"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.MergedAsyncGame.get_deviation_game">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_deviation_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">game0</span><span class="p">,</span> <span class="n">game1</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="o">.</span><span class="n">get_deviation_game</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="p">),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="o">.</span><span class="n">get_deviation_game</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="p">))</span></div>
-        <span class="k">return</span> <span class="n">mergegame</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">game0</span><span class="p">,</span> <span class="n">game1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="o">.</span><span class="n">get_deviation_game</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">role_index</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">mix</span><span class="p">(</span><span class="n">game0</span><span class="p">,</span> <span class="n">game1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">othr</span><span class="p">):</span>
+        <span class="c1"># pylint: disable-msg=protected-access</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">othr</span><span class="p">)</span> <span class="ow">and</span> <span class="p">((</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_agame0</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_agame1</span> <span class="ow">and</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">_prob</span><span class="p">)</span>
+            <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_agame1</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span> <span class="o">==</span> <span class="n">othr</span><span class="o">.</span><span class="n">_agame0</span> <span class="ow">and</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">othr</span><span class="o">.</span><span class="n">_prob</span><span class="p">)</span>
+            <span class="p">)))</span>
+
+    <span class="nd">@utils</span><span class="o">.</span><span class="n">memoize</span>
     <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_agame0</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_agame1</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_t</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_t</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">frozenset</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="p">]))</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> - </span><span class="si">{:g}</span><span class="s1"> - </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span></div>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> - </span><span class="si">{:g}</span><span class="s1"> - </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_agame0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agame1</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="merge"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.merge">[docs]</a><span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Merge two async games&quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">agame0</span><span class="p">)</span> <span class="o">==</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">emptygame_copy</span><span class="p">(</span><span class="n">agame1</span><span class="p">)</span></div>
-    <span class="k">return</span> <span class="n">MergedAsyncGame</span><span class="p">(</span><span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+<div class="viewcode-block" id="mix"><a class="viewcode-back" href="../../egta.asyncgame.html#egta.asyncgame.mix">[docs]</a><span class="k">def</span> <span class="nf">mix</span><span class="p">(</span><span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">prob</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Mix two async games&quot;&quot;&quot;</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
+        <span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span><span class="n">agame0</span><span class="p">)</span> <span class="o">==</span> <span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span><span class="n">agame1</span><span class="p">),</span>
+        <span class="s1">&#39;games must have identically structure&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_MixedAsyncGame</span><span class="p">(</span><span class="n">agame0</span><span class="p">,</span> <span class="n">agame1</span><span class="p">,</span> <span class="n">prob</span><span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -162,13 +186,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.0.40 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.1.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.2.
     </div>
   </body>
 </html>
