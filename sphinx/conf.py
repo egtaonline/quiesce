@@ -39,9 +39,10 @@ class OrderingMock(mock.MagicMock):
         self.__gt__ = lambda _, __: True
         self.__ge__ = lambda _, __: True
 
-MOCK_MODULES = ['numpy', 'numpy.random', 'scipy', 'scipy.misc',
-                'scipy.special', 'scipy.stats', 'scipy.optimize',
-                'scipy.sparse', 'sklearn']
+MOCK_MODULES = [
+    'numpy', 'numpy.random', 'numpy.lib', 'scipy', 'scipy.misc',
+    'scipy.special', 'scipy.stats', 'scipy.optimize', 'scipy.sparse',
+    'sklearn']
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = OrderingMock()
