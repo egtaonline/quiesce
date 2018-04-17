@@ -14,6 +14,8 @@ from egta.script import innerloop
 from egta.script import trace
 
 
+# TODO Create outerloop, a version that takes a whole game will require that
+# asyncgames implement restrict.
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
 

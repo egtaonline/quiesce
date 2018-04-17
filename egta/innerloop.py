@@ -14,8 +14,16 @@ from gameanalysis import restrict
 # TODO There's something to be said about individual rationality constraints
 # relative to best deviation, i.e. if all are positive gains, but negative
 # payoff, that might mean we should warn, or at least explore something else.
-
-
+# TODO Restrict size should maybe be a num strats per role and set such that
+# and restriction that has less than the number of profiles is valid. For
+# backwards compatibility, it'd be nice to have a good way to interpret a
+# single number for games with multiple roles, potentially the division that
+# produces the maximum number of profiles?
+# TODO Schedule restriction should only schedule if equilibria < num or haven't
+# started queuing backups
+# TODO It'd be cool to have an option to explore better responses proportional
+# to gain instead of best response. This would require a deterministic random
+# seed in order to get consistent output.
 async def inner_loop( # pylint: disable=too-many-locals
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
@@ -210,7 +218,9 @@ async def inner_loop( # pylint: disable=too-many-locals
                         continue
                     rest = mask.copy()
                     # TODO We could randomize instead of taking the first
-                    # strategy, but this would remove reproducability
+                    # strategy, but this would remove reproducability unless it
+                    # was somehow predicated on all of the explored
+                    # restrictions or something...
                     strat = np.split(rest, agame.role_starts[1:])[role].argmin()
                     rest[agame.role_starts[role] + strat] = True
                     restrictions.add(rest)
