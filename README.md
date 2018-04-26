@@ -24,36 +24,35 @@ Below are some example uses
 1. Perform the quiesce routine on a game that already has game data.
    One can also add noise to the payoffs for testing of equilibria procedures but this will just run it with no noise.
 
-   ```
-   egta --game-json cdasim/data_game.json quiesce game --load-game
+   ```bash
+   egta quiesce game:game:cdasim/data_game.json
    ```
 
 2. Perform the quiesce routine on a game that's defined by a command line simulator.
    This will get profile data by sampling from the cdasim python simulator.
 
-   ```
-   egta --game-json cdasim/small_game.json quiesce sim -- python3 cdasim/sim.py 1 --single
+   ```bash
+   egta quiesce 'sim:game:cdasim/small_game.json,command:python3 cdasim/sim.py 1 --single'
    ```
 
    By default the quiesce routine only uses one payoff sample per profile.
-   Setting `--count` to a larger number will help reduce the noise.
+   Adding `,count:<number>` to the description will help reduce the noise.
 
 3. Perform the quiesce routine on a game that's defined by an EGTA Online zip file.
    This will get profile by calling the batch script from a zip file the same way as EGTA Online.
    To accomplish this, this repository has a zip scheduler that takes a zip file and schedules like EGTA Online does.
 
-   ```
-   egta --game-json cdasim/small_game.json quiesce zip cdasim/cdasim.zip
+   ```bash
+   egta quiesce zip:game:cdasim/small_game.json,zipf:cdasim/cdasim.zip
    ```
 
-3. Perform the quiesce routine on a game with information on EGTA Online.
+4. Perform the quiesce routine on a game with information on EGTA Online.
    The parameters specified here are for the same simulation that was uploaded there.
 
-   ```
-   egta --game-id 1466 quiesce --dpr buyers:2,sellers:2 egta --sim-memory 2048 --sim-time 60
+   ```bash
+   egta quiesce eo:game:1466,mem:2048,time:60 --dpr buyers:2,sellers:2
    ```
 
-   Note: To use this method, your EGTA Online credentials must be stored in a place where the python api can find them.
    Note: This game has already been solved, so this call will only fetch the initial game and then solve it without scheduling more profiles.
 
 
