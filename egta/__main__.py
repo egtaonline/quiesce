@@ -11,6 +11,7 @@ import egta
 from egta.script import bootstrap
 from egta.script import brute
 from egta.script import innerloop
+from egta.script import schedspec
 from egta.script import trace
 
 
@@ -19,8 +20,9 @@ from egta.script import trace
 # TODO Create a scheduler that runs jobs on flux, but without going through
 # egta online, potentially using spark
 
-async def amain(*argv): # pylint: disable=too-many-locals
-    """Async entry point for arbitrary command line arguments"""
+
+def create_parser():
+    """Create parser"""
     parser = argparse.ArgumentParser(
         description="""Command line egta. To run, both an equilibrium finding
         method and a profile scheduler must be specified. Each element
@@ -54,12 +56,24 @@ async def amain(*argv): # pylint: disable=too-many-locals
     eq_methods = parser.add_subparsers(
         title='operations', dest='method', metavar='<operation>', help="""The
         operation to run on the game. Available commands are:""")
-    for module in [brute, bootstrap, innerloop, trace]:
+
+    class _Wrap(str):
+        async def run(self, args):
+            return await eq_methods.choices[self].run(args)
+
+    eq_methods.required = True
+    eq_methods.type = _Wrap
+    for module in [brute, bootstrap, innerloop, trace, schedspec]:
         module.add_parser(eq_methods)
 
+    return parser
+
+
+async def amain(*argv): # pylint: disable=too-many-locals
+    """Async entry point for arbitrary command line arguments"""
     # Parse args and process
+    parser = create_parser()
     args = parser.parse_args(argv)
-    method = eq_methods.choices[args.method]
 
     tag = '' if args.tag is None else ' ' + args.tag
 
@@ -92,7 +106,7 @@ async def amain(*argv): # pylint: disable=too-many-locals
     logging.basicConfig(level=0, handlers=log_handlers)
 
     try:
-        await method.run(args)
+        await args.method.run(args)
 
     except KeyboardInterrupt as ex:  # pragma: no cover
         logging.critical('execution interrupted by user')

@@ -5,6 +5,7 @@ import itertools
 import json
 import shutil
 import textwrap
+from os import path
 
 from gameanalysis import reduction
 
@@ -41,6 +42,23 @@ def parse_reduction(game, args):
     return red, red_players
 
 
+def pos_int(string):
+    """Type for a positive integer"""
+    val = int(string)
+    if val <= 0:
+        raise argparse.ArgumentTypeError(
+            '{:d} is an invalid positive int value'.format(string))
+    return val
+
+
+def check_file(string):
+    """Type for a file that exists"""
+    if not string == '-' and not os.path.isfile(string):
+        raise argparse.ArgumentTypeError(
+            '{} is not a file'.format(string))
+    return string
+
+
 _TYPES = {
     'zip': zipsched.create_scheduler,
     'sim': simsched.create_scheduler,
@@ -60,74 +78,6 @@ async def parse_scheduler(string):
     if count > 1:
         base = CountWrapper(base, count)
     return base
-
-
-def add_scheduler_epilog(parser, help_indent=15):
-    """Epilog for scheduler format"""
-    width, _ = shutil.get_terminal_size((80, 20))
-    indent = ' ' * help_indent
-    parser.formatter_class = argparse.RawDescriptionHelpFormatter
-    parser.description = textwrap.fill(
-        ' '.join(parser.description.split()), width=width)
-
-    epilog = ['scheduler specification:', '']
-    epilog.append(textwrap.fill(
-        ' '.join("""
-A scheduler specification tells egta how to get samples of profiles. Their
-format looks like `<type>:[param:value][,param:value]...`. Each scheduler type
-and their supported parameters are listed below. For example:""".split()),
-        width=width))
-    epilog.extend(['', 'eo:game:827,mem:2048,time:600', ''])
-    epilog.append(textwrap.fill(' '.join("""
-Represents an egtaonline scheduler for game 827 with 2048 MB and 600 seconds
-per observation.""".split())))
-    epilog.append('')
-    for name, func in itertools.chain(
-            [('<global>', _global)], sorted(_TYPES.items())):
-        start = '  ' + name
-        desc = inspect.getdoc(func) or ''
-        desc = ' '.join(desc.split())
-        if len(start) < help_indent - 1:
-            epilog.extend(textwrap.wrap(
-                '{:{}}{}'.format(start, help_indent, desc), width=width,
-                subsequent_indent=indent))
-        else:
-            epilog.append(start)
-            epilog.extend(textwrap.wrap(
-                desc, width=width, initial_indent=indent,
-                subsequent_indent=indent))
-
-        for pname, param in inspect.signature(func).parameters.items():
-            if pname == '_':
-                continue
-            start = '    ' + pname
-            desc = ''
-            if param.annotation is not inspect._empty:  # pragma: no branch pylint: disable=protected-access
-                desc += param.annotation
-            if param.default is not None:
-                desc += ' (default: {})'.format(param.default)
-            desc = ' '.join(desc.split())
-            if len(start) < help_indent - 1:
-                epilog.extend(textwrap.wrap(
-                    '{:{}}{}'.format(start, help_indent, desc), width=width,
-                    subsequent_indent=indent))
-            else:
-                epilog.append(start)
-                epilog.extend(textwrap.wrap(
-                    desc, width=width, initial_indent=indent,
-                    subsequent_indent=indent))
-        epilog.append('')
-    parser.epilog = '\n'.join(epilog)
-
-
-def _global(
-        # pylint: disable-msg=unused-argument
-        count: """The number of samples to compute for one payoff
-        observations.""" = '1',
-        save: """A file to save all sampled profile data to as a sample
-        game.""" = None):
-    """Global parameters that apply to all schedulers."""
-    pass  # pragma: no cover
 
 
 class SaveWrapper(savesched._SaveScheduler): # pylint: disable=protected-access
