@@ -58,7 +58,9 @@ def create_parser():
         operation to run on the game. Available commands are:""")
 
     class _Wrap(str):
+        """A class that allows getting the run command from sub command"""
         async def run(self, args):
+            """Run the sub command"""
             return await eq_methods.choices[self].run(args)
 
     eq_methods.required = True

@@ -9,6 +9,7 @@ from gameanalysis import regret
 from gameanalysis import restrict
 
 from egta import schedgame
+from egta.script import schedspec
 from egta.script import utils
 
 
@@ -23,7 +24,7 @@ def add_parser(subparsers):
         game.""")
     parser.add_argument(
         'scheduler', metavar='<sched-spec>', help="""A scheduler specification,
-        see below.""")
+        see `egta spec` for more info.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -48,14 +49,12 @@ def add_parser(subparsers):
         '--min-reg', action='store_true', help="""Return the minimum regret
         profile found, if none were found below regret threshold.""")
     utils.add_reductions(parser)
-    utils.add_scheduler_epilog(parser)
     parser.run = run
-    return parser
 
 
 async def run(args):
     """Brute force entry point"""
-    sched = await utils.parse_scheduler(args.scheduler)
+    sched = await schedspec.parse_scheduler(args.scheduler)
     red, red_players = utils.parse_reduction(sched, args)
 
     rest = (np.ones(sched.num_strats, bool) if args.restrict is None

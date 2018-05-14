@@ -6,7 +6,7 @@ import logging
 import numpy as np
 
 from egta import bootstrap
-from egta.script import utils
+from egta.script import schedspec
 
 
 def add_parser(subparsers):
@@ -20,7 +20,7 @@ def add_parser(subparsers):
         string representation of the percentile.""")
     parser.add_argument(
         'scheduler', metavar='<sched-spec>', help="""A scheduler specification,
-        see below.""")
+        see `egta spec` for more info.""")
     parser.add_argument(
         'mixture', metavar='<mixture-file>', type=argparse.FileType('r'),
         help="""A file with the json formatted mixture to compute the regret
@@ -51,14 +51,12 @@ def add_parser(subparsers):
         '--standard', action='store_true', help="""Force output to be
         consistent irrespective of if percentiles is specified or the game is
         symmetric.""")
-    utils.add_scheduler_epilog(parser)
     parser.run = run
-    return parser
 
 
 async def run(args): # pylint: disable=too-many-locals
     """Bootstrap entry point"""
-    sched = await utils.parse_scheduler(args.scheduler)
+    sched = await schedspec.parse_scheduler(args.scheduler)
     if not args.percentile:
         args.boots = 0
     mix = sched.mixture_from_json(json.load(args.mixture))

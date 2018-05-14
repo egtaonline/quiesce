@@ -1,20 +1,8 @@
 """Utilities for command line modules"""
 import argparse
-import inspect
-import itertools
-import json
-import shutil
-import textwrap
-from os import path
+import os
 
 from gameanalysis import reduction
-
-from egta import countsched
-from egta import savesched
-from egta.script import eosched
-from egta.script import gamesched
-from egta.script import simsched
-from egta.script import zipsched
 
 
 def add_reductions(parser):
@@ -57,50 +45,3 @@ def check_file(string):
         raise argparse.ArgumentTypeError(
             '{} is not a file'.format(string))
     return string
-
-
-_TYPES = {
-    'zip': zipsched.create_scheduler,
-    'sim': simsched.create_scheduler,
-    'game': gamesched.create_scheduler,
-    'eo': eosched.create_scheduler,
-}
-
-
-async def parse_scheduler(string):
-    """Return a scheduler for a string specification"""
-    stype, args, *_ = itertools.chain(string.split(':', 1), [''])
-    args = dict(s.split(':', 1) for s in args.split(',') if s)
-    base = await _TYPES[stype](**args)
-    if 'save' in args:
-        base = SaveWrapper(base, args['save'])
-    count = int(args.get('count', '1'))
-    if count > 1:
-        base = CountWrapper(base, count)
-    return base
-
-
-class SaveWrapper(savesched._SaveScheduler): # pylint: disable=protected-access
-    """Make save scheduler an async context manager"""
-    def __init__(self, sched, dest):
-        super().__init__(sched)
-        self._dest = dest
-
-    async def __aenter__(self):
-        await self._sched.__aenter__()
-        return self
-
-    async def __aexit__(self, *args):
-        with open(self._dest, 'w') as fil:
-            json.dump(self.get_game().to_json(), fil)
-        await self._sched.__aexit__(*args)
-
-
-class CountWrapper(countsched._CountScheduler): # pylint: disable=protected-access
-    """Make count scheduler an async context manager"""
-    async def __aenter__(self):
-        await self._sched.__aenter__()
-        return self
-
-    async def __aexit__(self, *args):
-        await self._sched.__aexit__(*args)

@@ -86,8 +86,8 @@ def fix_sim_sched(jgame, tmpdir_factory):
     sim = ' '.join([
         path.join(BASE, '..', 'bin', 'python'), path.join(SIM_DIR, 'sim.py'),
         '1', '--single'])
-    return 'sim:game:{},conf:{},command:{}'.format(
-        SIM_GAME_FILE, conf_file, sim)
+    return 'sim:command:{},conf:{},game:{}'.format(
+        sim, conf_file, SIM_GAME_FILE)
 
 
 @pytest.fixture(scope='session', name='zip_sched')
@@ -133,6 +133,8 @@ async def test_help():
         assert await run('boot', '--help'), err.getvalue()
     with stderr() as err:
         assert await run('trace', '--help'), err.getvalue()
+    with stderr() as err:
+        assert await run('spec', '--help'), err.getvalue()
 
 
 @pytest.mark.asyncio
@@ -463,7 +465,7 @@ async def test_boot_symmetric(tmpdir):
         json.dump(game.mixture_to_json(game.random_mixture()), fil)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
-            'boot', 'game', mix_file, '10'), err.getvalue()
+            'boot', 'game:game:-', mix_file, '10'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'surplus', 'regret', 'response'} == results.keys()
 
@@ -477,7 +479,7 @@ async def test_boot_symmetric_percs(tmpdir):
         json.dump(game.mixture_to_json(game.random_mixture()), fil)
     with stdin(json.dumps(game.to_json())), stdout() as out, stderr() as err:
         assert await run(
-            'boot', 'game', mix_file, '10', '-p95'), err.getvalue()
+            'boot', 'game:game:-', mix_file, '10', '-p95'), err.getvalue()
         results = json.loads(out.getvalue())
     assert {'95', 'mean'} == results.keys()
     assert {'surplus', 'regret', 'response'} == results['mean'].keys()
@@ -513,3 +515,51 @@ async def test_boot_sim(game, sim_sched):
     assert {'total', 'buyers', 'sellers'} == results.keys()
     for val in results.values():
         assert {'surplus', 'regret', 'response'} == val.keys()
+
+
+@pytest.mark.asyncio
+async def test_fix_game_sched(game_sched):
+    """Test that game scheduler fixture is correct"""
+    _, args_str = game_sched.split(':', 1)
+    args = dict(kv.split(':', 1) for kv in args_str.split(','))
+    with stdout() as out, stderr() as err:
+        assert await run(
+            'spec', 'game', args['game']), err.getvalue()
+    assert sorted(out.getvalue()[:-1]) == sorted(game_sched)
+
+
+@pytest.mark.asyncio
+async def test_fix_sim_sched(sim_sched):
+    """Test that sim scheduler fixture is correct"""
+    _, args_str = sim_sched.split(':', 1)
+    args = dict(kv.split(':', 1) for kv in args_str.split(','))
+    with stdout() as out, stderr() as err:
+        assert await run(
+            'spec', '--count', '2', 'sim', args['game'], args['command'],
+            '--conf', args['conf']), err.getvalue()
+    assert sorted(out.getvalue()[:-1]) == sorted(sim_sched + ',count:2')
+
+
+@pytest.mark.asyncio
+async def test_fix_zip_sched(zip_sched):
+    """Test that zip scheduler fixture is correct"""
+    _, args_str = zip_sched.split(':', 1)
+    args = dict(kv.split(':', 1) for kv in args_str.split(','))
+    with stdout() as out, stderr() as err:
+        assert await run(
+            'spec', 'zip', args['game'], args['zipf']), err.getvalue()
+    assert sorted(out.getvalue()[:-1]) == sorted(zip_sched)
+
+
+@pytest.mark.asyncio
+async def test_game_sched_file_error():
+    """Test that game scheduler fixture is correct"""
+    assert not await run(
+        'spec', 'game', '/this/path/does/not/exist')
+
+
+@pytest.mark.asyncio
+async def test_game_sched_count_error():
+    """Test that game scheduler fixture is correct"""
+    assert not await run(
+        'spec', '--count', '-1', 'game', '-')

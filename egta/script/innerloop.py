@@ -8,6 +8,7 @@ from gameanalysis import regret
 
 from egta import innerloop
 from egta import schedgame
+from egta.script import schedspec
 from egta.script import utils
 
 
@@ -22,7 +23,7 @@ def add_parser(subparsers):
         an "equilibrium".""")
     parser.add_argument(
         'scheduler', metavar='<sched-spec>', help="""A scheduler specification,
-        see below.""")
+        see `egta spec` for more info.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -65,14 +66,12 @@ def add_parser(subparsers):
         will speed up computation if doing computationally intensive things
         simultaneously, i.e. nash finding. (default: %(default)d)""")
     utils.add_reductions(parser)
-    utils.add_scheduler_epilog(parser)
     parser.run = run
-    return parser
 
 
 async def run(args):
     """Entry point for cli"""
-    sched = await utils.parse_scheduler(args.scheduler)
+    sched = await schedspec.parse_scheduler(args.scheduler)
     red, red_players = utils.parse_reduction(sched, args)
     agame = schedgame.schedgame(sched, red, red_players)
 

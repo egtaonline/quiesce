@@ -1,29 +1,47 @@
 """Command line creation for egtaonline scheduler"""
+import argparse
+
 from egtaonline import api
 from gameanalysis import rsgame
-from gameanalysis import utils
 
 from egta import eosched
+from egta.script import utils
+
+
+def add_parser(subparsers):
+    """Create eosched parser"""
+    parser = subparsers.add_parser(
+        'eo', help="""Egtaonline""", description="""A scheduler that gets
+        payoff data from egtaonline.""")
+    parser.add_argument(
+        'game', metavar='<game-id>', type=utils.pos_int, help="""The game id of
+        the game to get profiles from.""")
+    parser.add_argument(
+        'mem', metavar='<mega-bytes>', type=utils.pos_int, help="""Memory in MB
+        for the scheduler.""")
+    parser.add_argument(
+        'time', metavar='<seconds>', type=utils.pos_int, help="""Time in
+        seconds for an observation.""")
+    parser.add_argument(
+        '--auth', metavar='<auth-token>', default=argparse.SUPPRESS,
+        help="""Auth string for egtaonline.""")
+    parser.add_argument(
+        '--sleep', default=argparse.SUPPRESS, metavar='<seconds>',
+        type=utils.pos_int, help="""Time to wait in seconds before querying
+        egtaonline to see if profiles are complete.  Due to the way flux and
+        egtaonline schedule jobs, this never needs to be less than 300.""")
+    parser.add_argument(
+        '--max', default=argparse.SUPPRESS, metavar='<num-jobs>',
+        type=utils.pos_int, help="""The maximum number of jobs to have active
+        on egtaonline at any specific time.""")
+    parser.create_scheduler = create_scheduler
 
 
 async def create_scheduler( # pylint: disable=too-many-arguments
-        game: """The game id of the game to get profiles from.
-        (required)""" = None,
-        mem: 'Memory in MB for the scheduler. (required)' = None,
-        time: 'Time in seconds for an observation. (required)' = None,
-        auth: 'Auth string for egtaonline.' = None,
-        count: """This scheduler is more efficient at sampling several
-        profiles.""" = '1',
-        sleep: """Time to wait in seconds before querying egtaonline to see if
-        profiles are complete. Due to the way flux and egtaonline schedule
-        jobs, this never needs to be less than 300.""" = '600',
+        game, mem, time, auth=None, count=1, sleep=600,
         # pylint: disable-msg=redefined-builtin
-        max: """The maximum number of jobs to have active on egtaonline at any
-        specific time.""" = '100', **_):
-    """A scheduler that gets payoff data from egtaonline."""
-    utils.check(game is not None, '`game` must be specified')
-    utils.check(mem is not None, '`mem` must be specified')
-    utils.check(time is not None, '`time` must be specified')
+        max=100):
+    """Create an egtaonline scheduler"""
     game_id = int(game)
     mem = int(mem)
     time = int(time)

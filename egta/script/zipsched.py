@@ -1,29 +1,42 @@
 """Create a zip scheduler from the command line"""
+import argparse
 import json
 import sys
 
 from gameanalysis import gamereader
-from gameanalysis import utils
 
 from egta import zipsched
+from egta.script import utils
 
 
-async def create_scheduler(
-        game: """A file with the description of the game to generate profiles
-        from. Only the basic game structure is necessary. `-` is interpreted as
-        stdin.""" = '-',
-        procs: """The maximum number of processes used to generate payoff
-        data.""" = '4',
-        zipf: """The zipfile to run. This must be identical to what would be
-        uploaded to egtaonline. (required)""" = None,
-        conf: """A file with the specific configuration to load. `-` is
-        interpreted as stdin. (default: {})""" = None,
-        count: """This scheduler is more efficient at sampling several
-        profiles.""" = '1', **_):
-    """Get payoffs from an egtaonline style simulator. This won't be as
-    efficient as using `sim`, but requires no modifications from an existing
-    egtaonline scheduler."""
-    utils.check(zipf is not None, '`zipf` must be specified')
+def add_parser(subparsers):
+    """Create zipsched parser"""
+    parser = subparsers.add_parser(
+        'zip', help="""An egtaonline zip file""", description="""Get payoffs
+        from an egtaonline style simulator.  This won't be as efficient as
+        using `sim`, but requires no modifications from an existing egtaonline
+        scheduler.""")
+    parser.add_argument(
+        'game', metavar='<game-file>', type=utils.check_file, help="""A file
+        with the description of the game to generate profiles from. Only the
+        basic game structure is necessary. `-` is interpreted as stdin.""")
+    parser.add_argument(
+        'zipf', metavar='<zip-file>', type=utils.check_file, help="""The
+        zipfile to run. This must be identical to what would be uploaded to
+        egtaonline.""")
+    parser.add_argument(
+        '--conf', metavar='<conf-file>', type=utils.check_file,
+        default=argparse.SUPPRESS, help="""A file with the specific
+        configuration to load. `-` is interpreted as stdin.  (default: {})""")
+    parser.add_argument(
+        '--procs', metavar='<num-procs>', type=utils.pos_int,
+        default=argparse.SUPPRESS, help="""The maximum number of processes used
+        to generate payoff data.""")
+    parser.create_scheduler = create_scheduler
+
+
+async def create_scheduler(game, zipf, procs=4, conf=None, count=1):
+    """Create a zip scheduler"""
     max_procs = int(procs)
     count = int(count)
 

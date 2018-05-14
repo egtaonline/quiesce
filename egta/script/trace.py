@@ -10,6 +10,7 @@ from gameanalysis import rsgame
 from egta import canonsched
 from egta import schedgame
 from egta import trace
+from egta.script import schedspec
 from egta.script import utils
 
 
@@ -28,10 +29,10 @@ def add_parser(subparsers):
         will also be omitted from equilibria as their answer is trivial.""")
     parser.add_argument(
         'sched0', metavar='<sched-spec-0>', help="""The scheduler specification
-        for the game when t is 0. See below.""")
+        for the game when t is 0. See `egta spec` for more info.""")
     parser.add_argument(
         'sched1', metavar='<sched-spec-1>', help="""The scheduler specification
-        for the game when t is 1. See below.""")
+        for the game when t is 1. See `egta spec` for more info.""")
     parser.add_argument(
         '--regret-thresh', metavar='<reg>', type=float, default=1e-3,
         help="""Regret threshold for a mixture to be considered an equilibrium.
@@ -77,15 +78,13 @@ def add_parser(subparsers):
         simultaneously, i.e. nash finding or ode solving. (default:
         %(default)d)""")
     utils.add_reductions(parser)
-    utils.add_scheduler_epilog(parser)
     parser.run = run
-    return parser
 
 
 async def run(args): # pylint: disable=too-many-locals
     """Command line entry point for tracing"""
-    sched0 = CanonWrapper(await utils.parse_scheduler(args.sched0))
-    sched1 = CanonWrapper(await utils.parse_scheduler(args.sched1))
+    sched0 = CanonWrapper(await schedspec.parse_scheduler(args.sched0))
+    sched1 = CanonWrapper(await schedspec.parse_scheduler(args.sched1))
     red, red_players = utils.parse_reduction(sched0, args)
     agame0 = schedgame.schedgame(sched0, red, red_players)
     agame1 = schedgame.schedgame(sched1, red, red_players)

@@ -1,4 +1,6 @@
+"""Command line create and help for scheduler specifications"""
 import argparse
+import json
 
 from egta import countsched
 from egta import savesched
@@ -15,7 +17,8 @@ def add_parser(subparsers):
         'spec', help="""Create and help for a scheduler specification""",
         description="""Create a scheduler specification for use with other
         methods. This can also be used to get information about what a
-        scheduler specification should look like.""")
+        scheduler specification should look like. A scheduler specification is
+        simply a string the describes how to generate payoffs for a game.""")
     parser.add_argument(
         '--save', metavar='<output-file>', default=argparse.SUPPRESS,
         help="""A file to save all sampled profile data to as a sample
@@ -27,13 +30,12 @@ def add_parser(subparsers):
 
     types = parser.add_subparsers(
         title='schedulers', dest='types', metavar='<scheduler-type>',
-        help="""The scheduler type. Available schedulers are:""")
+        help="""The scheduler type. Create a scheduler with data from:""")
+    parser.types = types
     types.required = True
-    for module in [gamesched]:
+    for module in [gamesched, eosched, simsched, zipsched]:
         module.add_parser(types)
-
     parser.run = run
-    return parser
 
 
 async def run(args):
@@ -51,11 +53,16 @@ async def run(args):
 
 async def parse_scheduler(string):
     """Return a scheduler for a string specification"""
-    stype, args, *_ = itertools.chain(string.split(':', 1), [''])
+    stype, args = string.split(':', 1)
     args = dict(s.split(':', 1) for s in args.split(',') if s)
+    count = int(args.get('count', '1'))
     save = args.pop('save', None)
-    count = int(args.pop('count', '1'))
-    base = await _TYPES[stype](**args)
+
+    subs = argparse.ArgumentParser().add_subparsers()
+    add_parser(subs)
+    choices = next(iter(subs.choices.values())).types.choices
+
+    base = await choices[stype].create_scheduler(**args)
     if save is not None:
         base = SaveWrapper(base, save)
     if count > 1:
