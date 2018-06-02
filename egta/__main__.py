@@ -1,6 +1,7 @@
 """Python script for performing egta"""
-import asyncio
 import argparse
+import asyncio
+import contextlib
 import logging
 from logging import handlers
 import smtplib
@@ -124,7 +125,13 @@ async def amain(*argv): # pylint: disable=too-many-locals
 def main():  # pragma: no cover
     """Entry point for egta cli"""
     loop = asyncio.get_event_loop()
+    task = asyncio.ensure_future(amain(*sys.argv[1:]))
     try:
-        loop.run_until_complete(amain(*sys.argv[1:]))
+        loop.run_until_complete(task)
+    except KeyboardInterrupt:
+        task.cancel()
+        loop.run_forever()
+        raise
     finally:
-        loop.close()
+        with contextlib.suppress(asyncio.CancelledError, SystemExit):
+            task.exception()

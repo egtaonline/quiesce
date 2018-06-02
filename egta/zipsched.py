@@ -122,8 +122,11 @@ class _ZipScheduler(profsched._OpenableScheduler): # pylint: disable=too-many-in
             self._prof_dir = tempfile.TemporaryDirectory()
             with zipfile.ZipFile(self.zipf) as zfil:
                 zfil.extractall(self._sim_dir.name)
-            sim_files = os.listdir(self._sim_dir.name)
-            utils.check(len(sim_files) == 1, 'improper zip format')
+            sim_files = [d for d in os.listdir(self._sim_dir.name)
+                         if d not in {'__MACOSX'}]
+            utils.check(
+                len(sim_files) == 1,
+                'improper zip format, only one file should exist in root')
             self._sim_root = os.path.join(self._sim_dir.name, sim_files[0])
             os.chmod(os.path.join(self._sim_root, 'script', 'batch'), 0o700)
 
