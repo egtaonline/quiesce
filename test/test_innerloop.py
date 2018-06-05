@@ -37,8 +37,7 @@ async def test_innerloop_game(players, strats):
     """Test that inner loop works for a game"""
     game = gamegen.samplegame(players, strats)
     sched = gamesched.gamesched(game)
-    eqas = await innerloop.inner_loop(
-        schedgame.schedgame(sched), dist_thresh=1e-3)
+    eqas = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqas)
     eqag = await innerloop.inner_loop(asyncgame.wrap(game))
     assert utils.allclose_perm(eqas, eqag, atol=1e-3, rtol=1e3)
