@@ -1,10 +1,12 @@
 """Tests for scheduler games"""
+import asyncio
 import pytest
 import numpy as np
 from gameanalysis import gamegen
 
 from egta import gamesched
 from egta import schedgame
+from test import utils # pylint: disable=wrong-import-order
 
 
 SIZES = [
@@ -106,3 +108,21 @@ async def test_random_normalize(players, strats, _):
     ngame = rgame.normalize()
     assert np.all(ngame.payoffs() >= -1e-7)
     assert np.all(ngame.payoffs() <= 1 + 1e-7)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('players,strats', SIZES)
+@pytest.mark.parametrize('when', ['pre', 'post'])
+@pytest.mark.parametrize('_', range(20))
+async def test_exception(players, strats, when, _):
+    """Test that exceptions are raised appropriately"""
+    game = gamegen.samplegame(players, strats)
+    sched = gamesched.samplegamesched(game)
+    esched = utils.ExceptionScheduler(sched, 10, when)
+    sgame = schedgame.schedgame(esched)
+    rests = np.concatenate([
+        game.random_restrictions(3),
+        np.ones((1, game.num_strats), bool)])
+    with pytest.raises(utils.SchedulerException):
+        await asyncio.gather(*[
+            sgame.get_restricted_game(rest) for rest in rests])

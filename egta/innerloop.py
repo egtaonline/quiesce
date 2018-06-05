@@ -94,8 +94,7 @@ async def inner_loop( # pylint: disable=too-many-locals
             return  # already explored
         if agame.is_pure_restriction(rest):
             # Short circuit for pure restriction
-            await add_deviations(rest, rest.astype(float), init_role_dev)
-            return
+            return await add_deviations(rest, rest.astype(float), init_role_dev)
         data = await agame.get_restricted_game(rest)
         reqa = await loop.run_in_executor(executor, functools.partial(
             nash.mixed_nash, data, regret_thresh=regret_thresh,

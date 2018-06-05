@@ -79,9 +79,10 @@ async def test_innerloop_by_role_simple(players, strats):
 async def test_innerloop_failures(players, strats, count, when):
     """Test that inner loop handles exceptions during scheduling"""
     game = gamegen.game(players, strats)
-    sched = ExceptionScheduler(game, count, when)
-    sgame = schedgame.schedgame(sched)
-    with pytest.raises(SchedulerException):
+    sched = gamesched.gamesched(game)
+    esched = tu.ExceptionScheduler(sched, count, when)
+    sgame = schedgame.schedgame(esched)
+    with pytest.raises(tu.SchedulerException):
         await innerloop.inner_loop(sgame, restricted_game_size=5)
 
 
@@ -163,27 +164,3 @@ async def test_at_least_one(players, strats, _):
     game = gamegen.game(players, strats)
     eqa = await innerloop.inner_loop(asyncgame.wrap(game), at_least_one=True)
     assert eqa.size
-
-
-class SchedulerException(Exception):
-    """Exception to be thrown by ExceptionScheduler"""
-    pass
-
-
-class ExceptionScheduler(gamesched._RsGameScheduler): # pylint: disable=protected-access
-    """Scheduler that allows triggering exeptions on command"""
-
-    def __init__(self, game, error_after, call_type):
-        super().__init__(game)
-        self._calls = 0
-        self._error_after = error_after
-        self._call_type = call_type
-
-    async def sample_payoffs(self, profile):
-        self._calls += 1
-        if self._error_after <= self._calls and self._call_type == 'pre':
-            raise SchedulerException
-        pay = await super().sample_payoffs(profile)
-        if self._error_after <= self._calls and self._call_type == 'post':
-            raise SchedulerException
-        return pay
