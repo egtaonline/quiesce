@@ -1,16 +1,33 @@
 """Module for test utilities"""
+import pytest
+import timeout_decorator
+from gameanalysis import rsgame
+
 from egta import profsched
 
 
-GAMES = [
-    ([1], [2]),
-    ([2], [2]),
-    ([2, 1], [1, 2]),
-    ([1, 2], [2, 1]),
-    ([2, 2], [2, 2]),
-    ([3, 2], [2, 3]),
-    ([1, 1, 1], [2, 2, 2]),
-]
+def games():
+    """Test games"""
+    yield rsgame.empty(1, 2)
+    yield rsgame.empty(2, 2)
+    yield rsgame.empty([2, 1], [1, 2])
+    yield rsgame.empty([1, 2], [2, 1])
+    yield rsgame.empty([2, 2], [2, 2])
+    yield rsgame.empty([3, 2], [2, 3])
+    yield rsgame.empty([1, 1, 1], 2)
+
+
+def timeout(seconds):
+    """Timeout test without error"""
+    def decorator(func):
+        """Decorator of function"""
+        for decorator in [
+                timeout_decorator.timeout(seconds),
+                pytest.mark.xfail(
+                    raises=timeout_decorator.timeout_decorator.TimeoutError)]:
+            func = decorator(func)
+        return func
+    return decorator
 
 
 class SchedulerException(Exception):

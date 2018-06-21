@@ -43,7 +43,7 @@ docs:
 clean:
 	rm -rf build bin include lib lib64 man share pyvenv.cfg dist egta.egg-info __pycache__ pip-selfcheck.json
 
-travis: PYTEST_ARGS += -v -n2
+travis: PYTEST_ARGS += -n2
 travis: PYLINT_ARGS += -d fixme -j 2
 travis: check test
 

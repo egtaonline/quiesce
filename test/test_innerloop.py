@@ -21,21 +21,20 @@ def verify_dist_thresh(eqa, thresh=0.1):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
-@pytest.mark.parametrize('_', range(1))
-async def test_innerloop_simple(players, strats, _):
+@pytest.mark.parametrize('base', tu.games())
+async def test_innerloop_simple(base):
     """Test that inner loop works for a simple setup"""
-    sgame = gamegen.samplegame(players, strats)
+    sgame = gamegen.samplegame_replace(base)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqa)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
-async def test_innerloop_game(players, strats):
+@pytest.mark.parametrize('base', tu.games())
+async def test_innerloop_game(base):
     """Test that inner loop works for a game"""
-    game = gamegen.samplegame(players, strats)
+    game = gamegen.samplegame_replace(base)
     sched = gamesched.gamesched(game)
     eqas = await innerloop.inner_loop(schedgame.schedgame(sched))
     verify_dist_thresh(eqas)
@@ -44,10 +43,9 @@ async def test_innerloop_game(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
-async def test_innerloop_dpr(players, strats):
+@pytest.mark.parametrize('redgame', tu.games())
+async def test_innerloop_dpr(redgame):
     """Test that inner loop handles dpr"""
-    redgame = rsgame.empty(players, strats)
     fullgame = rsgame.empty(
         redgame.num_role_players ** 2, redgame.num_role_strats)
     profs = dpr.expand_profiles(fullgame, redgame.all_profiles())
@@ -61,10 +59,10 @@ async def test_innerloop_dpr(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
-async def test_innerloop_by_role_simple(players, strats):
+@pytest.mark.parametrize('base', tu.games())
+async def test_innerloop_by_role_simple(base):
     """Test that inner loop works by role"""
-    sgame = gamegen.samplegame(players, strats)
+    sgame = gamegen.samplegame_replace(base)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
         schedgame.schedgame(sched), devs_by_role=True)
@@ -101,11 +99,11 @@ async def test_innerloop_known_eq(eq_prob):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
+@pytest.mark.parametrize('base', tu.games())
 @pytest.mark.parametrize('num', [1, 2])
-async def test_innerloop_num_eqa(players, strats, num):
+async def test_innerloop_num_eqa(base, num):
     """Test that inner loop returns alternate number of equilibria"""
-    sgame = gamegen.samplegame(players, strats)
+    sgame = gamegen.samplegame_replace(base)
     sched = gamesched.samplegamesched(sgame)
     eqa = await innerloop.inner_loop(
         schedgame.schedgame(sched),
@@ -157,10 +155,10 @@ async def test_nash_failure():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', tu.GAMES)
+@pytest.mark.parametrize('base', tu.games())
 @pytest.mark.parametrize('_', range(5))
-async def test_at_least_one(players, strats, _):
+async def test_at_least_one(base, _):
     """inner loop should always find one equilibrium with at_least one"""
-    game = gamegen.game(players, strats)
+    game = gamegen.game_replace(base)
     eqa = await innerloop.inner_loop(asyncgame.wrap(game), at_least_one=True)
     assert eqa.size

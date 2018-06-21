@@ -3,7 +3,6 @@ import asyncio
 
 import numpy as np
 import pytest
-import timeout_decorator
 from gameanalysis import gamegen
 from gameanalysis import paygame
 from gameanalysis import rsgame
@@ -29,14 +28,12 @@ def verify_complete_traces(traces):
 # These sometimes take a really long time because of at_least_one and many
 # innerloops. If it takes more than a minute, just give up.
 @pytest.mark.asyncio
-@timeout_decorator.timeout(20)
-@pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
-@pytest.mark.parametrize('players,strats', utils.GAMES)
-@pytest.mark.parametrize('_', range(5))
-async def test_random_trace_game(players, strats, _):
+@utils.timeout(20)
+@pytest.mark.parametrize('base', utils.games())
+async def test_random_trace_game(base):
     """Test tracing for random games"""
-    agame1 = asyncgame.wrap(gamegen.game(players, strats))
-    agame2 = asyncgame.wrap(gamegen.game(players, strats))
+    agame1 = asyncgame.wrap(gamegen.game_replace(base))
+    agame2 = asyncgame.wrap(gamegen.game_replace(base))
     traces = await trace.trace_all_equilibria(
         agame1, agame2, at_least_one=True)
     verify_complete_traces(traces)
@@ -45,14 +42,12 @@ async def test_random_trace_game(players, strats, _):
 # These sometimes take a really long time because of at_least_one and many
 # innerloops. If it takes more than a minute, just give up.
 @pytest.mark.asyncio
-@timeout_decorator.timeout(20)
-@pytest.mark.xfail(raises=timeout_decorator.timeout_decorator.TimeoutError)
-@pytest.mark.parametrize('players,strats', utils.GAMES)
-@pytest.mark.parametrize('_', range(5))
-async def test_random_trace_sched(players, strats, _):
+@utils.timeout(20)
+@pytest.mark.parametrize('base', utils.games())
+async def test_random_trace_sched(base):
     """Test tracing for random schedulers"""
-    sched1 = gamesched.gamesched(gamegen.game(players, strats))
-    sched2 = gamesched.gamesched(gamegen.game(players, strats))
+    sched1 = gamesched.gamesched(gamegen.game_replace(base))
+    sched2 = gamesched.gamesched(gamegen.game_replace(base))
     traces = await trace.trace_all_equilibria(
         schedgame.schedgame(sched1), schedgame.schedgame(sched2),
         at_least_one=True)
