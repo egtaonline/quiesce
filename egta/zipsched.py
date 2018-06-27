@@ -82,10 +82,10 @@ class _ZipScheduler(profsched._OpenableScheduler): # pylint: disable=too-many-in
 
             # Limit simultaneous processes
             async with self._procs:
-                proc = await asyncio.create_subprocess_shell(
-                    '{} {} {:d}'.format(os.path.join('script', 'batch'),
-                                        direc, self._count),
-                    cwd=self._sim_root, stderr=asyncio.subprocess.PIPE)
+                proc = await asyncio.create_subprocess_exec(
+                    os.path.join('script', 'batch'), direc, str(self._count),
+                    cwd=self._sim_root, stderr=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.DEVNULL)
                 _, err = await proc.communicate()
             utils.check(
                 proc.returncode == 0,

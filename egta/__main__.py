@@ -128,6 +128,7 @@ def main():  # pragma: no cover
     task = asyncio.ensure_future(amain(*sys.argv[1:]))
     try:
         loop.run_until_complete(task)
+        loop.close()
     except KeyboardInterrupt:
         task.cancel()
         loop.run_forever()
