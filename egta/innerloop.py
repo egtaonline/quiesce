@@ -28,7 +28,7 @@ async def inner_loop( # pylint: disable=too-many-locals
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
         num_equilibria=1, num_backups=1, devs_by_role=False,
-        at_least_one=False, executor=None):
+        style='best', executor=None):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -70,11 +70,9 @@ async def inner_loop( # pylint: disable=too-many-locals
         found. This can reduce the number of profiles sampled, but may also
         fail to find certain equilibria due to the different path through
         restricted games.
-    at_least_one : boolean, optional
-        If specified, at least one equilibria will be found in each restricted
-        game.  This has the potential to run for a very long time as it may
-        take exponential time. If your regret threshold is not set too log for
-        your game, this is relatively reasonable though.
+    style : string, optional
+        A string describing the thoroughness of equilibrium finding. Seed
+        `nash.mixed_equilibria` for options and a description.
     executor : Executor, optional
         The executor to be used for Nash finding. The default setting will
         allow async networking calls to continue to happen during long nash
@@ -97,8 +95,8 @@ async def inner_loop( # pylint: disable=too-many-locals
             return await add_deviations(rest, rest.astype(float), init_role_dev)
         data = await agame.get_restricted_game(rest)
         reqa = await loop.run_in_executor(executor, functools.partial(
-            nash.mixed_nash, data, regret_thresh=regret_thresh,
-            dist_thresh=dist_thresh, at_least_one=at_least_one))
+            nash.mixed_equilibria, data, regret_thresh=regret_thresh,
+            dist_thresh=dist_thresh, style=style, processes=1))
         if reqa.size:
             eqa = restrict.translate(data.trim_mixture_support(
                 reqa, thresh=support_thresh), rest)

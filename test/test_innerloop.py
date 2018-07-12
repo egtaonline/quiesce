@@ -160,5 +160,5 @@ async def test_nash_failure():
 async def test_at_least_one(base, _):
     """inner loop should always find one equilibrium with at_least one"""
     game = gamegen.game_replace(base)
-    eqa = await innerloop.inner_loop(asyncgame.wrap(game), at_least_one=True)
+    eqa = await innerloop.inner_loop(asyncgame.wrap(game), style='one')
     assert eqa.size

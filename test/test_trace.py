@@ -35,7 +35,7 @@ async def test_random_trace_game(base):
     agame1 = asyncgame.wrap(gamegen.game_replace(base))
     agame2 = asyncgame.wrap(gamegen.game_replace(base))
     traces = await trace.trace_all_equilibria(
-        agame1, agame2, at_least_one=True)
+        agame1, agame2, style='one')
     verify_complete_traces(traces)
 
 
@@ -50,7 +50,7 @@ async def test_random_trace_sched(base):
     sched2 = gamesched.gamesched(gamegen.game_replace(base))
     traces = await trace.trace_all_equilibria(
         schedgame.schedgame(sched1), schedgame.schedgame(sched2),
-        at_least_one=True)
+        style='one')
     verify_complete_traces(traces)
 
 

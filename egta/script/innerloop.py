@@ -58,13 +58,15 @@ def add_parser(subparsers):
         deviation is found, then that restricted strategy set is scheduled
         without exploring deviations from the other roles.""")
     parser.add_argument(
-        '--one', action='store_true', help="""Guarantee that an equilibrium is
-        found in every restricted game. This may take up to exponential
-        time.""")
+        '--style', default='best', choices=['fast', 'more', 'best', 'one'],
+        help="""Style of equilibrium finding to use. `fast` is the fastests but
+        least thorough, `one` will guarantee an equilibrium is found in
+        potentially exponential time.""")
     parser.add_argument(
-        '--procs', type=int, default=2, help="""Number of process to use. This
-        will speed up computation if doing computationally intensive things
-        simultaneously, i.e. nash finding. (default: %(default)d)""")
+        '--procs', type=int, default=2, metavar='<num-procs>', help="""Number
+        of process to use. This will speed up computation if doing
+        computationally intensive things simultaneously, i.e. nash finding.
+        (default: %(default)d)""")
     utils.add_reductions(parser)
     parser.run = run
 
@@ -88,7 +90,7 @@ async def run(args):
                 restricted_game_size=args.max_restrict_size,
                 num_equilibria=args.num_equilibria,
                 num_backups=args.num_backups, devs_by_role=args.dev_by_role,
-                at_least_one=args.one, executor=executor)
+                style=args.style, executor=executor)
         regrets = await asyncio.gather(*[
             get_regret(eqm) for eqm in eqa])
 
