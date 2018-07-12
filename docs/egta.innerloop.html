@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.1.4 documentation</title>
+    <title>egta.innerloop module &#8212; Empirical Game-Theoretic Analysis 0.2.0 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -33,7 +33,7 @@
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.1.4 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.2.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" accesskey="U">egta package</a> &#187;</li> 
       </ul>
     </div>  
@@ -48,7 +48,7 @@
 <p>module for doing innerloop procedures</p>
 <dl class="function">
 <dt id="egta.innerloop.inner_loop">
-<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>agame</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.1</em>, <em>support_thresh=0.0001</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>at_least_one=False</em>, <em>executor=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">egta.innerloop.</code><code class="descname">inner_loop</code><span class="sig-paren">(</span><em>agame</em>, <em>*</em>, <em>initial_restrictions=None</em>, <em>regret_thresh=0.001</em>, <em>dist_thresh=0.1</em>, <em>support_thresh=0.0001</em>, <em>restricted_game_size=3</em>, <em>num_equilibria=1</em>, <em>num_backups=1</em>, <em>devs_by_role=False</em>, <em>style='best'</em>, <em>executor=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/egta/innerloop.html#inner_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#egta.innerloop.inner_loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inner loop a game using a scheduler</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -83,10 +83,8 @@ proceeding to the next role only when no beneficial deviations are
 found. This can reduce the number of profiles sampled, but may also
 fail to find certain equilibria due to the different path through
 restricted games.</li>
-<li><strong>at_least_one</strong> (<em>boolean</em><em>, </em><em>optional</em>) – If specified, at least one equilibria will be found in each restricted
-game.  This has the potential to run for a very long time as it may
-take exponential time. If your regret threshold is not set too log for
-your game, this is relatively reasonable though.</li>
+<li><strong>style</strong> (<em>string</em><em>, </em><em>optional</em>) – A string describing the thoroughness of equilibrium finding. Seed
+<cite>nash.mixed_equilibria</cite> for options and a description.</li>
 <li><strong>executor</strong> (<em>Executor</em><em>, </em><em>optional</em>) – The executor to be used for Nash finding. The default setting will
 allow async networking calls to continue to happen during long nash
 finding, but buy using a process pool this can take advantage of
@@ -150,7 +148,7 @@ parallel computation.</li>
         <li class="right" >
           <a href="egta.gamesched.html" title="egta.gamesched module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.1.4 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Empirical Game-Theoretic Analysis 0.2.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="egta.html" >egta package</a> &#187;</li> 
       </ul>
     </div>
