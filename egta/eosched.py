@@ -106,6 +106,8 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
                 reqs = info['scheduling_requirements']
                 for req in reqs:
                     prof_id = req['id']
+                    if prof_id not in self._prof_ids:
+                        continue # race condition
                     scheduled, received, _, _, pays = self._prof_ids[prof_id]
                     if req['current_count'] <= received[0]:
                         continue
