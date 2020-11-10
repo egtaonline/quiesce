@@ -6,7 +6,7 @@ from gameanalysis import paygame
 from egta import profsched
 
 
-class _SaveScheduler(profsched._Scheduler): # pylint: disable=protected-access
+class _SaveScheduler(profsched._Scheduler):  # pylint: disable=protected-access
     """A scheduler that saves all of the payoff data for output later
 
     Parameters
@@ -18,8 +18,7 @@ class _SaveScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """
 
     def __init__(self, sched):
-        super().__init__(
-            sched.role_names, sched.strat_names, sched.num_role_players)
+        super().__init__(sched.role_names, sched.strat_names, sched.num_role_players)
         self._sched = sched
         self._game = paygame.samplegame_copy(rsgame.empty_copy(self))
         self._profiles = []
@@ -34,16 +33,17 @@ class _SaveScheduler(profsched._Scheduler): # pylint: disable=protected-access
     def get_game(self):
         """Get the game with the observed data"""
         if self._profiles:
-            new_profs = np.concatenate([
-                self._game.flat_profiles(),
-                np.stack(self._profiles)])
-            new_pays = np.concatenate([
-                self._game.flat_payoffs(),
-                np.stack(self._payoffs)])
+            new_profs = np.concatenate(
+                [self._game.flat_profiles(), np.stack(self._profiles)]
+            )
+            new_pays = np.concatenate(
+                [self._game.flat_payoffs(), np.stack(self._payoffs)]
+            )
             self._profiles.clear()
             self._payoffs.clear()
             self._game = paygame.samplegame_replace_flat(
-                self._game, new_profs, new_pays)
+                self._game, new_profs, new_pays
+            )
         return self._game
 
     def __str__(self):

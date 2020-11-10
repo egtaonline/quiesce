@@ -11,7 +11,9 @@ from egta import profsched
 from egta import utils as eu
 
 
-class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too-many-instance-attributes,protected-access
+class _EgtaOnlineScheduler(
+    profsched._AOpenableScheduler
+):  # pylint: disable=too-many-instance-attributes,protected-access
     """A profile scheduler that schedules through egta online
 
     Parameters
@@ -42,11 +44,18 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         samples, too long and it will take longer to schedule jobs on flux.
     """
 
-    def __init__( # pylint: disable=too-many-arguments
-            self, game, api, game_id, sleep_time, simultaneous_obs,
-            max_scheduled, obs_memory, obs_time):
-        super().__init__(
-            game.role_names, game.strat_names, game.num_role_players)
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        game,
+        api,
+        game_id,
+        sleep_time,
+        simultaneous_obs,
+        max_scheduled,
+        obs_memory,
+        obs_time,
+    ):
+        super().__init__(game.role_names, game.strat_names, game.num_role_players)
         self._api = api
         self._game = paygame.samplegame_copy(rsgame.empty_copy(game))
         self._game_id = game_id
@@ -62,8 +71,7 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         self._sched = None
         self._fetcher = None
         self._sched_lock = asyncio.Lock()
-        self._scheduled = asyncio.BoundedSemaphore(
-            max_scheduled * simultaneous_obs)
+        self._scheduled = asyncio.BoundedSemaphore(max_scheduled * simultaneous_obs)
 
     def _check_fetcher(self):
         """Check if background coroutine has failed"""
@@ -71,11 +79,12 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
             raise self._fetcher.exception()
 
     async def sample_payoffs(self, profile):
-        gu.check(self._is_open, 'not open')
+        gu.check(self._is_open, "not open")
         self._check_fetcher()
         hprof = gu.hash_array(profile)
         data = self._profiles.setdefault(
-            hprof, ([0], [0], [0], [None], asyncio.Queue()))
+            hprof, ([0], [0], [0], [None], asyncio.Queue())
+        )
         scheduled, _, claimed, prof_id, pays = data
         claimed[0] += 1
         if scheduled[0] < claimed[0]:
@@ -87,29 +96,31 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
                 if pid is not None:
                     await self._sched.remove_profile(pid)
                 assignment = self._game.profile_to_repr(profile)
-                prof_id[0] = (await self._sched.add_profile(
-                    assignment, scheduled[0]))['id']
+                prof_id[0] = (await self._sched.add_profile(assignment, scheduled[0]))[
+                    "id"
+                ]
                 if pid is None:
                     self._prof_ids[prof_id[0]] = data
         pay = await pays.get()
         self._check_fetcher()
         return pay
 
-    async def _fetch(self): # pylint: disable=too-many-locals
+    async def _fetch(self):  # pylint: disable=too-many-locals
         """Fetch current scheduling status"""
         try:
             while True:
-                logging.info('query scheduler %d for game %d',
-                             self._sched['id'], self._game_id)
+                logging.info(
+                    "query scheduler %d for game %d", self._sched["id"], self._game_id
+                )
                 info = await self._sched.get_requirements()
-                gu.check(info['active'], 'scheduler was deactivated')
-                reqs = info['scheduling_requirements']
+                gu.check(info["active"], "scheduler was deactivated")
+                reqs = info["scheduling_requirements"]
                 for req in reqs:
-                    prof_id = req['id']
+                    prof_id = req["id"]
                     if prof_id not in self._prof_ids:
-                        continue # race condition
+                        continue  # race condition
                     scheduled, received, _, _, pays = self._prof_ids[prof_id]
-                    if req['current_count'] <= received[0]:
+                    if req["current_count"] <= received[0]:
                         continue
                     egta_prof = await self._api.get_profile(prof_id)
                     jobs = await egta_prof.get_observations()
@@ -134,21 +145,22 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
 
     async def aopen(self):  # pylint: disable=too-many-locals
         """Open the eosched"""
-        gu.check(not self._is_open, 'already open')
+        gu.check(not self._is_open, "already open")
         try:
             game = await self._api.get_game(self._game_id)
             obs = await game.get_observations()
             gu.check(
                 rsgame.empty_copy(self._game) == rsgame.empty_json(obs),
-                "egtaonline game didn't match specified game")
-            conf = dict(obs.get('configuration', ()) or ())
-            profiles = obs.get('profiles', ()) or ()
+                "egtaonline game didn't match specified game",
+            )
+            conf = dict(obs.get("configuration", ()) or ())
+            profiles = obs.get("profiles", ()) or ()
 
             # Parse profiles
             num_profs = len(profiles)
             num_pays = 0
             for jprof in profiles:
-                pid = jprof['id']
+                pid = jprof["id"]
                 prof, spays = self._game.profsamplepay_from_json(jprof)
                 spays.setflags(write=False)
                 hprof = gu.hash_array(prof)
@@ -161,17 +173,30 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
                 self._profiles[hprof] = data
                 self._prof_ids[pid] = data
             logging.info(
-                'found %d existing profiles with %d payoffs in game %d',
-                num_profs, num_pays, self._game_id)
+                "found %d existing profiles with %d payoffs in game %d",
+                num_profs,
+                num_pays,
+                self._game_id,
+            )
 
             # Create and start scheduler
             self._sched = await obs.create_generic_scheduler(
-                'egta_' + eu.random_string(20), True, self._obs_memory,
-                self._obs_time, self._simult_obs, 1, conf)
+                "egta_" + eu.random_string(20),
+                True,
+                self._obs_memory,
+                self._obs_time,
+                self._simult_obs,
+                1,
+                conf,
+            )
             logging.warning(
-                'created scheduler %d for running simulations of game %d: '
-                'https://%s/generic_schedulers/%d', self._sched['id'],
-                self._game_id, self._api.domain, self._sched['id'])
+                "created scheduler %d for running simulations of game %d: "
+                "https://%s/generic_schedulers/%d",
+                self._sched["id"],
+                self._game_id,
+                self._api.domain,
+                self._sched["id"],
+            )
             self._fetcher = asyncio.ensure_future(self._fetch())
             self._is_open = True
         except Exception as ex:
@@ -189,8 +214,9 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
 
         if self._sched is not None:
             await self._sched.deactivate()
-            logging.info('deactivated scheduler %d for game %d',
-                         self._sched['id'], self._game_id)
+            logging.info(
+                "deactivated scheduler %d for game %d", self._sched["id"], self._game_id
+            )
             self._sched = None
 
         if self._sched_lock.locked():
@@ -207,10 +233,24 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         return str(self._game_id)
 
 
-def eosched( # pylint: disable=too-many-arguments
-        game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
-        obs_memory, obs_time):
+def eosched(  # pylint: disable=too-many-arguments
+    game,
+    api,
+    game_id,
+    sleep_time,
+    simultaneous_obs,
+    max_scheduled,
+    obs_memory,
+    obs_time,
+):
     """Create an egtaonline scheduler"""
     return _EgtaOnlineScheduler(
-        game, api, game_id, sleep_time, simultaneous_obs, max_scheduled,
-        obs_memory, obs_time)
+        game,
+        api,
+        game_id,
+        sleep_time,
+        simultaneous_obs,
+        max_scheduled,
+        obs_memory,
+        obs_time,
+    )

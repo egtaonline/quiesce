@@ -10,7 +10,7 @@ from egta import savesched
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('_', range(20))
+@pytest.mark.parametrize("_", range(20))
 async def test_basic_profile(_):
     """Test that profiles are saved"""
     sgame = gamegen.samplegame([4, 3], [3, 4], 0)

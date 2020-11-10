@@ -4,7 +4,7 @@ import numpy as np
 from egta import profsched
 
 
-class _CanonScheduler(profsched._Scheduler): # pylint: disable=protected-access
+class _CanonScheduler(profsched._Scheduler):  # pylint: disable=protected-access
     """A scheduler that removes single strategy roles
 
     Parameters
@@ -18,11 +18,11 @@ class _CanonScheduler(profsched._Scheduler): # pylint: disable=protected-access
         super().__init__(
             tuple(r for r, m in zip(sched.role_names, role_mask) if m),
             tuple(s for s, m in zip(sched.strat_names, role_mask) if m),
-            sched.num_role_players[role_mask])
+            sched.num_role_players[role_mask],
+        )
         self._sched = sched
         self._players = sched.num_role_players[~role_mask]
-        self._inds = np.cumsum(
-            role_mask * sched.num_role_strats)[~role_mask]
+        self._inds = np.cumsum(role_mask * sched.num_role_strats)[~role_mask]
         self._mask = role_mask.repeat(sched.num_role_strats)
 
     async def sample_payoffs(self, profile):

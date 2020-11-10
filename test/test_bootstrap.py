@@ -16,7 +16,7 @@ SIZES = [
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', SIZES)
+@pytest.mark.parametrize("players,strats", SIZES)
 async def test_random_mean_reg(players, strats):
     """Test that no bootstraps works"""
     game = gamegen.game(players, strats)
@@ -28,7 +28,7 @@ async def test_random_mean_reg(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', SIZES)
+@pytest.mark.parametrize("players,strats", SIZES)
 async def test_random_boot_reg(players, strats):
     """Test that bootstrap works for random mixtures"""
     game = gamegen.game(players, strats)
@@ -36,7 +36,8 @@ async def test_random_boot_reg(players, strats):
     devs = game.deviation_payoffs(mix)
     sched = gamesched.gamesched(game)
     mean, boot = await bootstrap.deviation_payoffs(
-        sched, mix, 20, boots=101, chunk_size=5)
+        sched, mix, 20, boots=101, chunk_size=5
+    )
     assert mean.shape == (game.num_strats,)
     assert boot.shape == (101, game.num_strats)
     # These aren't guaranteed to be false, but it's incredibly unlikely
@@ -45,15 +46,14 @@ async def test_random_boot_reg(players, strats):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', SIZES)
+@pytest.mark.parametrize("players,strats", SIZES)
 async def test_random_pure_boot_reg(players, strats):
     """Test that bootstrap works for pure mixtures"""
     game = gamegen.game(players, strats)
     sched = gamesched.gamesched(game)
     for mix in game.pure_mixtures():
         devs = game.deviation_payoffs(mix)
-        mean, boot = await bootstrap.deviation_payoffs(
-            sched, mix, 20, boots=101)
+        mean, boot = await bootstrap.deviation_payoffs(sched, mix, 20, boots=101)
         assert np.allclose(devs, mean)
         assert np.allclose(devs, boot)
         assert mean.shape == (game.num_strats,)

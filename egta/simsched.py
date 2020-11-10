@@ -13,7 +13,9 @@ from gameanalysis import utils
 from egta import profsched
 
 
-class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too-many-instance-attributes,protected-access
+class _SimulationScheduler(
+    profsched._AOpenableScheduler
+):  # pylint: disable=too-many-instance-attributes,protected-access
     """Schedule profiles using a command line program
 
     Parameters
@@ -39,10 +41,9 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
     """
 
     def __init__(self, game, config, command, buff_size=65536):
-        super().__init__(
-            game.role_names, game.strat_names, game.num_role_players)
+        super().__init__(game.role_names, game.strat_names, game.num_role_players)
         self._game = paygame.game_copy(rsgame.empty_copy(game))
-        self._base = {'configuration': config}
+        self._base = {"configuration": config}
         self.command = command
         self.buff_size = buff_size
 
@@ -58,14 +59,15 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         self._buffer_empty.set()
 
     async def sample_payoffs(self, profile):
-        utils.check(self._is_open, 'not open')
+        utils.check(self._is_open, "not open")
 
-        self._base['assignment'] = self._game.profile_to_json(profile)
-        bprof = json.dumps(self._base, separators=(',', ':')).encode('utf8')
+        self._base["assignment"] = self._game.profile_to_json(profile)
+        bprof = json.dumps(self._base, separators=(",", ":")).encode("utf8")
         size = len(bprof) + 1
         utils.check(
             size < self.buff_size,
-            'profile could not be written to buffer without blocking')
+            "profile could not be written to buffer without blocking",
+        )
         async with self._write_lock:
             self._buffer_bytes += size
             self._line_bytes.appendleft(size)
@@ -78,22 +80,20 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
             self._read_queue.put_nowait((line, got_data))
 
             self._proc.stdin.write(bprof)
-            self._proc.stdin.write(b'\n')
+            self._proc.stdin.write(b"\n")
             try:
                 await self._proc.stdin.drain()
             except ConnectionError:  # pragma: no cover race condition
-                raise RuntimeError('process died unexpectedly')
+                raise RuntimeError("process died unexpectedly")
 
-        logging.debug('scheduled profile: %s',
-                      self._game.profile_to_repr(profile))
+        logging.debug("scheduled profile: %s", self._game.profile_to_repr(profile))
         await got_data.wait()
         if self._reader.done() and self._reader.exception() is not None:
             raise self._reader.exception()
-        jpays = json.loads(line[0].decode('utf8'))
+        jpays = json.loads(line[0].decode("utf8"))
         payoffs = self._game.payoff_from_json(jpays)
         payoffs.setflags(write=False)
-        logging.debug('read payoff for profile: %s',
-                      self.profile_to_repr(profile))
+        logging.debug("read payoff for profile: %s", self.profile_to_repr(profile))
         return payoffs
 
     async def _read(self):
@@ -103,7 +103,7 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
             try:
                 line[0] = await self._proc.stdout.readline()
                 if not line[0]:
-                    raise RuntimeError('process died unexpectedly')
+                    raise RuntimeError("process died unexpectedly")
                 self._buffer_bytes -= self._line_bytes.pop()
                 if self._buffer_bytes < self.buff_size:  # pragma: no branch
                     self._buffer_empty.set()
@@ -113,11 +113,12 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
     async def aopen(self):
         """Open the simsched"""
         utils.check(not self._is_open, "can't open twice")
-        utils.check(self._proc is None, 'proce must be None')
-        utils.check(self._reader is None, 'stream must be None')
+        utils.check(self._proc is None, "proce must be None")
+        utils.check(self._reader is None, "stream must be None")
         try:
             self._proc = await asyncio.create_subprocess_exec(
-                *self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                *self.command, stdout=subprocess.PIPE, stdin=subprocess.PIPE
+            )
             self._reader = asyncio.ensure_future(self._read())
             self._is_open = True
         except Exception as ex:
@@ -154,7 +155,7 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         self._line_bytes.clear()
 
     def __str__(self):
-        return ' '.join(self.command)
+        return " ".join(self.command)
 
 
 def simsched(game, config, command, buff_size=65536):

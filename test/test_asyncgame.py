@@ -34,7 +34,7 @@ async def test_mix_asyncgame():
     game1 = gamegen.game([4, 3], [3, 4])
     agame = asyncgame.mix(asyncgame.wrap(game0), asyncgame.wrap(game1), 0.4)
     assert agame.get_game() == rsgame.mix(game0, game1, 0.4)
-    assert str(agame) == '{} - 0.4 - {}'.format(repr(game0), repr(game1))
+    assert str(agame) == "{} - 0.4 - {}".format(repr(game0), repr(game1))
 
     rest = agame.random_restriction()
     rgame = await agame.get_restricted_game(rest)

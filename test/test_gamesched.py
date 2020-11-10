@@ -18,8 +18,7 @@ async def test_basic_profile():
 
     sched = gamesched.gamesched(game)
     assert rsgame.empty_copy(sched) == rsgame.empty_copy(game)
-    paylist = await asyncio.gather(*[
-        sched.sample_payoffs(p) for p in profs])
+    paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
     assert str(sched) == repr(game)
@@ -33,8 +32,7 @@ async def test_basic_profile_sample():
 
     sched = gamesched.samplegamesched(sgame)
     assert rsgame.empty_copy(sched) == rsgame.empty_copy(sgame)
-    paylist = await asyncio.gather(*[
-        sched.sample_payoffs(p) for p in profs])
+    paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)
     assert str(sched) == repr(sgame)
@@ -75,8 +73,8 @@ async def test_noise_profile():
     profs = sgame.random_profiles(20)
 
     sched = gamesched.samplegamesched(
-        sgame, lambda w: rand.normal(0, w, sgame.num_strats),
-        lambda: (rand.random(),))
+        sgame, lambda w: rand.normal(0, w, sgame.num_strats), lambda: (rand.random(),)
+    )
     paylist = await asyncio.gather(*[sched.sample_payoffs(p) for p in profs])
     pays = np.stack(paylist)
     assert np.allclose(pays[profs == 0], 0)

@@ -26,11 +26,20 @@ from gameanalysis import restrict
 # seed in order to get consistent output.
 # TODO in failure conditions, some tasks are left hanging, instead we should be
 # cancelling, and awaiting them so they're not left running
-async def inner_loop( # pylint: disable=too-many-locals
-        agame, *, initial_restrictions=None, regret_thresh=1e-3,
-        dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,
-        num_equilibria=1, num_backups=1, devs_by_role=False,
-        style='best', executor=None):
+async def inner_loop(  # pylint: disable=too-many-locals
+    agame,
+    *,
+    initial_restrictions=None,
+    regret_thresh=1e-3,
+    dist_thresh=0.1,
+    support_thresh=1e-4,
+    restricted_game_size=3,
+    num_equilibria=1,
+    num_backups=1,
+    devs_by_role=False,
+    style="best",
+    executor=None
+):
     """Inner loop a game using a scheduler
 
     Parameters
@@ -96,22 +105,34 @@ async def inner_loop( # pylint: disable=too-many-locals
             # Short circuit for pure restriction
             return await add_deviations(rest, rest.astype(float), init_role_dev)
         data = await agame.get_restricted_game(rest)
-        reqa = await loop.run_in_executor(executor, functools.partial(
-            nash.mixed_equilibria, data, regret_thresh=regret_thresh,
-            dist_thresh=dist_thresh, style=style, processes=1))
+        reqa = await loop.run_in_executor(
+            executor,
+            functools.partial(
+                nash.mixed_equilibria,
+                data,
+                regret_thresh=regret_thresh,
+                dist_thresh=dist_thresh,
+                style=style,
+                processes=1,
+            ),
+        )
         if reqa.size:
-            eqa = restrict.translate(data.trim_mixture_support(
-                reqa, thresh=support_thresh), rest)
-            await asyncio.gather(*[
-                add_deviations(rest, eqm, init_role_dev) for eqm in eqa])
+            eqa = restrict.translate(
+                data.trim_mixture_support(reqa, thresh=support_thresh), rest
+            )
+            await asyncio.gather(
+                *[add_deviations(rest, eqm, init_role_dev) for eqm in eqa]
+            )
         else:
             logging.warning(
                 "couldn't find equilibria in %s with restriction %s. This is "
-                'likely due to high variance in payoffs which means '
-                'quiesce should be re-run with more samples per profile. '
-                'This could also be fixed by performing a more expensive '
-                'equilibria search to always return one.',
-                agame, agame.restriction_to_repr(rest))
+                "likely due to high variance in payoffs which means "
+                "quiesce should be re-run with more samples per profile. "
+                "This could also be fixed by performing a more expensive "
+                "equilibria search to always return one.",
+                agame,
+                agame.restriction_to_repr(rest),
+            )
 
     async def add_deviations(rest, mix, role_index):
         """Add deviations to be evaluated"""
@@ -127,13 +148,20 @@ async def inner_loop( # pylint: disable=too-many-locals
                 reg = gains.max()
                 if equilibria.add(mix, reg):
                     logging.warning(
-                        'found equilibrium %s in game %s with regret %f',
-                        agame.mixture_to_repr(mix), agame, reg)
+                        "found equilibrium %s in game %s with regret %f",
+                        agame.mixture_to_repr(mix),
+                        agame,
+                        reg,
+                    )
             else:
-                await asyncio.gather(*[
-                    queue_restrictions(rgains, ri, rest)
-                    for ri, rgains in enumerate(np.split(
-                        gains, agame.role_starts[1:]))])
+                await asyncio.gather(
+                    *[
+                        queue_restrictions(rgains, ri, rest)
+                        for ri, rgains in enumerate(
+                            np.split(gains, agame.role_starts[1:])
+                        )
+                    ]
+                )
 
         else:  # Set role index
             rgains = np.split(gains, agame.role_starts[1:])[role_index]
@@ -149,8 +177,11 @@ async def inner_loop( # pylint: disable=too-many-locals
                     reg = regret.mixture_regret(data, mix)
                     if equilibria.add(mix, reg):
                         logging.warning(
-                            'found equilibrium %s in game %s with regret %f',
-                            agame.mixture_to_repr(mix), agame, reg)
+                            "found equilibrium %s in game %s with regret %f",
+                            agame.mixture_to_repr(mix),
+                            agame,
+                            reg,
+                        )
             else:
                 await queue_restrictions(rgains, role_index, rest)
 
@@ -164,8 +195,7 @@ async def inner_loop( # pylint: disable=too-many-locals
         role_start = agame.role_starts[role_index]
 
         best_resp = np.nanargmax(np.where(role_rest, np.nan, role_gains))
-        if (role_gains[best_resp] > regret_thresh
-                and rest_size < restricted_game_size):
+        if role_gains[best_resp] > regret_thresh and rest_size < restricted_game_size:
             br_sub = rest.copy()
             br_sub[role_start + best_resp] = True
             await add_restriction(br_sub)
@@ -181,27 +211,31 @@ async def inner_loop( # pylint: disable=too-many-locals
             heapq.heappush(back, (-gain, id(sub), sub))  # id for tie-breaking
 
     restrictions = (
-        agame.pure_restrictions() if initial_restrictions is None
-        else np.asarray(initial_restrictions, bool))
+        agame.pure_restrictions()
+        if initial_restrictions is None
+        else np.asarray(initial_restrictions, bool)
+    )
 
     iteration = 0
-    while (len(equilibria) < num_equilibria
-           and (any(q for q in backups) or
-                not next(iter(exp_restrictions)).all())):
+    while len(equilibria) < num_equilibria and (
+        any(q for q in backups) or not next(iter(exp_restrictions)).all()
+    ):
         if iteration == 1:
             logging.warning(
-                'scheduling backup restrictions in game %s. This only happens '
-                'when quiesce criteria could not be met with current '
-                'maximum restriction size (%d). This probably means that '
-                'the maximum restriction size should be increased. If '
-                'this is happening frequently, increasing the number of '
-                'backups taken at a time might be desired (currently %s).',
-                agame, restricted_game_size, num_backups)
+                "scheduling backup restrictions in game %s. This only happens "
+                "when quiesce criteria could not be met with current "
+                "maximum restriction size (%d). This probably means that "
+                "the maximum restriction size should be increased. If "
+                "this is happening frequently, increasing the number of "
+                "backups taken at a time might be desired (currently %s).",
+                agame,
+                restricted_game_size,
+                num_backups,
+            )
         elif iteration > 1:
-            logging.info('scheduling backup restrictions in game %s', agame)
+            logging.info("scheduling backup restrictions in game %s", agame)
 
-        await asyncio.gather(*[
-            add_restriction(r) for r in restrictions])
+        await asyncio.gather(*[add_restriction(r) for r in restrictions])
 
         restrictions = collect.bitset(agame.num_strats, exp_restrictions)
         for role, back in enumerate(backups):
@@ -230,7 +264,7 @@ async def inner_loop( # pylint: disable=too-many-locals
         iteration += 1
 
     # Return equilibria
-    if equilibria: # pylint: disable=no-else-return
+    if equilibria:  # pylint: disable=no-else-return
         return np.stack([eqm for eqm, _ in equilibria])
     else:
         return np.empty((0, agame.num_strats))  # pragma: no cover

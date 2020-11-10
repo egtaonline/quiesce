@@ -4,7 +4,7 @@ import abc
 from gameanalysis import rsgame
 
 
-class _Scheduler(rsgame._GameLike): # pylint: disable=protected-access
+class _Scheduler(rsgame._GameLike):  # pylint: disable=protected-access
     """A profile scheduler
 
     It must be a context manager for its resources."""
@@ -19,15 +19,16 @@ class _Scheduler(rsgame._GameLike): # pylint: disable=protected-access
 
 class _OpenableScheduler(_Scheduler):
     """Scheduler that is opened"""
+
     @abc.abstractmethod
     def open(self):
         """Open the scheduler"""
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     @abc.abstractmethod
     def close(self):
         """Close the scheduler"""
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     def __enter__(self):
         self.open()
@@ -39,15 +40,16 @@ class _OpenableScheduler(_Scheduler):
 
 class _AOpenableScheduler(_Scheduler):
     """Scheduler that is asynchronously opened"""
+
     @abc.abstractmethod
     async def aopen(self):
         """Open the scheduler"""
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     @abc.abstractmethod
     async def aclose(self):
         """Close the scheduler"""
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     async def __aenter__(self):
         await self.aopen()

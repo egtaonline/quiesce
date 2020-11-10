@@ -11,7 +11,7 @@ from egta import profsched
 # TODO Add common random seed for deterministic runs.
 
 
-class _RsGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
+class _RsGameScheduler(profsched._Scheduler):  # pylint: disable=protected-access
     """Schedule profiles by adding noise to a game
 
     This scheduler will generate random parameters to assign to each profile.
@@ -41,14 +41,14 @@ class _RsGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
     """
 
     def __init__(  # pragma: no branch # noqa
-            self, game, noise_dist=lambda: 0, param_dist=lambda: (),
-            size_ratio=200):
-        super().__init__(
-            game.role_names, game.strat_names, game.num_role_players)
+        self, game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200
+    ):
+        super().__init__(game.role_names, game.strat_names, game.num_role_players)
         self._noise_dist = noise_dist
         self._param_dist = param_dist
-        self._max_size = max(int(math.log(game.num_all_profiles) * size_ratio),
-                             game.num_profiles)
+        self._max_size = max(
+            int(math.log(game.num_all_profiles) * size_ratio), game.num_profiles
+        )
         self._game = game
         self._params = {}
 
@@ -67,15 +67,14 @@ class _RsGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
         return repr(self._game)
 
 
-def gamesched(
-        game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200):
+def gamesched(game, noise_dist=lambda: 0, param_dist=lambda: (), size_ratio=200):
     """Create a game scheduler"""
     return _RsGameScheduler(
-        game, noise_dist=noise_dist, param_dist=param_dist,
-        size_ratio=size_ratio)
+        game, noise_dist=noise_dist, param_dist=param_dist, size_ratio=size_ratio
+    )
 
 
-class _SampleGameScheduler(profsched._Scheduler): # pylint: disable=protected-access
+class _SampleGameScheduler(profsched._Scheduler):  # pylint: disable=protected-access
     """Schedule profiles by adding noise to a sample game
 
     This scheduler will generate random parameters to assign to each profile.
@@ -101,11 +100,10 @@ class _SampleGameScheduler(profsched._Scheduler): # pylint: disable=protected-ac
     """
 
     def __init__(  # pragma: no branch # noqa
-            self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
-        super().__init__(
-            sgame.role_names, sgame.strat_names, sgame.num_role_players)
-        utils.check(
-            hasattr(sgame, 'get_sample_payoffs'), 'sgame not a sample game')
+        self, sgame, noise_dist=lambda: 0, param_dist=lambda: ()
+    ):
+        super().__init__(sgame.role_names, sgame.strat_names, sgame.num_role_players)
+        utils.check(hasattr(sgame, "get_sample_payoffs"), "sgame not a sample game")
         self._noise_dist = noise_dist
         self._param_dist = param_dist
         self._sgame = sgame
@@ -131,5 +129,4 @@ class _SampleGameScheduler(profsched._Scheduler): # pylint: disable=protected-ac
 
 def samplegamesched(sgame, noise_dist=lambda: 0, param_dist=lambda: ()):
     """Create a samplegame scheduler"""
-    return _SampleGameScheduler(
-        sgame, noise_dist=noise_dist, param_dist=param_dist)
+    return _SampleGameScheduler(sgame, noise_dist=noise_dist, param_dist=param_dist)

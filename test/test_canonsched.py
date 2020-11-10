@@ -8,10 +8,16 @@ from egta import gamesched
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('players,strats', [
-    ([2], [2]), ([1, 2], [2, 1]), ([2, 1], [1, 2]), ([2, 1, 2], [1, 2, 1]),
-    ([1, 2, 1], [2, 1, 2]),
-])
+@pytest.mark.parametrize(
+    "players,strats",
+    [
+        ([2], [2]),
+        ([1, 2], [2, 1]),
+        ([2, 1], [1, 2]),
+        ([2, 1, 2], [1, 2, 1]),
+        ([1, 2, 1], [2, 1, 2]),
+    ],
+)
 async def test_basic_profile(players, strats):
     """Test that basic profile sampling works"""
     game = gamegen.game(players, strats)

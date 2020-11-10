@@ -29,37 +29,69 @@ def create_parser():
         method and a profile scheduler must be specified. Each element
         processes the arguments after it, e.g. `egta -a brute -b game -c` will
         pass -a to the base parser, -b to the brute equilibrium solver, and -c
-        to the game profile scheduler.""")
+        to the game profile scheduler."""
+    )
 
     # Standard arguments
     parser.add_argument(
-        '--version', '-V', action='version',
-        version='%(prog)s {}'.format(egta.__version__))
+        "--version",
+        "-V",
+        action="version",
+        version="%(prog)s {}".format(egta.__version__),
+    )
     parser.add_argument(
-        '--output', '-o', metavar='<output-file>', type=argparse.FileType('w'),
-        default=sys.stdout, help="""The file to write the output to. (default:
-        stdout)""")
+        "--output",
+        "-o",
+        metavar="<output-file>",
+        type=argparse.FileType("w"),
+        default=sys.stdout,
+        help="""The file to write the output to. (default:
+        stdout)""",
+    )
     parser.add_argument(
-        '--verbose', '-v', action='count', default=0, help="""Increases the
-        verbosity level for standard error.""")
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="""Increases the
+        verbosity level for standard error.""",
+    )
     parser.add_argument(
-        '-e', '--email_verbosity', action='count', default=0, help="""Increases
-        the verbosity level for emails.""")
+        "-e",
+        "--email_verbosity",
+        action="count",
+        default=0,
+        help="""Increases
+        the verbosity level for emails.""",
+    )
     parser.add_argument(
-        '-r', '--recipient', metavar='<email-address>', action='append',
-        default=[], help="""Specify an email address to receive email logs at.
-        Can specify multiple email addresses.""")
+        "-r",
+        "--recipient",
+        metavar="<email-address>",
+        action="append",
+        default=[],
+        help="""Specify an email address to receive email logs at.
+        Can specify multiple email addresses.""",
+    )
     parser.add_argument(
-        '--tag', metavar='<tag>', help="""Specify an optional tag that will get
-        appended to logs and appear in the email subject.""")
+        "--tag",
+        metavar="<tag>",
+        help="""Specify an optional tag that will get
+        appended to logs and appear in the email subject.""",
+    )
 
     # All of the actual methods to run
     eq_methods = parser.add_subparsers(
-        title='operations', dest='method', metavar='<operation>', help="""The
-        operation to run on the game. Available commands are:""")
+        title="operations",
+        dest="method",
+        metavar="<operation>",
+        help="""The
+        operation to run on the game. Available commands are:""",
+    )
 
     class _Wrap(str):
         """A class that allows getting the run command from sub command"""
+
         async def run(self, args):
             """Run the sub command"""
             return await eq_methods.choices[self].run(args)
@@ -72,38 +104,41 @@ def create_parser():
     return parser
 
 
-async def amain(*argv): # pylint: disable=too-many-locals
+async def amain(*argv):  # pylint: disable=too-many-locals
     """Async entry point for arbitrary command line arguments"""
     # Parse args and process
     parser = create_parser()
     args = parser.parse_args(argv)
 
-    tag = '' if args.tag is None else ' ' + args.tag
+    tag = "" if args.tag is None else " " + args.tag
 
     stderr_handle = logging.StreamHandler(sys.stderr)
     stderr_handle.setLevel(50 - 10 * min(args.verbose, 4))
-    stderr_handle.setFormatter(logging.Formatter(
-        '%(asctime)s {}{} %(message)s'.format(
-            args.method, tag)))
+    stderr_handle.setFormatter(
+        logging.Formatter("%(asctime)s {}{} %(message)s".format(args.method, tag))
+    )
     log_handlers = [stderr_handle]
 
     # Email Logging
     if args.recipient:  # pragma: no cover
-        smtp_host = 'localhost'
+        smtp_host = "localhost"
 
         # We need to do this to match the from address to the local host name
         # otherwise, email logging will not work. This seems to vary somewhat
         # by machine
         with smtplib.SMTP(smtp_host) as server:
-            smtp_fromaddr = 'EGTA Online <egta_online@{host}>'.format(
-                host=server.local_hostname)
+            smtp_fromaddr = "EGTA Online <egta_online@{host}>".format(
+                host=server.local_hostname
+            )
 
         email_handler = handlers.SMTPHandler(
-            smtp_host, smtp_fromaddr, args.recipient,
-            'EGTA Status for {}{}'.format(args.method, tag))
+            smtp_host,
+            smtp_fromaddr,
+            args.recipient,
+            "EGTA Status for {}{}".format(args.method, tag),
+        )
         email_handler.setLevel(50 - args.email_verbosity * 10)
-        email_handler.setFormatter(logging.Formatter(
-            '%(message)s'))
+        email_handler.setFormatter(logging.Formatter("%(message)s"))
         log_handlers.append(email_handler)
 
     logging.basicConfig(level=0, handlers=log_handlers)
@@ -112,13 +147,14 @@ async def amain(*argv): # pylint: disable=too-many-locals
         await args.method.run(args)
 
     except KeyboardInterrupt as ex:  # pragma: no cover
-        logging.critical('execution interrupted by user')
+        logging.critical("execution interrupted by user")
         raise ex
 
     except Exception as ex:  # pragma: no cover
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        logging.critical(''.join(traceback.format_exception(
-            exc_type, exc_value, exc_traceback)))
+        logging.critical(
+            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        )
         raise ex
 
 

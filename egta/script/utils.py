@@ -9,11 +9,17 @@ def add_reductions(parser):
     """Add reduction options to a parser"""
     reductions = parser.add_mutually_exclusive_group()
     reductions.add_argument(
-        '--dpr', metavar='<role:count,role:count,...>', help="""Specify a
-        deviation preserving reduction.""")
+        "--dpr",
+        metavar="<role:count,role:count,...>",
+        help="""Specify a
+        deviation preserving reduction.""",
+    )
     reductions.add_argument(
-        '--hr', metavar='<role:count,role:count,...>', help="""Specify a
-        hierarchical reduction.""")
+        "--hr",
+        metavar="<role:count,role:count,...>",
+        help="""Specify a
+        hierarchical reduction.""",
+    )
 
 
 def parse_reduction(game, args):
@@ -35,13 +41,13 @@ def pos_int(string):
     val = int(string)
     if val <= 0:
         raise argparse.ArgumentTypeError(
-            '{:d} is an invalid positive int value'.format(string))
+            "{:d} is an invalid positive int value".format(string)
+        )
     return val
 
 
 def check_file(string):
     """Type for a file that exists"""
-    if not string == '-' and not os.path.isfile(string):
-        raise argparse.ArgumentTypeError(
-            '{} is not a file'.format(string))
+    if not string == "-" and not os.path.isfile(string):
+        raise argparse.ArgumentTypeError("{} is not a file".format(string))
     return string

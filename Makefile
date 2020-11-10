@@ -1,6 +1,7 @@
 PYTEST_ARGS =
 PYLINT_ARGS =
 PYTHON = python3
+PYTHON_DIRS = egta test
 
 help:
 	@echo "usage: make <tag>"
@@ -8,6 +9,7 @@ help:
 	@echo "setup    - setup for development"
 	@echo "ubuntu-reqs - install required files on ubuntu (requires root)"
 	@echo "check    - check for comformance to pep8 standards"
+	@echo "format   - format source files"
 	@echo "test     - run fast tests with coverage"
 	@echo "test-all - run all tests with coverage"
 	@echo "publish  - publish package to pypi"
@@ -26,11 +28,14 @@ test-all: test
 test:
 	bin/pytest test $(PYTEST_ARGS) --cov egta --cov test 2>/dev/null
 
+format:
+	bin/black $(PYTHON_DIRS)
+
 ubuntu-reqs:
 	sudo apt-get install libatlas-base-dev gfortran libxml2-dev libxslt1-dev python3-venv zlib1g-dev
 
 check:
-	bin/pylint $(PYLINT_ARGS) egta test
+	bin/pylint $(PYLINT_ARGS) $(PYTHON_DIRS)
 
 publish:
 	rm -rf dist
