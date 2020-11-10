@@ -24,6 +24,8 @@ from gameanalysis import restrict
 # TODO It'd be cool to have an option to explore better responses proportional
 # to gain instead of best response. This would require a deterministic random
 # seed in order to get consistent output.
+# TODO in failure conditions, some tasks are left hanging, instead we should be
+# cancelling, and awaiting them so they're not left running
 async def inner_loop( # pylint: disable=too-many-locals
         agame, *, initial_restrictions=None, regret_thresh=1e-3,
         dist_thresh=0.1, support_thresh=1e-4, restricted_game_size=3,

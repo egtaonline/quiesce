@@ -1,5 +1,6 @@
 """Tests for egta online scheduler"""
 import asyncio
+import contextlib
 import random
 
 import numpy as np
@@ -111,13 +112,18 @@ async def test_exception_in_get(game):
 
         async with eosched.eosched(
             game, egta, egame['id'], 0.1, 1, 10, 0, 0) as sched:
-            futures = asyncio.gather(*[
-                sched.sample_payoffs(p) for p in profs])
+            tasks = [asyncio.ensure_future(sched.sample_payoffs(p))
+                     for p in profs]
             await asyncio.sleep(0.1)
             server.custom_response(lambda: _raise(TimeoutError))
             await asyncio.sleep(0.1)
             with pytest.raises(TimeoutError):
-                await futures
+                await asyncio.gather(*tasks)
+            # tidy up
+            errors = asyncio.gather(*tasks, return_exceptions=True)
+            errors.cancel()
+            with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                await errors
 
 
 @pytest.mark.asyncio

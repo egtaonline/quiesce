@@ -132,7 +132,7 @@ class _SimulationScheduler(profsched._AOpenableScheduler): # pylint: disable=too
 
         if self._reader is not None:
             self._reader.cancel()
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(Exception, asyncio.CancelledError):
                 await self._reader
             self._reader = None
 

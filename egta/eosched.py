@@ -183,7 +183,7 @@ class _EgtaOnlineScheduler(profsched._AOpenableScheduler): # pylint: disable=too
         """Close the eosched"""
         if self._fetcher is not None:
             self._fetcher.cancel()
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(Exception, asyncio.CancelledError):
                 await self._fetcher
             self._fetcher = None
 
