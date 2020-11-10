@@ -40,7 +40,7 @@ check:
 publish:
 	rm -rf dist
 	bin/python setup.py sdist bdist_wheel
-	bin/twine upload -u strategic.reasoning.group dist/*
+	bin/twine upload dist/*
 
 docs:
 	bin/python setup.py build_sphinx -b html
