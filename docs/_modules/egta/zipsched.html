@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>egta.zipsched &#8212; Empirical Game-Theoretic Analysis 0.2.1 documentation</title>
+    <title>egta.zipsched &#8212; Empirical Game-Theoretic Analysis 0.2.2 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
   </head><body>
@@ -25,7 +26,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.2.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.2.2 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -46,14 +47,16 @@
 <span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">import</span> <span class="nn">zipfile</span>
 
-<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">paygame</span>
-<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">rsgame</span>
-<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="kn">import</span> <span class="n">paygame</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="kn">import</span> <span class="n">rsgame</span>
+<span class="kn">from</span> <span class="nn">gameanalysis</span> <span class="kn">import</span> <span class="n">utils</span>
 
-<span class="kn">from</span> <span class="nn">egta</span> <span class="k">import</span> <span class="n">profsched</span>
+<span class="kn">from</span> <span class="nn">egta</span> <span class="kn">import</span> <span class="n">profsched</span>
 
 
-<span class="k">class</span> <span class="nc">_ZipScheduler</span><span class="p">(</span><span class="n">profsched</span><span class="o">.</span><span class="n">_OpenableScheduler</span><span class="p">):</span> <span class="c1"># pylint: disable=too-many-instance-attributes,protected-access</span>
+<span class="k">class</span> <span class="nc">_ZipScheduler</span><span class="p">(</span>
+    <span class="n">profsched</span><span class="o">.</span><span class="n">_OpenableScheduler</span>
+<span class="p">):</span>  <span class="c1"># pylint: disable=too-many-instance-attributes,protected-access</span>
     <span class="sd">&quot;&quot;&quot;Schedule profiles using am EGTA Online zip file</span>
 
 <span class="sd">    Parameters</span>
@@ -70,9 +73,8 @@
 <span class="sd">        The maximum number of processes to spawn for simulations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">zipf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_procs</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">zipf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_procs</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">game</span><span class="o">.</span><span class="n">role_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">strat_names</span><span class="p">,</span> <span class="n">game</span><span class="o">.</span><span class="n">num_role_players</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_game</span> <span class="o">=</span> <span class="n">paygame</span><span class="o">.</span><span class="n">game_copy</span><span class="p">(</span><span class="n">rsgame</span><span class="o">.</span><span class="n">empty_copy</span><span class="p">(</span><span class="n">game</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conf</span> <span class="o">=</span> <span class="n">conf</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">zipf</span> <span class="o">=</span> <span class="n">zipf</span>
@@ -89,7 +91,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_procs</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">max_procs</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">sample_payoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
-        <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span><span class="p">,</span> <span class="s1">&#39;must enter scheduler&#39;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span><span class="p">,</span> <span class="s2">&quot;must enter scheduler&quot;</span><span class="p">)</span>
         <span class="n">hprof</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">hash_array</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
         <span class="n">counter</span><span class="p">,</span> <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_profs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hprof</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">counter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -97,8 +99,7 @@
             <span class="k">if</span> <span class="nb">next</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_extra_profs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">hprof</span><span class="p">)</span>
             <span class="n">pay</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s1">&#39;read payoff for profile: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;read payoff for profile: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">pay</span>
 
         <span class="k">else</span><span class="p">:</span>
@@ -109,46 +110,53 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_extra_profs</span><span class="p">[</span><span class="n">hprof</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">queue</span><span class="p">)</span>
             <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">direc</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s1">&#39;assignment&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_assignment</span><span class="p">(</span>
-                <span class="n">profile</span><span class="p">)</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">direc</span><span class="p">,</span> <span class="s1">&#39;simulation_spec.json&#39;</span><span class="p">),</span>
-                      <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fil</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s2">&quot;assignment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">profile_to_assignment</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">direc</span><span class="p">,</span> <span class="s2">&quot;simulation_spec.json&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fil</span><span class="p">:</span>
                 <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">,</span> <span class="n">fil</span><span class="p">)</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s1">&#39;scheduled </span><span class="si">%d</span><span class="s1"> profile</span><span class="si">%s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">,</span>
-                <span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
+                <span class="s2">&quot;scheduled </span><span class="si">%d</span><span class="s2"> profile</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">,</span>
+                <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;s&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">),</span>
+            <span class="p">)</span>
 
             <span class="c1"># Limit simultaneous processes</span>
             <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_procs</span><span class="p">:</span>
                 <span class="n">proc</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_subprocess_exec</span><span class="p">(</span>
-                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;script&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span> <span class="n">direc</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">),</span>
-                    <span class="n">cwd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-                    <span class="n">stdout</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;script&quot;</span><span class="p">,</span> <span class="s2">&quot;batch&quot;</span><span class="p">),</span>
+                    <span class="n">direc</span><span class="p">,</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">),</span>
+                    <span class="n">cwd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span>
+                    <span class="n">stderr</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                    <span class="n">stdout</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
+                <span class="p">)</span>
                 <span class="n">_</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
             <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
                 <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
-                <span class="s1">&#39;process failed with returncode </span><span class="si">{:d}</span><span class="s1"> and stderr </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">,</span>
-                <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+                <span class="s2">&quot;process failed with returncode </span><span class="si">{:d}</span><span class="s2"> and stderr </span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span>
+                <span class="n">err</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">obs_files</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">direc</span><span class="p">)</span>
-                <span class="k">if</span> <span class="s1">&#39;observation&#39;</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.json&#39;</span><span class="p">))</span>
+                <span class="n">f</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">direc</span><span class="p">)</span>
+                <span class="k">if</span> <span class="s2">&quot;observation&quot;</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">):</span>
                 <span class="n">obs_file</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">obs_files</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
                 <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
                     <span class="n">obs_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="s2">&quot;simulation didn&#39;t write enough observation files&quot;</span><span class="p">)</span>
+                    <span class="s2">&quot;simulation didn&#39;t write enough observation files&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
                 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">direc</span><span class="p">,</span> <span class="n">obs_file</span><span class="p">))</span> <span class="k">as</span> <span class="n">fil</span><span class="p">:</span>
                     <span class="n">pay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_game</span><span class="o">.</span><span class="n">payoff_from_json</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fil</span><span class="p">))</span>
                     <span class="n">pay</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                     <span class="n">queue</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">pay</span><span class="p">)</span>
             <span class="n">obs_file</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">obs_files</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
-                <span class="n">obs_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span>
-                <span class="s1">&#39;simulation wrote too many observation files&#39;</span><span class="p">)</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">obs_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;simulation wrote too many observation files&quot;</span><span class="p">)</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">direc</span><span class="p">)</span>
             <span class="n">pay</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;read payoff for profile: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span>
-                          <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;read payoff for profile: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile_to_repr</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">pay</span>
 
     <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -160,18 +168,19 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_prof_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span>
             <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zipf</span><span class="p">)</span> <span class="k">as</span> <span class="n">zfil</span><span class="p">:</span>
                 <span class="n">zfil</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_dir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-            <span class="n">sim_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_dir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-                         <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;__MACOSX&#39;</span><span class="p">}]</span>
+            <span class="n">sim_files</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_dir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;__MACOSX&quot;</span><span class="p">}</span>
+            <span class="p">]</span>
             <span class="n">utils</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
                 <span class="nb">len</span><span class="p">(</span><span class="n">sim_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span>
-                <span class="s1">&#39;improper zip format, only one file should exist in root&#39;</span><span class="p">)</span>
+                <span class="s2">&quot;improper zip format, only one file should exist in root&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">sim_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span> <span class="s1">&#39;script&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span> <span class="mo">0o700</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span> <span class="s2">&quot;script&quot;</span><span class="p">,</span> <span class="s2">&quot;batch&quot;</span><span class="p">),</span> <span class="mo">0o700</span><span class="p">)</span>
 
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span> <span class="s1">&#39;defaults.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">fil</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s1">&#39;configuration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                    <span class="s1">&#39;configuration&#39;</span><span class="p">,</span> <span class="p">{})</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s1">&#39;configuration&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sim_root</span><span class="p">,</span> <span class="s2">&quot;defaults.json&quot;</span><span class="p">))</span> <span class="k">as</span> <span class="n">fil</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s2">&quot;configuration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;configuration&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="p">[</span><span class="s2">&quot;configuration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
@@ -184,15 +193,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_sim_dir</span><span class="o">.</span><span class="n">cleanup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_prof_dir</span><span class="o">.</span><span class="n">cleanup</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">zipf</span>
 
 
 <div class="viewcode-block" id="zipsched"><a class="viewcode-back" href="../../egta.zipsched.html#egta.zipsched.zipsched">[docs]</a><span class="k">def</span> <span class="nf">zipsched</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">zipf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_procs</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Create a zip scheduler&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">_ZipScheduler</span><span class="p">(</span>
-        <span class="n">game</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">zipf</span><span class="p">,</span> <span class="n">max_procs</span><span class="o">=</span><span class="n">max_procs</span><span class="p">,</span>
-        <span class="n">simultaneous_obs</span><span class="o">=</span><span class="n">simultaneous_obs</span><span class="p">)</span></div>
+        <span class="n">game</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">zipf</span><span class="p">,</span> <span class="n">max_procs</span><span class="o">=</span><span class="n">max_procs</span><span class="p">,</span> <span class="n">simultaneous_obs</span><span class="o">=</span><span class="n">simultaneous_obs</span>
+    <span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -225,13 +234,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.2.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Empirical Game-Theoretic Analysis 0.2.2 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2018, Strategic Reasoning Group.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
+        &#169; Copyright 2020, Strategic Reasoning Group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
     </div>
   </body>
 </html>
